@@ -891,6 +891,10 @@
           <div class="section-divider">Geometry</div>
           <div class="lib-note" style="margin-top:-4px;">ACQ voxel size — same value as Summary above (linked, not re-entered here).</div>
           <div class="field">
+            <label for="cur-slices" id="cur-slices-label">Number of slices (optional)</label>
+            <input type="number" id="cur-slices" min="1" step="1" placeholder="e.g. 24">
+          </div>
+          <div class="field">
             <label id="cur-oversampling-label">Fold-over suppression</label>
             <select id="cur-oversampling-axis" style="margin-bottom:6px; width:100%;">
               <option value="hf">H/F</option>
@@ -1055,6 +1059,10 @@
         <div class="section-divider">Geometry</div>
         <div class="lib-note" style="margin-top:-4px;">ACQ voxel size — same value as Summary above (linked, not re-entered here).</div>
         <div class="field">
+          <label for="prop-slices" id="prop-slices-label">Number of slices (optional)</label>
+          <input type="number" id="prop-slices" min="1" step="1" placeholder="e.g. 24">
+        </div>
+        <div class="field">
           <label id="prop-oversampling-label">Fold-over suppression</label>
           <select id="prop-oversampling-axis" style="margin-bottom:6px; width:100%;">
             <option value="hf">H/F</option>
@@ -1153,7 +1161,7 @@
     <div class="info-note" id="oversampling-note"></div>
 
     <footer>
-      <strong>Model notes:</strong> Scan time ≈ TR × NSA × phase steps × (1 + oversampling%) ÷ (SENSE × TSE/turbo factor). TSE/turbo factor is now included (previously excluded entirely, which produced a ~9.5× real-world discrepancy on a TSE cervical axial T2 — est. ~19 min vs an actual ~2 min); it doesn't scale time perfectly linearly in practice and can also affect achievable voxel size, similar to the CS-SENSE factor, so treat this as a major improvement over the prior order-of-magnitude error, not a claim of precise linearity — verify any meaningful TSE factor change at console. Still excludes partial Fourier, prep pulses, and multi-package slice timing.
+      <strong>Model notes:</strong> Scan time ≈ TR × NSA × phase steps × (1 + oversampling%) ÷ (SENSE × TSE/turbo factor). TSE/turbo factor is now included (previously excluded entirely, which produced a ~9.5× real-world discrepancy on a TSE cervical axial T2 — est. ~19 min vs an actual ~2 min); it doesn't scale time perfectly linearly in practice and can also affect achievable voxel size, similar to the CS-SENSE factor, so treat this as a major improvement over the prior order-of-magnitude error, not a claim of precise linearity — verify any meaningful TSE factor change at console. Multi-package slice timing (additional TR passes once slice count exceeds what fits per TR) still isn't modeled — there's no reliable way to estimate max-slices-per-TR with what this app tracks — so entering a slice count flags the time estimate as "Verify at console" instead of silently under-predicting (confirmed ~6× off on an axial brain T2, 24 slices, est. ~19s vs an actual ~2:00). Still excludes partial Fourier and prep pulses (fat sat, IR).
       SNR ≈ (1 / (freq × phase)) × √(NSA × phase steps × (1 + oversampling%)) ÷ (g(R) × √R), assuming FOV and slice thickness stay constant between current and proposed — so voxel size is inferred from matrix size only. TR is not part of this SNR number — its effect on signal (via T1 recovery/saturation) is tissue-dependent, so it's called out qualitatively below instead of folded into the percentage.
       Phase oversampling is modeled like NSA — √(more phase-direction data) — since both just acquire more data in the phase direction, but it doesn't feed voxelFactor: the extra lines extend FOV, not resolution, and are cropped away on recon. Oversampling primarily prevents fold-over/aliasing artifact; the SNR increase is a secondary benefit, not the primary reason to adjust it — don't reduce oversampling below what's needed to prevent aliasing just to save time, even though the calculator will show a time savings for doing so.
       For CS-SENSE, the g-factor model above is skipped — SNR is instead estimated from the ACQ voxel size you enter directly, as (voxel freq × voxel phase) × √(NSA × (1 + oversampling%)), since CS-SENSE's iterative, variable-density reconstruction isn't something this simple model can approximate — treat those estimates as less precise than standard-SENSE ones, and only compare them against other CS-SENSE estimates (see the "not comparable" note when mixing with standard SENSE). Scan time for CS-SENSE isn't estimated at all — dividing by the CS factor like standard SENSE was confirmed ~4x off against actual console time (TR 741, NSA 2, 214×172, CS factor 2.1, TSE factor 7 → this app showed 35.8s, console showed ~150s), and there's no reliable approximation to use instead; the app shows "Verify at console" in its place.
@@ -1444,6 +1452,10 @@
         <input type="number" id="pf-slice-thickness" min="0.1" step="0.1" required>
       </div>
       <div class="field">
+        <label for="pf-slices">Number of slices (optional)</label>
+        <input type="number" id="pf-slices" min="1" step="1" placeholder="e.g. 24">
+      </div>
+      <div class="field">
         <label for="pf-acr-sequence">ACR sequence</label>
         <select id="pf-acr-sequence">
           <option value="">— Not ACR-tracked —</option>
@@ -1506,6 +1518,10 @@
           <span>×</span>
           <input type="number" id="opt-fov-phase" min="10" step="1" placeholder="FOV">
         </div>
+      </div>
+      <div class="field">
+        <label for="opt-slices">Number of slices (optional)</label>
+        <input type="number" id="opt-slices" min="1" step="1" placeholder="e.g. 24">
       </div>
       <div class="field">
         <label for="opt-oversampling">Phase oversampling</label>
@@ -1685,6 +1701,28 @@ function hasCsVoxel(params) {
     && Number.isFinite(params.csVoxelPhase) && params.csVoxelPhase > 0;
 }
 
+// True whenever this params set triggers a known gap in the time model —
+// same "no reliable formula, don't guess" treatment as CS-SENSE, now
+// extended to slice count/coverage. Real 2D multi-slice acquisition packs
+// as many slices as fit into one TR (bounded by per-slice dead time) and
+// needs additional full TR passes ("packages," in Philips' terms) once
+// slice count exceeds that - each pass directly multiplies scan time. This
+// app has no reliable way to estimate max-slices-per-TR (it depends on
+// TE/readout duration/bandwidth/hardware timing this app doesn't model at
+// all - unlike CS-SENSE and TSE factor, there isn't even an approximate
+// relationship to fall back on), and a real test confirmed the resulting
+// gap is severe: an axial brain T2, 24 slices, predicted ~19s vs an actual
+// ~2:00 (~6x). So rather than guess, entering ANY slice count flags time
+// as unreliable - the app can't tell "definitely fits in one TR" from
+// "definitely needs several packages" without that missing formula.
+function hasSliceCount(params) {
+  return Number.isFinite(params.slices) && params.slices > 0;
+}
+
+function hasUnreliableTime(params) {
+  return params.accelType === 'cs-sense' || hasSliceCount(params);
+}
+
 // Phase oversampling extends the acquired FOV in the phase direction
 // beyond the anatomy (the extra region is cropped on recon), so it adds
 // extra phase-encode lines without changing the reconstructed voxel size.
@@ -1804,21 +1842,20 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const snrComparable = currentIsCs === proposedIsCs;
 
   // Time is a different, more serious problem than SNR's basis mismatch
-  // above: effectiveAccelFactor() divides time by the CS-SENSE factor the
-  // exact same way it does standard SENSE, but real-world testing found
-  // that's wrong by a confirmed ~4x on an unmodified baseline protocol
-  // (TR 741, NSA 2, 214x172, CS factor 2.1, TSE factor 7 -> app showed
-  // 35.8s, console showed ~150s). Unlike SNR, there's no known approximate
-  // relationship for CS-SENSE time to fall back on (no g-factor-style
-  // model exists for it), so rather than keep showing a confidently wrong
-  // absolute number, either side's time is flagged unreliable whenever
-  // it's CS-SENSE - currentMs/proposedMs/ratio/percentChange are still
-  // computed (kept internally consistent for the optimizer's own
-  // tier-ranking, which searches other parameters at a FIXED CS factor -
-  // see optimizeProtocolTiers), but the UI must check .comparable before
+  // above: this app has confirmed, unresolved gaps in the time formula for
+  // both CS-SENSE (dividing by its factor the same way as standard SENSE
+  // was ~4x off) and slice count/coverage (multi-package timing isn't
+  // modeled at all, confirmed ~6x off) - see hasUnreliableTime(). Neither
+  // has a reliable approximation to fall back on, so rather than keep
+  // showing a confidently wrong absolute number, either side's time is
+  // flagged unreliable whenever it triggers one of those gaps -
+  // currentMs/proposedMs/ratio/percentChange are still computed (kept
+  // internally consistent for the optimizer's own tier-ranking, which
+  // searches other parameters at a FIXED CS factor/slice count - see
+  // optimizeProtocolTiers), but the UI must check .comparable before
   // displaying any of them and show "Verify at console" instead when false.
-  const currentTimeUnreliable = current.accelType === 'cs-sense';
-  const proposedTimeUnreliable = proposed.accelType === 'cs-sense';
+  const currentTimeUnreliable = hasUnreliableTime(current);
+  const proposedTimeUnreliable = hasUnreliableTime(proposed);
   const timeComparable = !currentTimeUnreliable && !proposedTimeUnreliable;
 
   return {
@@ -1850,7 +1887,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 }
 
 (function () {
-  const ids = ['tr', 'nsa', 'sense', 'freq', 'phase', 'te', 'etl'];
+  const ids = ['tr', 'nsa', 'sense', 'freq', 'phase', 'te', 'etl', 'slices'];
   const curInputs = Object.fromEntries(ids.map(id => [id, document.getElementById('cur-' + id)]));
   const propInputs = Object.fromEntries(ids.map(id => [id, document.getElementById('prop-' + id)]));
 
@@ -2324,6 +2361,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       // leaving this blank behaves exactly as before TSE factor was added
       // to the time model.
       etl: parseFloat(inputs.etl.value),
+      // Optional - hasUnreliableTime() only flags time when this is set,
+      // so leaving it blank behaves exactly as before slice count was
+      // tracked at all.
+      slices: parseFloat(inputs.slices.value),
     };
   }
 
@@ -2697,13 +2738,18 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       oversamplingNoteEl.classList.remove('show');
     }
 
-    if (result.csSenseApprox || !result.time.comparable) {
+    const timeUnreliableCsSense = current.accelType === 'cs-sense' || proposed.accelType === 'cs-sense';
+    const timeUnreliableSlices = hasSliceCount(current) || hasSliceCount(proposed);
+    if (result.csSenseApprox || timeUnreliableCsSense || timeUnreliableSlices) {
       const parts = [];
       if (result.csSenseApprox) {
         parts.push('CS-SENSE SNR estimate is approximate — based on your entered ACQ voxel size only; the g-factor model used for standard SENSE doesn\'t apply, since CS-SENSE\'s iterative, variable-density reconstruction isn\'t something this simple model can approximate.');
       }
-      if (!result.time.comparable) {
+      if (timeUnreliableCsSense) {
         parts.push('CS-SENSE time can\'t be estimated at all — dividing by the CS factor like standard SENSE was confirmed ~4x off against actual console time on an unmodified baseline protocol, and there\'s no reliable approximation to use instead. Read the real scan time off console.');
+      }
+      if (timeUnreliableSlices) {
+        parts.push('Time with a slice count entered can\'t be estimated either — this app doesn\'t model multi-package slice timing (additional TR passes once slice count exceeds what fits per TR), confirmed ~6x off on an axial brain T2 with 24 slices. Read the real scan time off console.');
       }
       csSenseBannerEl.textContent = '⚠ ' + parts.join(' ');
       csSenseBannerEl.classList.add('show');
@@ -3482,6 +3528,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   function applyProtocolToInputs(p, inputs, panel) {
     inputs.tr.value = p.tr;
     inputs.etl.value = p.etl ?? '';
+    inputs.slices.value = p.slices ?? '';
     inputs.nsa.value = p.nsa;
     inputs.sense.value = p.sense;
     inputs.te.value = ''; // TE isn't tracked in the protocol library — avoid stale carryover
@@ -3536,6 +3583,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     phase: document.getElementById('pf-phase'),
     matrixLabel: document.getElementById('pf-matrix-label'),
     sliceThickness: document.getElementById('pf-slice-thickness'),
+    slices: document.getElementById('pf-slices'),
     acrSequence: document.getElementById('pf-acr-sequence'),
     acrHint: document.getElementById('pf-acr-hint'),
     notes: document.getElementById('pf-notes'),
@@ -3622,6 +3670,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     pf.fovPhase.value = prefill?.fovPhase ?? '';
     oversamplingGroups.pf.set(prefill?.oversamplingPercent || 0);
     pf.sliceThickness.value = prefill?.sliceThicknessMm ?? '';
+    pf.slices.value = prefill?.slices ?? '';
     pf.notes.value = prefill?.notes || '';
     toggleSubregionField();
     refreshAcrSequenceOptions();
@@ -3680,6 +3729,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       fovPhase: pf.fovPhase.value ? parseFloat(pf.fovPhase.value) : null,
       oversamplingPercent: oversamplingGroups.pf.readPercent(),
       sliceThicknessMm: parseFloat(pf.sliceThickness.value),
+      slices: parseFloat(pf.slices.value),
       acrSequenceId: pf.acrSequence.value || '',
       notes: pf.notes.value.trim(),
       updatedAt: new Date().toISOString(),
@@ -3702,7 +3752,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const values = readSet(curInputs, 'cur');
     if (!isValid(values)) { alert('Enter valid values in the Current protocol fields before saving.'); return; }
     openModal('add', {
-      tr: values.tr, etl: values.etl, nsa: values.nsa, sense: values.sense, freqMatrix: values.freqMatrix, phaseMatrix: values.phaseMatrix,
+      tr: values.tr, etl: values.etl, slices: values.slices, nsa: values.nsa, sense: values.sense, freqMatrix: values.freqMatrix, phaseMatrix: values.phaseMatrix,
       accelType: values.accelType, csVoxelFreq: values.csVoxelFreq, csVoxelPhase: values.csVoxelPhase,
       oversamplingPercent: values.oversamplingPercent,
     });
@@ -3711,7 +3761,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const values = readSet(propInputs, 'prop');
     if (!isValid(values)) { alert('Enter valid values in the Proposed protocol fields before saving.'); return; }
     openModal('add', {
-      tr: values.tr, etl: values.etl, nsa: values.nsa, sense: values.sense, freqMatrix: values.freqMatrix, phaseMatrix: values.phaseMatrix,
+      tr: values.tr, etl: values.etl, slices: values.slices, nsa: values.nsa, sense: values.sense, freqMatrix: values.freqMatrix, phaseMatrix: values.phaseMatrix,
       accelType: values.accelType, csVoxelFreq: values.csVoxelFreq, csVoxelPhase: values.csVoxelPhase,
       oversamplingPercent: values.oversamplingPercent,
     });
@@ -4236,7 +4286,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           freqMatrix: start.freqMatrix, phaseMatrix: start.phaseMatrix,
           oversamplingPercent: (start.oversamplingPercent || 0) + addOs,
           accelType: start.accelType, csVoxelFreq: start.csVoxelFreq, csVoxelPhase: start.csVoxelPhase,
-          etl: start.etl,
+          etl: start.etl, slices: start.slices,
         };
         const result = compareProtocols(start, candidate, gFactorK);
         if (result.snr.comparable && result.snr.ratio >= NSA_RULE_MIN_SNR_RATIO) {
@@ -4257,7 +4307,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       freqMatrix: start.freqMatrix, phaseMatrix: start.phaseMatrix,
       oversamplingPercent: start.oversamplingPercent,
       accelType: start.accelType, csVoxelFreq: start.csVoxelFreq, csVoxelPhase: start.csVoxelPhase,
-      etl: start.etl,
+      etl: start.etl, slices: start.slices,
     };
 
     if (!isT1 && !isT2) {
@@ -4374,8 +4424,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       // never searched (its real-world non-linearity and voxel-size
       // interaction make it unsuitable to optimize automatically — see
       // tseFactor()) — every candidate just carries the starting value
-      // through unchanged.
-      const candidate = { tr, nsa, sense, freqMatrix, phaseMatrix, oversamplingPercent: searchBase.oversamplingPercent, etl: searchBase.etl };
+      // through unchanged. Slice count is a coverage requirement, not a
+      // speed knob either — never searched, always carried through
+      // unchanged (see hasUnreliableTime()).
+      const candidate = { tr, nsa, sense, freqMatrix, phaseMatrix, oversamplingPercent: searchBase.oversamplingPercent, etl: searchBase.etl, slices: searchBase.slices };
       if (csSense) {
         candidate.accelType = 'cs-sense';
         // The CS factor itself is held fixed (never varied below), but a
@@ -4536,14 +4588,17 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   }
 
   // TR reduction has a real interdependency with slice count/coverage that
-  // this single-slice-group time formula doesn't model (see the model
-  // notes' "excludes ... multi-package slice timing"). Reducing TR can
-  // force some sequences (especially multi-slice 2D TSE/SE) into multiple
-  // concatenations/packages to fit all slices into fewer TR periods —
-  // which multiplies the real scan time and can make it LONGER than this
-  // formula predicts, not shorter, even though the formula itself is
-  // internally consistent. Every TR decrease gets this caution rather
-  // than assuming the predicted time savings will hold at console.
+  // this single-slice-group time formula doesn't model on its own (see
+  // hasUnreliableTime() — entering a slice count flags time outright, but
+  // even WITHOUT one entered, reducing TR can silently push a real
+  // protocol over the max-slices-per-TR line this app has no way to know).
+  // Reducing TR can force some sequences (especially multi-slice 2D
+  // TSE/SE) into multiple concatenations/packages to fit all slices into
+  // fewer TR periods — which multiplies the real scan time and can make it
+  // LONGER than this formula predicts, not shorter, even though the
+  // formula itself is internally consistent. Every TR decrease gets this
+  // caution rather than assuming the predicted time savings will hold at
+  // console.
   function trDecreaseCaveat(start, candidate) {
     if (candidate.tr >= start.tr) return null;
     return 'Verify this TR still fits your full slice coverage in a single package before scanning — reducing TR can force some sequences (especially multi-slice 2D TSE/SE) into multiple concatenations to fit all slices, which this time formula doesn\'t model and would make the real scan time longer than predicted, not shorter.';
@@ -4725,6 +4780,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const optPriorityEl = document.getElementById('opt-priority');
   const optFovFreqEl = document.getElementById('opt-fov-freq');
   const optFovPhaseEl = document.getElementById('opt-fov-phase');
+  const optSlicesEl = document.getElementById('opt-slices');
   oversamplingGroups.opt = setupOversamplingGroup('opt', () => {});
   const optimizerErrorEl = document.getElementById('optimizer-error');
   const optimizerFormSection = document.getElementById('optimizer-form-section');
@@ -4754,6 +4810,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // re-enter — still editable here for a one-off exception.
     optFovFreqEl.value = protocol.fovFreq ?? '';
     optFovPhaseEl.value = protocol.fovPhase ?? '';
+    optSlicesEl.value = protocol.slices ?? '';
     oversamplingGroups.opt.set(protocol.oversamplingPercent || 0);
     optimizerErrorEl.style.display = 'none';
     optimizerModalOverlay.classList.add('show');
@@ -4954,14 +5011,15 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       tr: optimizerProtocol.tr, nsa: optimizerProtocol.nsa,
       sense: optimizerProtocol.accelType === 'none' ? 1 : optimizerProtocol.sense,
       freqMatrix: optimizerProtocol.freqMatrix, phaseMatrix: optimizerProtocol.phaseMatrix,
-      // Read fresh from the modal's own field rather than the stored
-      // protocol value directly, since it's editable here for a one-off
-      // exception just like FOV above.
+      // Read fresh from the modal's own fields rather than the stored
+      // protocol values directly, since they're editable here for a
+      // one-off exception just like FOV above.
       oversamplingPercent: oversamplingGroups.opt.readPercent(),
       accelType: optimizerProtocol.accelType || 'sense',
       csVoxelFreq: optimizerProtocol.csVoxelFreq,
       csVoxelPhase: optimizerProtocol.csVoxelPhase,
       etl: optimizerProtocol.etl,
+      slices: parseFloat(optSlicesEl.value),
     };
     const gFactorK = parseFloat(gK.value);
     // The modal has no separate "Exam/anatomy" field of its own — the
