@@ -652,6 +652,7 @@
   .optimizer-tier-card .tier-metrics .bad { color: var(--bad); font-weight: 600; }
   .optimizer-tier-card .tier-oneliner { color: var(--text-dim); font-size: 0.76rem; line-height: 1.4; }
   .tier-matrix-caveat { color: var(--warn-border); font-size: 0.74rem; font-weight: 600; margin-top: 4px; }
+  .cs-time-unavailable { color: var(--warn-border); font-weight: 600; }
 
   /* NSA rule exceptions + NSA-adjustment step */
   .nsa-exception-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
@@ -890,11 +891,16 @@
           <div class="section-divider">Geometry</div>
           <div class="lib-note" style="margin-top:-4px;">ACQ voxel size — same value as Summary above (linked, not re-entered here).</div>
           <div class="field">
-            <label for="cur-oversampling-h" id="cur-oversampling-label">Fold-over suppression (mm)</label>
+            <label id="cur-oversampling-label">Fold-over suppression</label>
+            <select id="cur-oversampling-axis" style="margin-bottom:6px; width:100%;">
+              <option value="hf">H/F</option>
+              <option value="lr">L/R</option>
+              <option value="ap">A/P</option>
+            </select>
             <div class="matrix-row">
-              <span style="color:var(--text-dim); font-size:0.85rem;">H</span>
+              <span id="cur-oversampling-h-tag" style="color:var(--text-dim); font-size:0.85rem;">H (mm)</span>
               <input type="number" id="cur-oversampling-h" min="0" step="1" placeholder="0">
-              <span style="color:var(--text-dim); font-size:0.85rem;">F</span>
+              <span id="cur-oversampling-f-tag" style="color:var(--text-dim); font-size:0.85rem;">F (mm)</span>
               <input type="number" id="cur-oversampling-f" min="0" step="1" placeholder="0">
             </div>
           </div>
@@ -1049,11 +1055,16 @@
         <div class="section-divider">Geometry</div>
         <div class="lib-note" style="margin-top:-4px;">ACQ voxel size — same value as Summary above (linked, not re-entered here).</div>
         <div class="field">
-          <label for="prop-oversampling-h" id="prop-oversampling-label">Fold-over suppression (mm)</label>
+          <label id="prop-oversampling-label">Fold-over suppression</label>
+          <select id="prop-oversampling-axis" style="margin-bottom:6px; width:100%;">
+            <option value="hf">H/F</option>
+            <option value="lr">L/R</option>
+            <option value="ap">A/P</option>
+          </select>
           <div class="matrix-row">
-            <span style="color:var(--text-dim); font-size:0.85rem;">H</span>
+            <span id="prop-oversampling-h-tag" style="color:var(--text-dim); font-size:0.85rem;">H (mm)</span>
             <input type="number" id="prop-oversampling-h" min="0" step="1" placeholder="0">
-            <span style="color:var(--text-dim); font-size:0.85rem;">F</span>
+            <span id="prop-oversampling-f-tag" style="color:var(--text-dim); font-size:0.85rem;">F (mm)</span>
             <input type="number" id="prop-oversampling-f" min="0" step="1" placeholder="0">
           </div>
         </div>
@@ -1145,7 +1156,7 @@
       <strong>Model notes:</strong> Scan time ≈ TR × NSA × phase steps × (1 + oversampling%) ÷ (SENSE × TSE/turbo factor). TSE/turbo factor is now included (previously excluded entirely, which produced a ~9.5× real-world discrepancy on a TSE cervical axial T2 — est. ~19 min vs an actual ~2 min); it doesn't scale time perfectly linearly in practice and can also affect achievable voxel size, similar to the CS-SENSE factor, so treat this as a major improvement over the prior order-of-magnitude error, not a claim of precise linearity — verify any meaningful TSE factor change at console. Still excludes partial Fourier, prep pulses, and multi-package slice timing.
       SNR ≈ (1 / (freq × phase)) × √(NSA × phase steps × (1 + oversampling%)) ÷ (g(R) × √R), assuming FOV and slice thickness stay constant between current and proposed — so voxel size is inferred from matrix size only. TR is not part of this SNR number — its effect on signal (via T1 recovery/saturation) is tissue-dependent, so it's called out qualitatively below instead of folded into the percentage.
       Phase oversampling is modeled like NSA — √(more phase-direction data) — since both just acquire more data in the phase direction, but it doesn't feed voxelFactor: the extra lines extend FOV, not resolution, and are cropped away on recon. Oversampling primarily prevents fold-over/aliasing artifact; the SNR increase is a secondary benefit, not the primary reason to adjust it — don't reduce oversampling below what's needed to prevent aliasing just to save time, even though the calculator will show a time savings for doing so.
-      For CS-SENSE, the g-factor model above is skipped — SNR is instead estimated from the ACQ voxel size you enter directly, as (voxel freq × voxel phase) × √(NSA × (1 + oversampling%)), since CS-SENSE's iterative, variable-density reconstruction isn't something this simple model can approximate — treat those estimates as less precise than standard-SENSE ones, and only compare them against other CS-SENSE estimates (see the "not comparable" note when mixing with standard SENSE).
+      For CS-SENSE, the g-factor model above is skipped — SNR is instead estimated from the ACQ voxel size you enter directly, as (voxel freq × voxel phase) × √(NSA × (1 + oversampling%)), since CS-SENSE's iterative, variable-density reconstruction isn't something this simple model can approximate — treat those estimates as less precise than standard-SENSE ones, and only compare them against other CS-SENSE estimates (see the "not comparable" note when mixing with standard SENSE). Scan time for CS-SENSE isn't estimated at all — dividing by the CS factor like standard SENSE was confirmed ~4x off against actual console time (TR 741, NSA 2, 214×172, CS factor 2.1, TSE factor 7 → this app showed 35.8s, console showed ~150s), and there's no reliable approximation to use instead; the app shows "Verify at console" in its place.
       g(R) = 1 + K×(R−1) is a simplified linear g-factor approximation, not derived from actual coil geometry.
       FOV and Voxel size are a convenience for filling in Matrix (Matrix = FOV ÷ Voxel size, per axis) — only Matrix itself feeds the SNR/time formulas above.
       This tool produces planning estimates only — always verify against the actual scanner console.
@@ -1792,12 +1803,33 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const proposedIsCs = hasCsVoxel(proposed);
   const snrComparable = currentIsCs === proposedIsCs;
 
+  // Time is a different, more serious problem than SNR's basis mismatch
+  // above: effectiveAccelFactor() divides time by the CS-SENSE factor the
+  // exact same way it does standard SENSE, but real-world testing found
+  // that's wrong by a confirmed ~4x on an unmodified baseline protocol
+  // (TR 741, NSA 2, 214x172, CS factor 2.1, TSE factor 7 -> app showed
+  // 35.8s, console showed ~150s). Unlike SNR, there's no known approximate
+  // relationship for CS-SENSE time to fall back on (no g-factor-style
+  // model exists for it), so rather than keep showing a confidently wrong
+  // absolute number, either side's time is flagged unreliable whenever
+  // it's CS-SENSE - currentMs/proposedMs/ratio/percentChange are still
+  // computed (kept internally consistent for the optimizer's own
+  // tier-ranking, which searches other parameters at a FIXED CS factor -
+  // see optimizeProtocolTiers), but the UI must check .comparable before
+  // displaying any of them and show "Verify at console" instead when false.
+  const currentTimeUnreliable = current.accelType === 'cs-sense';
+  const proposedTimeUnreliable = proposed.accelType === 'cs-sense';
+  const timeComparable = !currentTimeUnreliable && !proposedTimeUnreliable;
+
   return {
     time: {
       currentMs: timeCurrentMs,
       proposedMs: timeProposedMs,
       ratio: timeRatio,
       percentChange: (timeRatio - 1) * 100,
+      comparable: timeComparable,
+      currentUnreliable: currentTimeUnreliable,
+      proposedUnreliable: proposedTimeUnreliable,
     },
     snr: {
       currentRelative: snrCurrent,
@@ -2077,19 +2109,45 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // convert — read directly regardless of Matrix input style, same
   // "don't make them re-enter it" pattern as the FOV/voxel fields.
   // ---------------------------------------------------------------------
+  // Which two edges the two fold-over suppression fields represent — a
+  // purely cosmetic relabeling (see setupOversamplingGroup below); the
+  // oversampling percentage this feeds into the physics formulas is
+  // exactly the same regardless of which physical axis it's labeled as.
+  const OVERSAMPLING_AXIS_LETTERS = { hf: ['H', 'F'], lr: ['L', 'R'], ap: ['A', 'P'] };
+
   function setupOversamplingGroup(prefix, onChange) {
     const valueEl = document.getElementById(`${prefix}-oversampling`);
     const unitEl = document.getElementById(`${prefix}-oversampling-unit`);
     const derivedEl = document.getElementById(`${prefix}-oversampling-derived`);
     const fovPhaseEl = document.getElementById(`${prefix}-fov-phase`);
-    // Philips-layout H(ead)/F(oot) fold-over suppression entry, if present
-    // for this prefix (Current/Proposed panels; the optimizer modal and
-    // Protocol Library form still use the plain value+unit control). Pure
-    // data-entry convenience — H + F combine into the same single mm
-    // value the rest of this group already knows how to convert/consume,
-    // so none of the downstream math changes.
+    // Philips-layout fold-over suppression entry, if present for this
+    // prefix (Current/Proposed panels; the optimizer modal and Protocol
+    // Library form still use the plain value+unit control). Pure
+    // data-entry convenience — the two axis fields combine into the same
+    // single mm value the rest of this group already knows how to
+    // convert/consume, so none of the downstream math changes. Which axis
+    // PAIR applies (H/F, L/R, or A/P) is a per-sequence tech choice, not
+    // something derivable from slice orientation/plane the way the
+    // Matrix freq/phase labels are (see axisPairLabel) — cervical axials
+    // commonly run L/R phase, for instance — so it's its own selector,
+    // independent per Current/Proposed panel, that just relabels these
+    // two fields to match whichever pair is actually in use.
     const hEl = document.getElementById(`${prefix}-oversampling-h`);
     const fEl = document.getElementById(`${prefix}-oversampling-f`);
+    const axisEl = document.getElementById(`${prefix}-oversampling-axis`);
+    const hTagEl = document.getElementById(`${prefix}-oversampling-h-tag`);
+    const fTagEl = document.getElementById(`${prefix}-oversampling-f-tag`);
+
+    function updateAxisTags() {
+      if (!axisEl || !hTagEl || !fTagEl) return;
+      const [firstLetter, secondLetter] = OVERSAMPLING_AXIS_LETTERS[axisEl.value] || OVERSAMPLING_AXIS_LETTERS.hf;
+      hTagEl.textContent = `${firstLetter} (mm)`;
+      fTagEl.textContent = `${secondLetter} (mm)`;
+    }
+    if (axisEl) {
+      axisEl.addEventListener('change', updateAxisTags);
+      updateAxisTags();
+    }
 
     function readPercent() {
       const raw = parseFloat(valueEl.value);
@@ -2142,6 +2200,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         unitEl.value = 'pct';
         if (hEl) hEl.value = '';
         if (fEl) fEl.value = '';
+        // No protocol to infer an axis pair from — back to the H/F default.
+        if (axisEl) { axisEl.value = 'hf'; updateAxisTags(); }
         updateDerived();
       },
       set(percent) {
@@ -2152,6 +2212,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         // shows the actual value driving the calculation.
         if (hEl) hEl.value = '';
         if (fEl) fEl.value = '';
+        if (axisEl) { axisEl.value = 'hf'; updateAxisTags(); }
         updateDerived();
       },
     };
@@ -2558,13 +2619,27 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
     const result = compareProtocols(current, proposed, k);
 
-    // Time: a decrease is "good" (shorter scan), an increase is "bad"
-    timeValueEl.textContent = formatPercent(result.time.percentChange);
-    timeValueEl.classList.toggle('good', result.time.percentChange < 0);
-    timeValueEl.classList.toggle('bad', result.time.percentChange > 0);
-    timeSubEl.textContent = formatSeconds(result.time.currentMs) + ' → ' + formatSeconds(result.time.proposedMs);
-    setBar(timeBarEl, result.time.percentChange);
-    timeBarEl.classList.add(result.time.percentChange <= 0 ? 'good' : 'bad');
+    // Time: a decrease is "good" (shorter scan), an increase is "bad" —
+    // except when either side is CS-SENSE, where this app has no reliable
+    // time formula at all (confirmed ~4x off against console on an
+    // unmodified baseline protocol) and shows "Verify at console" instead
+    // of a number, the same honest-gap treatment as SNR's "not comparable".
+    timeBarEl.classList.remove('good', 'bad');
+    if (result.time.comparable) {
+      timeValueEl.textContent = formatPercent(result.time.percentChange);
+      timeValueEl.classList.toggle('good', result.time.percentChange < 0);
+      timeValueEl.classList.toggle('bad', result.time.percentChange > 0);
+      setBar(timeBarEl, result.time.percentChange);
+      timeBarEl.classList.add(result.time.percentChange <= 0 ? 'good' : 'bad');
+    } else {
+      timeValueEl.textContent = 'Verify at console';
+      timeValueEl.classList.remove('good', 'bad');
+      setBar(timeBarEl, 0);
+    }
+    timeSubEl.textContent =
+      (result.time.currentUnreliable ? 'Verify at console' : formatSeconds(result.time.currentMs))
+      + ' → ' +
+      (result.time.proposedUnreliable ? 'Verify at console' : formatSeconds(result.time.proposedMs));
 
     // SNR: an increase is "good", a decrease is "bad" — except when current
     // and proposed use different SNR bases (one CS-SENSE, one not), where
@@ -2622,8 +2697,15 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       oversamplingNoteEl.classList.remove('show');
     }
 
-    if (result.csSenseApprox) {
-      csSenseBannerEl.textContent = '⚠ CS-SENSE SNR estimate is approximate — based on your entered ACQ voxel size only; the g-factor model used for standard SENSE doesn\'t apply, since CS-SENSE\'s iterative, variable-density reconstruction isn\'t something this simple model can approximate.';
+    if (result.csSenseApprox || !result.time.comparable) {
+      const parts = [];
+      if (result.csSenseApprox) {
+        parts.push('CS-SENSE SNR estimate is approximate — based on your entered ACQ voxel size only; the g-factor model used for standard SENSE doesn\'t apply, since CS-SENSE\'s iterative, variable-density reconstruction isn\'t something this simple model can approximate.');
+      }
+      if (!result.time.comparable) {
+        parts.push('CS-SENSE time can\'t be estimated at all — dividing by the CS factor like standard SENSE was confirmed ~4x off against actual console time on an unmodified baseline protocol, and there\'s no reliable approximation to use instead. Read the real scan time off console.');
+      }
+      csSenseBannerEl.textContent = '⚠ ' + parts.join(' ');
       csSenseBannerEl.classList.add('show');
     } else {
       csSenseBannerEl.classList.remove('show');
@@ -2671,7 +2753,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // time formula); SNR excludes TR and TSE factor, since relativeSnr()
     // never uses either.
     const confRows = suggestionConfidenceRows(current, proposed, propRange);
-    timeConfidenceEl.innerHTML = confidenceTagFromRows(confRows);
+    // Skip the tag when time isn't comparable at all (CS-SENSE) — the
+    // "Verify at console" value itself already says so; a second tag
+    // next to it would just be redundant.
+    timeConfidenceEl.innerHTML = result.time.comparable ? confidenceTagFromRows(confRows) : '';
     snrConfidenceEl.innerHTML = result.snr.comparable ? confidenceTagFromRows(confRows.filter(r => r.key !== 'tr' && r.key !== 'etl')) : '';
 
     // TSE/turbo factor now feeds the time formula (see tseFactor()) but is
@@ -4365,10 +4450,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // Be honest when the resolution ceiling itself is the bottleneck,
     // rather than silently presenting a barely-there time saving as if it
     // were a real recommendation — see MIN_MEANINGFUL_TIME_SAVINGS_PCT.
-    if (fastest && fastest.result.time.percentChange > -MIN_MEANINGFUL_TIME_SAVINGS_PCT) {
+    // Skipped for CS-SENSE, where the time percentage itself isn't
+    // comparable/displayed at all (see compareProtocols) - this claim
+    // would just be another confident number built on the same untrusted
+    // formula.
+    if (fastest && fastest.result.time.comparable && fastest.result.time.percentChange > -MIN_MEANINGFUL_TIME_SAVINGS_PCT) {
       fastest.limitedSavings = true;
     }
-    if (balanced && balanced.result.time.percentChange > -MIN_MEANINGFUL_TIME_SAVINGS_PCT) {
+    if (balanced && balanced.result.time.comparable && balanced.result.time.percentChange > -MIN_MEANINGFUL_TIME_SAVINGS_PCT) {
       balanced.limitedSavings = true;
     }
 
@@ -4729,14 +4818,19 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // (e.g. a range violation) shouldn't taint the SNR badge — only the
     // time estimate actually depends on TR.
     const confRows = suggestionConfidenceRows(outcome.start, candidate, outcome.trRange);
-    const timeConfTag = confidenceTagFromRows(confRows);
+    // CS-SENSE time isn't comparable at all (see compareProtocols) — show
+    // that directly rather than a confidence-tagged number that's still
+    // implicitly claiming a specific percentage.
+    const timeMetricHtml = result.time.comparable
+      ? `<span class="${result.time.percentChange <= 0 ? 'good' : 'bad'}">${formatPercent(result.time.percentChange)} time</span>${confidenceTagFromRows(confRows)}`
+      : `<span class="cs-time-unavailable">Verify at console (time)</span>`;
     const snrConfTag = confidenceTagFromRows(confRows.filter(r => r.key !== 'tr'));
     return `
       <label class="optimizer-tier-card" data-tier="${key}">
         <input type="radio" name="${radioName}" value="${key}" ${checked}>
         <h4>${escapeHtml(meta.label)}</h4>
         <div class="tier-metrics">
-          <span class="${result.time.percentChange <= 0 ? 'good' : 'bad'}">${formatPercent(result.time.percentChange)} time</span>${timeConfTag}
+          ${timeMetricHtml}
           <span class="${result.snr.percentChange >= 0 ? 'good' : 'bad'}">${formatPercent(result.snr.percentChange)} SNR</span>${snrConfTag}
         </div>
         <div class="tier-oneliner">${escapeHtml(tierChangeOneLiner(outcome.start, tierData.candidate))}</div>
@@ -4802,9 +4896,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       <div class="lib-note" style="margin-top:-6px;">Oversampling is a fold-over/aliasing safeguard, not a speed knob — every tier keeps it unchanged from the starting protocol.</div>
       <div class="results" style="margin: 14px 0;">
         <div class="result-card">
-          <h3>Relative scan time ${timeConfTag}</h3>
-          <div class="result-value ${result.time.percentChange < 0 ? 'good' : result.time.percentChange > 0 ? 'bad' : ''}">${formatPercent(result.time.percentChange)}</div>
-          <div class="result-sub">${formatSeconds(result.time.currentMs)} → ${formatSeconds(result.time.proposedMs)}</div>
+          <h3>Relative scan time ${result.time.comparable ? timeConfTag : ''}</h3>
+          ${result.time.comparable
+            ? `<div class="result-value ${result.time.percentChange < 0 ? 'good' : result.time.percentChange > 0 ? 'bad' : ''}">${formatPercent(result.time.percentChange)}</div>
+          <div class="result-sub">${formatSeconds(result.time.currentMs)} → ${formatSeconds(result.time.proposedMs)}</div>`
+            : `<div class="result-value cs-time-unavailable" style="font-size:1.1rem;">Verify at console</div>
+          <div class="result-sub">${result.time.currentUnreliable ? 'Verify at console' : formatSeconds(result.time.currentMs)} → ${result.time.proposedUnreliable ? 'Verify at console' : formatSeconds(result.time.proposedMs)}</div>`
+          }
         </div>
         <div class="result-card">
           <h3>Relative SNR ${snrConfTag}</h3>
