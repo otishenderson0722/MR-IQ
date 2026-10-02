@@ -359,6 +359,26 @@
     color: var(--text-dim);
     white-space: pre-wrap;
   }
+  /* Planning notes — deliberately more prominent than the generic Notes
+     field above: site-specific slice-angling/positioning guidance a tech
+     needs to see before planning the scan, not buried at the bottom. */
+  .planning-note-callout {
+    background: rgba(79, 168, 224, 0.10);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.82rem;
+    white-space: pre-wrap;
+  }
+  .planning-note-callout .planning-note-label {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    display: block;
+    margin-bottom: 2px;
+  }
   .health-score-row { display: flex; align-items: center; gap: 8px; }
   .health-score-badge {
     font-size: 0.76rem;
@@ -654,6 +674,26 @@
   .tier-matrix-caveat { color: var(--warn-border); font-size: 0.74rem; font-weight: 600; margin-top: 4px; }
   .cs-time-unavailable { color: var(--warn-border); font-weight: 600; }
 
+  /* Habitus-based oversampling reduction — deliberately louder than the
+     standard confidence tag / warning-banner, since this is a
+     coverage/safety parameter (anatomy fitting in the FOV), not just a
+     speed knob that's merely imprecise. */
+  .habitus-caveat-card {
+    color: var(--bad);
+    font-weight: 700;
+    font-size: 0.78rem;
+    margin-top: 4px;
+  }
+  .habitus-caveat-banner {
+    background: rgba(240, 103, 79, 0.14);
+    border: 2px solid var(--bad);
+    color: var(--bad);
+    font-weight: 700;
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin: 8px 0;
+  }
+
   /* NSA rule exceptions + NSA-adjustment step */
   .nsa-exception-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
   .nsa-exception-chip {
@@ -820,6 +860,24 @@
     </div>
 
     <div class="settings-row">
+      <label for="calc-height">Patient height (optional)</label>
+      <input type="number" id="calc-height" min="1" step="0.1" placeholder="e.g. 170" style="width: 80px;">
+      <select id="calc-height-unit"><option value="cm">cm</option><option value="in">in</option></select>
+      <label for="calc-weight" style="margin-left: 8px;">Weight (optional)</label>
+      <input type="number" id="calc-weight" min="1" step="0.1" placeholder="e.g. 70" style="width: 80px;">
+      <select id="calc-weight-unit"><option value="kg">kg</option><option value="lb">lb</option></select>
+      <span style="color: var(--text-dim); margin-left: 8px;" id="calc-habitus-derived"></span>
+    </div>
+    <div class="settings-row" style="margin-top: -10px;">
+      <span style="color: var(--text-dim)">
+        Used only by the optimizer below, to judge how much oversampling margin a given patient actually needs — a
+        rough habitus estimate (BMI-based, acknowledged as an imperfect proxy for cross-sectional girth), not a
+        precise measurement. Leave either blank and oversampling stays untouched by the optimizer, exactly as
+        without this field.
+      </span>
+    </div>
+
+    <div class="settings-row">
       <label for="gfactor-k">g-factor penalty constant (K)</label>
       <input type="range" id="gfactor-k" min="0" max="1" step="0.05" value="0.3">
       <span class="val" id="gfactor-k-val">0.30</span>
@@ -829,6 +887,7 @@
     <div class="columns">
       <div class="panel">
         <h2><span class="dot current"></span> Current protocol</h2>
+        <div id="cur-planning-note"></div>
 
         <!-- Field order/grouping below mirrors the Philips console's own
              Summary / Geometry / Contrast tabs (hardcoded for now — see
@@ -992,6 +1051,7 @@
 
     <div class="panel" style="max-width: 460px; margin-bottom: 16px;">
       <h2><span class="dot proposed"></span> Proposed protocol</h2>
+      <div id="prop-planning-note"></div>
       <div class="field">
         <label for="prop-sequenceType">Sequence type (optional)</label>
         <select id="prop-sequenceType">
@@ -1463,6 +1523,10 @@
       </div>
       <div class="acr-hint" id="pf-acr-hint"></div>
       <div class="notes-field">
+        <label for="pf-planning-notes">Planning notes (optional)</label>
+        <textarea id="pf-planning-notes" rows="2" placeholder="Site-specific slice angling/positioning guidance — e.g. &quot;angle axials to the corpus callosum, not AC-PC&quot;. Shown prominently on this protocol's card — plain text only, doesn't affect any calculation."></textarea>
+      </div>
+      <div class="notes-field">
         <label for="pf-notes">Notes</label>
         <textarea id="pf-notes" rows="3" placeholder="Optional — coil used, breath-hold, indication, etc."></textarea>
       </div>
@@ -1492,6 +1556,7 @@
       scanning.
     </div>
 
+    <div id="optimizer-planning-note"></div>
     <div id="optimizer-health-score" class="optimizer-health-score"></div>
 
     <div id="optimizer-form-section">
@@ -1522,6 +1587,16 @@
       <div class="field">
         <label for="opt-slices">Number of slices (optional)</label>
         <input type="number" id="opt-slices" min="1" step="1" placeholder="e.g. 24">
+      </div>
+      <div class="field">
+        <label for="opt-height">Patient height / weight (optional)</label>
+        <div class="matrix-row">
+          <input type="number" id="opt-height" min="1" step="0.1" placeholder="height">
+          <select id="opt-height-unit"><option value="cm">cm</option><option value="in">in</option></select>
+          <input type="number" id="opt-weight" min="1" step="0.1" placeholder="weight">
+          <select id="opt-weight-unit"><option value="kg">kg</option><option value="lb">lb</option></select>
+        </div>
+        <div class="lib-note" id="opt-habitus-derived" style="margin-top:-6px;"></div>
       </div>
       <div class="field">
         <label for="opt-oversampling">Phase oversampling</label>
@@ -2002,6 +2077,28 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const propSequenceTypeEl = document.getElementById('prop-sequenceType');
   const examLabelEl = document.getElementById('exam-label');
   examLabelEl.addEventListener('input', render);
+
+  // Patient height/weight — optimizer-only (see optimizeProtocolTiers'
+  // habitus-based oversampling floor); doesn't touch the manual
+  // Current-vs-Proposed comparison at all, so only the optimizer needs
+  // to be recomputed when either changes.
+  const calcHeightEl = document.getElementById('calc-height');
+  const calcHeightUnitEl = document.getElementById('calc-height-unit');
+  const calcWeightEl = document.getElementById('calc-weight');
+  const calcWeightUnitEl = document.getElementById('calc-weight-unit');
+  const calcHabitusDerivedEl = document.getElementById('calc-habitus-derived');
+
+  function updateCalcHabitusDerived() {
+    const heightCm = heightToCm(parseFloat(calcHeightEl.value), calcHeightUnitEl.value);
+    const weightKg = weightToKg(parseFloat(calcWeightEl.value), calcWeightUnitEl.value);
+    const bmi = estimateBmi(heightCm, weightKg);
+    calcHabitusDerivedEl.textContent = bmi !== null
+      ? `BMI ~${Math.round(bmi)} (${bmiCategory(bmi)}) — oversampling floor ~${habitusOversamplingFloor(bmi)}%`
+      : '';
+  }
+
+  setupUnitConvertingField(calcHeightEl, calcHeightUnitEl, heightToCm, cmToDisplay, () => { updateCalcHabitusDerived(); computeCalcOptimizer(); });
+  setupUnitConvertingField(calcWeightEl, calcWeightUnitEl, weightToKg, kgToDisplay, () => { updateCalcHabitusDerived(); computeCalcOptimizer(); });
 
   const CLINICAL_PRIORITIES = {
     'cord-nerve': {
@@ -2553,7 +2650,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
     const gFactorK = parseFloat(gK.value);
     const examLabel = examLabelEl.value;
-    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions });
+    const heightCm = heightToCm(parseFloat(calcHeightEl.value), calcHeightUnitEl.value);
+    const weightKg = weightToKg(parseFloat(calcWeightEl.value), calcWeightUnitEl.value);
+    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg });
 
     if (!outcome.ok) {
       calcOptimizerOutcome = null;
@@ -2603,6 +2702,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (!tierData) return;
     applyProtocolToInputs(tierData.candidate, propInputs, 'prop');
     propSequenceTypeEl.value = calcOptimizerOutcome.sequenceType;
+    // The tier candidate is a derived parameter set, not a protocol record
+    // — it carries no planning note of its own, so copy over whatever's
+    // currently shown for Current, since that's what the optimizer ran on.
+    document.getElementById('prop-planning-note').innerHTML = document.getElementById('cur-planning-note').innerHTML;
     render();
   });
 
@@ -2843,6 +2946,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     oversamplingGroups.cur.reset();
     oversamplingGroups.prop.reset();
     gK.value = DEFAULT_G_FACTOR_K;
+    document.getElementById('cur-planning-note').innerHTML = '';
+    document.getElementById('prop-planning-note').innerHTML = '';
     curInputs.tr.focus();
     render();
   });
@@ -3194,7 +3299,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       if (libState.scanner && scannerLabel(p) !== libState.scanner) return false;
       if (libState.facility && p.facility !== libState.facility) return false;
       if (libState.search) {
-        const haystack = [p.name, p.facility, p.scannerModel, p.scannerRoom, p.notes].join(' ').toLowerCase();
+        const haystack = [p.name, p.facility, p.scannerModel, p.scannerRoom, p.notes, p.planningNotes].join(' ').toLowerCase();
         if (!haystack.includes(libState.search)) return false;
       }
       return true;
@@ -3337,6 +3442,15 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       ${bulletsHtml}`;
   }
 
+  // Separate from the generic Notes field below — site-specific slice
+  // angling/positioning guidance a tech needs to see BEFORE planning the
+  // scan, so it renders near the top of the card, not after everything
+  // else. Plain text only; never feeds the calculator/optimizer math.
+  function planningNoteHtml(p) {
+    if (!p.planningNotes) return '';
+    return `<div class="planning-note-callout"><span class="planning-note-label">📐 Planning note</span>${escapeHtml(p.planningNotes)}</div>`;
+  }
+
   function protocolCardHtml(p) {
     const notesHtml = p.notes ? `<div class="protocol-notes">${escapeHtml(p.notes)}</div>` : '';
     const regionLabel = p.region + (p.region === 'Spine' && p.subRegion ? ' · ' + p.subRegion : '');
@@ -3354,6 +3468,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           <span class="badge badge-scanner">${escapeHtml(scannerLabel(p))}</span>
           ${vendorBadgeHtml}
         </div>
+        ${planningNoteHtml(p)}
         <div class="protocol-params">TR ${p.tr} ms · ${terms.nsa} ${p.nsa} · ${accelSummaryLabel(p)} · ${p.freqMatrix}×${p.phaseMatrix}${thicknessLabel}</div>
         ${acrTagHtml}
         ${healthScoreHtml(p)}
@@ -3493,11 +3608,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     switch (btn.dataset.action) {
       case 'load-current':
         applyProtocolToInputs(protocol, curInputs, 'cur');
+        document.getElementById('cur-planning-note').innerHTML = planningNoteHtml(protocol);
         render();
         switchView('calculator');
         break;
       case 'load-proposed':
         applyProtocolToInputs(protocol, propInputs, 'prop');
+        document.getElementById('prop-planning-note').innerHTML = planningNoteHtml(protocol);
         render();
         switchView('calculator');
         break;
@@ -3587,6 +3704,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     acrSequence: document.getElementById('pf-acr-sequence'),
     acrHint: document.getElementById('pf-acr-hint'),
     notes: document.getElementById('pf-notes'),
+    planningNotes: document.getElementById('pf-planning-notes'),
   };
 
   matrixStyleGroups.pf = setupMatrixStyleGroup('pf', () => {});
@@ -3672,6 +3790,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     pf.sliceThickness.value = prefill?.sliceThicknessMm ?? '';
     pf.slices.value = prefill?.slices ?? '';
     pf.notes.value = prefill?.notes || '';
+    pf.planningNotes.value = prefill?.planningNotes || '';
     toggleSubregionField();
     refreshAcrSequenceOptions();
     pf.acrSequence.value = prefill?.acrSequenceId || '';
@@ -3732,6 +3851,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       slices: parseFloat(pf.slices.value),
       acrSequenceId: pf.acrSequence.value || '',
       notes: pf.notes.value.trim(),
+      planningNotes: pf.planningNotes.value.trim(),
       updatedAt: new Date().toISOString(),
     };
 
@@ -4189,6 +4309,87 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     return vals.sort((a, b) => b - a);
   }
 
+  // --- Habitus-based oversampling floor -------------------------------
+  // BMI (kg/m^2) as a rough, acknowledged-imperfect proxy for how much
+  // fold-over suppression margin a patient actually needs. It isn't a
+  // direct measurement of cross-sectional girth in the phase direction
+  // (which is what actually drives how far anatomy extends toward the
+  // FOV edge) - two people at the same BMI can have different girth - but
+  // combining height+weight is meaningfully better than weight alone,
+  // since two patients at the same weight but different heights have
+  // different girth. Returns null whenever either input is missing,
+  // which is the signal the optimizer uses to leave oversampling alone
+  // exactly as it does without this feature at all.
+  function estimateBmi(heightCm, weightKg) {
+    if (!Number.isFinite(heightCm) || heightCm <= 0 || !Number.isFinite(weightKg) || weightKg <= 0) return null;
+    const heightM = heightCm / 100;
+    return weightKg / (heightM * heightM);
+  }
+
+  // Minimum recommended oversampling %, by estimated BMI band - each
+  // number already includes a real safety margin on top of the bare
+  // theoretical minimum (per your explicit "don't suggest the bare
+  // minimum" instruction), not just the smallest value that might work.
+  // These are starting points, same spirit as MAX_VOXEL_INCREASE_PCT
+  // above - adjustable constants, not a clinical standard.
+  const HABITUS_OVERSAMPLING_FLOOR_PCT = [
+    { maxBmi: 20, floorPct: 10 },
+    { maxBmi: 25, floorPct: 15 },
+    { maxBmi: 30, floorPct: 20 },
+    { maxBmi: 35, floorPct: 25 },
+    { maxBmi: Infinity, floorPct: 30 },
+  ];
+
+  function habitusOversamplingFloor(bmi) {
+    const band = HABITUS_OVERSAMPLING_FLOOR_PCT.find(b => bmi <= b.maxBmi) || HABITUS_OVERSAMPLING_FLOOR_PCT[HABITUS_OVERSAMPLING_FLOOR_PCT.length - 1];
+    return band.floorPct;
+  }
+
+  function bmiCategory(bmi) {
+    if (bmi < 18.5) return 'underweight';
+    if (bmi < 25) return 'normal';
+    if (bmi < 30) return 'overweight';
+    if (bmi < 40) return 'obese';
+    return 'severely obese';
+  }
+
+  const HEIGHT_CM_PER_IN = 2.54;
+  const WEIGHT_KG_PER_LB = 0.45359237;
+
+  function heightToCm(value, unit) {
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return unit === 'in' ? value * HEIGHT_CM_PER_IN : value;
+  }
+
+  function weightToKg(value, unit) {
+    if (!Number.isFinite(value) || value <= 0) return null;
+    return unit === 'lb' ? value * WEIGHT_KG_PER_LB : value;
+  }
+
+  // Lets a height/weight unit dropdown behave like an actual unit
+  // converter (switching cm->in recomputes the displayed number) rather
+  // than the oversampling group's "reinterpret the same number" pattern -
+  // appropriate there since %/mm aren't a pure scale factor of each
+  // other, but wrong here since cm/in and kg/lb are.
+  function setupUnitConvertingField(valueEl, unitEl, toCanonical, fromCanonical, onChange) {
+    let lastUnit = unitEl.value;
+    unitEl.addEventListener('change', () => {
+      const raw = parseFloat(valueEl.value);
+      if (Number.isFinite(raw)) {
+        const canonical = toCanonical(raw, lastUnit);
+        if (canonical !== null) {
+          valueEl.value = Math.round(fromCanonical(canonical, unitEl.value) * 10) / 10;
+        }
+      }
+      lastUnit = unitEl.value;
+      onChange();
+    });
+    valueEl.addEventListener('input', onChange);
+  }
+
+  function cmToDisplay(cm, unit) { return unit === 'in' ? cm / HEIGHT_CM_PER_IN : cm; }
+  function kgToDisplay(kg, unit) { return unit === 'lb' ? kg / WEIGHT_KG_PER_LB : kg; }
+
   // Candidate values from `current` up to `ceiling`, stepping by `step`,
   // always including both endpoints. If current already meets/exceeds the
   // ceiling, there's nowhere to go — just return current.
@@ -4369,7 +4570,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   }
 
   function optimizeProtocolTiers(start, opts) {
-    const { sequenceType, priority, gFactorK, examLabel, exceptions } = opts;
+    const { sequenceType, priority, gFactorK, examLabel, exceptions, heightCm, weightKg } = opts;
     const trRange = findTrRange(sequenceType);
     if (!trRange || !Number.isFinite(trRange.minTr) || !Number.isFinite(trRange.maxTr)) {
       return { ok: false, reason: `No TR range defined for "${sequenceType}" yet. Add it in the TR Ranges tab first.` };
@@ -4414,20 +4615,38 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const balancedLocked = balancedMatrixScales.length === 1 && balancedMatrixScales[0] >= 1 - 1e-9;
     const qualityLocked = qualityMatrixScales.length === 1 && qualityMatrixScales[0] >= 1 - 1e-9;
 
-    function buildCandidate(sense, nsa, scale, tr) {
+    // Habitus-based oversampling floor — purely additive: null whenever
+    // height+weight aren't BOTH provided, in which case every tier below
+    // just falls back to searchBase.oversamplingPercent (buildCandidate's
+    // default) and oversampling stays exactly as untouched as it was
+    // before this feature existed. When both ARE provided, Fastest may
+    // reduce all the way to the habitus floor, Balanced about halfway
+    // there, Quality-first never (protecting margin is its whole
+    // purpose — same tier philosophy as the voxel-size caps above). Never
+    // used to INCREASE oversampling, and never below the floor itself.
+    const baseOversampling = searchBase.oversamplingPercent || 0;
+    const habitusBmi = estimateBmi(heightCm, weightKg);
+    const habitusFloorPct = habitusBmi !== null ? habitusOversamplingFloor(habitusBmi) : null;
+    const habitusHasRoom = habitusFloorPct !== null && habitusFloorPct < baseOversampling;
+    const fastestOversamplingPct = habitusHasRoom ? habitusFloorPct : baseOversampling;
+    const balancedOversamplingPct = habitusHasRoom ? Math.round((baseOversampling + habitusFloorPct) / 2) : baseOversampling;
+    const habitusInfo = habitusHasRoom ? { bmi: habitusBmi, category: bmiCategory(habitusBmi), floorPct: habitusFloorPct, basePct: baseOversampling } : null;
+
+    function buildCandidate(sense, nsa, scale, tr, oversamplingPercent = searchBase.oversamplingPercent) {
       const freqMatrix = Math.max(64, Math.round(searchBase.freqMatrix * scale / 2) * 2);
       const phaseMatrix = Math.max(64, Math.round(searchBase.phaseMatrix * scale / 2) * 2);
       // Phase oversampling is a fold-over/aliasing safeguard, not a speed
-      // knob (see the model notes) — the tier search never touches it
-      // beyond whatever the NSA rule above already set, every tier just
-      // carries that value through unchanged. TSE/turbo factor is likewise
-      // never searched (its real-world non-linearity and voxel-size
-      // interaction make it unsuitable to optimize automatically — see
-      // tseFactor()) — every candidate just carries the starting value
-      // through unchanged. Slice count is a coverage requirement, not a
-      // speed knob either — never searched, always carried through
-      // unchanged (see hasUnreliableTime()).
-      const candidate = { tr, nsa, sense, freqMatrix, phaseMatrix, oversamplingPercent: searchBase.oversamplingPercent, etl: searchBase.etl, slices: searchBase.slices };
+      // knob, and the tier search never discovers a reduction on its own —
+      // every candidate just carries searchBase's value through unchanged
+      // UNLESS a tier-specific habitus target is passed in (see
+      // habitusFloorPct/fastestOversamplingPct above). TSE/turbo factor is
+      // never searched either (its real-world non-linearity and
+      // voxel-size interaction make it unsuitable to optimize
+      // automatically — see tseFactor()) — every candidate just carries
+      // the starting value through unchanged. Slice count is a coverage
+      // requirement, not a speed knob either — never searched, always
+      // carried through unchanged (see hasUnreliableTime()).
+      const candidate = { tr, nsa, sense, freqMatrix, phaseMatrix, oversamplingPercent, etl: searchBase.etl, slices: searchBase.slices };
       if (csSense) {
         candidate.accelType = 'cs-sense';
         // The CS factor itself is held fixed (never varied below), but a
@@ -4471,7 +4690,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     for (const sense of senseUpCandidates) {
       for (const nsa of nsaDownCandidates) {
         for (const scale of fastestMatrixScales) {
-          const { candidate, result } = buildCandidate(sense, nsa, scale, speedTr);
+          const { candidate, result } = buildCandidate(sense, nsa, scale, speedTr, fastestOversamplingPct);
           if (!passesPriorityGuard(result)) continue;
           if (!fastest || result.time.proposedMs < fastest.result.time.proposedMs - 1e-6) {
             fastest = { candidate, result };
@@ -4484,7 +4703,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     for (const sense of senseUpCandidates) {
       for (const nsa of nsaDownCandidates) {
         for (const scale of balancedMatrixScales) {
-          const { candidate, result } = buildCandidate(sense, nsa, scale, speedTr);
+          const { candidate, result } = buildCandidate(sense, nsa, scale, speedTr, balancedOversamplingPct);
           if (!passesPriorityGuard(result)) continue;
           if (result.snr.ratio >= BALANCED_MIN_SNR_RATIO) {
             const better = !balanced
@@ -4498,6 +4717,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
     if (fastest) fastest.matrixLocked = fastestLocked;
     if (balanced) balanced.matrixLocked = balancedLocked;
+
+    // Flag which tiers actually used the habitus-based reduction, for the
+    // UI's more-prominent-than-usual "verify anatomy fits" caution — this
+    // is a coverage/safety parameter, not just a speed knob, so it gets
+    // stronger treatment than the standard confidence tag (see
+    // habitusInfo above; null whenever height+weight weren't both given).
+    if (fastest && habitusInfo) fastest.habitusInfo = habitusInfo;
+    if (balanced && habitusInfo) balanced.habitusInfo = habitusInfo;
 
     // Be honest when the resolution ceiling itself is the bottleneck,
     // rather than silently presenting a barely-there time saving as if it
@@ -4574,6 +4801,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (candidate.freqMatrix !== start.freqMatrix || candidate.phaseMatrix !== start.phaseMatrix) {
       changes.push(`Matrix ${start.freqMatrix}×${start.phaseMatrix}→${candidate.freqMatrix}×${candidate.phaseMatrix}`);
     }
+    if ((candidate.oversamplingPercent || 0) !== (start.oversamplingPercent || 0)) {
+      changes.push(`Oversampling ${start.oversamplingPercent || 0}%→${candidate.oversamplingPercent || 0}%`);
+    }
     return changes.length ? changes.join(', ') : 'No parameters changed from your saved protocol.';
   }
 
@@ -4626,7 +4856,23 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     'tr-range': 'TR falls outside the stated range for this sequence type.',
     matrix: 'Matrix/voxel changes need console verification — TSE factor and other settings can reject a combination this math allows.',
     etl: 'TSE/turbo factor is in the time model now, but testing shows it doesn\'t scale time perfectly linearly, and changing it can also affect achievable voxel size — verify at console.',
+    habitus: 'Reduced based on an estimated body habitus (BMI from height/weight) — see the prominent caution below; this is a coverage/safety parameter, not just a speed knob.',
   };
+
+  // Overrides the oversampling row's confidence to 'verify' when the
+  // optimizer reduced it via the habitus-based floor (see
+  // optimizeProtocolTiers) — the usual "high confidence" for an
+  // oversampling change assumes it was a direct manual edit, not an
+  // estimate derived from height/weight, so it doesn't apply here. Kept
+  // consistent between the compact tier card and the detail panel by
+  // sharing this one function.
+  function applyHabitusConfidenceOverride(confRows, habitusInfo) {
+    if (!habitusInfo) return confRows;
+    const row = { key: 'oversampling', level: 'verify', reasonKey: 'habitus' };
+    const idx = confRows.findIndex(r => r.key === 'oversampling');
+    if (idx >= 0) confRows[idx] = row; else confRows.push(row);
+    return confRows;
+  }
 
   function confidenceTagHtml(level, reasonKey) {
     if (!level) return '';
@@ -4776,11 +5022,27 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const optimizerModalOverlay = document.getElementById('optimizer-modal-overlay');
   const optimizerModalTitle = document.getElementById('optimizer-modal-title');
   const optimizerHealthScoreEl = document.getElementById('optimizer-health-score');
+  const optimizerPlanningNoteEl = document.getElementById('optimizer-planning-note');
   const optSequenceTypeEl = document.getElementById('opt-sequence-type');
   const optPriorityEl = document.getElementById('opt-priority');
   const optFovFreqEl = document.getElementById('opt-fov-freq');
   const optFovPhaseEl = document.getElementById('opt-fov-phase');
   const optSlicesEl = document.getElementById('opt-slices');
+  const optHeightEl = document.getElementById('opt-height');
+  const optHeightUnitEl = document.getElementById('opt-height-unit');
+  const optWeightEl = document.getElementById('opt-weight');
+  const optWeightUnitEl = document.getElementById('opt-weight-unit');
+  const optHabitusDerivedEl = document.getElementById('opt-habitus-derived');
+  function updateOptHabitusDerived() {
+    const heightCm = heightToCm(parseFloat(optHeightEl.value), optHeightUnitEl.value);
+    const weightKg = weightToKg(parseFloat(optWeightEl.value), optWeightUnitEl.value);
+    const bmi = estimateBmi(heightCm, weightKg);
+    optHabitusDerivedEl.textContent = bmi !== null
+      ? `BMI ~${Math.round(bmi)} (${bmiCategory(bmi)}) — oversampling floor ~${habitusOversamplingFloor(bmi)}%`
+      : '';
+  }
+  setupUnitConvertingField(optHeightEl, optHeightUnitEl, heightToCm, cmToDisplay, updateOptHabitusDerived);
+  setupUnitConvertingField(optWeightEl, optWeightUnitEl, weightToKg, kgToDisplay, updateOptHabitusDerived);
   oversamplingGroups.opt = setupOversamplingGroup('opt', () => {});
   const optimizerErrorEl = document.getElementById('optimizer-error');
   const optimizerFormSection = document.getElementById('optimizer-form-section');
@@ -4801,6 +5063,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     optimizerResultSection.style.display = 'none';
     optimizerFormSection.style.display = 'block';
     optimizerHealthScoreEl.innerHTML = healthScoreHtml(protocol);
+    optimizerPlanningNoteEl.innerHTML = planningNoteHtml(protocol);
 
     optSequenceTypeEl.innerHTML = ['<option value="">Select…</option>']
       .concat(trRanges.map(r => `<option value="${escapeHtml(r.sequenceType)}">${escapeHtml(r.sequenceType)}</option>`))
@@ -4811,6 +5074,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     optFovFreqEl.value = protocol.fovFreq ?? '';
     optFovPhaseEl.value = protocol.fovPhase ?? '';
     optSlicesEl.value = protocol.slices ?? '';
+    // Height/weight are patient-specific, not part of the saved protocol
+    // at all (unlike FOV/slices) - always starts blank for a new patient.
+    optHeightEl.value = '';
+    optHeightUnitEl.value = 'cm';
+    optWeightEl.value = '';
+    optWeightUnitEl.value = 'kg';
+    updateOptHabitusDerived();
     oversamplingGroups.opt.set(protocol.oversamplingPercent || 0);
     optimizerErrorEl.style.display = 'none';
     optimizerModalOverlay.classList.add('show');
@@ -4874,7 +5144,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // TR doesn't feed relativeSnr() at all, so a TR-only confidence issue
     // (e.g. a range violation) shouldn't taint the SNR badge — only the
     // time estimate actually depends on TR.
-    const confRows = suggestionConfidenceRows(outcome.start, candidate, outcome.trRange);
+    const confRows = applyHabitusConfidenceOverride(suggestionConfidenceRows(outcome.start, candidate, outcome.trRange), tierData.habitusInfo);
     // CS-SENSE time isn't comparable at all (see compareProtocols) — show
     // that directly rather than a confidence-tagged number that's still
     // implicitly claiming a specific percentage.
@@ -4894,6 +5164,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         ${matrixCaveat ? '<div class="tier-matrix-caveat">⚠ Verify matrix/voxel at console</div>' : ''}
         ${trCaveat ? '<div class="tier-matrix-caveat">⚠ Verify TR/slice-fit at console</div>' : ''}
         ${tierData.limitedSavings ? '<div class="tier-matrix-caveat">Limited savings within resolution limits</div>' : ''}
+        ${tierData.habitusInfo ? `<div class="habitus-caveat-card">⚠⚠ VERIFY ANATOMY FITS WITHIN REDUCED FOV — oversampling cut for estimated habitus (BMI ~${Math.round(tierData.habitusInfo.bmi)})</div>` : ''}
         <div class="tier-tradeoff">${escapeHtml(tradeoff)}</div>
       </label>`;
   }
@@ -4911,7 +5182,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const trCaveat = trDecreaseCaveat(start, candidate);
     const csSense = start.accelType === 'cs-sense';
 
-    const confRows = suggestionConfidenceRows(start, candidate, trRange);
+    const confRows = applyHabitusConfidenceOverride(suggestionConfidenceRows(start, candidate, trRange), tierData.habitusInfo);
     // TR isn't part of relativeSnr() at all, so a TR-only confidence issue
     // shouldn't taint the SNR estimate's badge — only time depends on TR.
     const timeConfTag = confidenceTagFromRows(confRows);
@@ -4950,7 +5221,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         ${voxelRow}
         ${optimizerCompareRow('Phase oversampling', `${start.oversamplingPercent || 0}%`, `${candidate.oversamplingPercent || 0}%`, confidenceRow(confRows, 'oversampling'))}
       </div>
-      <div class="lib-note" style="margin-top:-6px;">Oversampling is a fold-over/aliasing safeguard, not a speed knob — every tier keeps it unchanged from the starting protocol.</div>
+      <div class="lib-note" style="margin-top:-6px;">${tierData.habitusInfo
+        ? 'Oversampling is normally a fold-over/aliasing safeguard, not a speed knob — reduced here only because height/weight were entered (see the caution below).'
+        : 'Oversampling is a fold-over/aliasing safeguard, not a speed knob — every tier keeps it unchanged from the starting protocol unless height/weight are entered above.'}</div>
       <div class="results" style="margin: 14px 0;">
         <div class="result-card">
           <h3>Relative scan time ${result.time.comparable ? timeConfTag : ''}</h3>
@@ -4968,6 +5241,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         </div>
       </div>
       <div class="info-note show">${escapeHtml(tierReasonText(selectedTier, start, candidate, result, { sequenceType, priority }, trRange, matrixLocked))}</div>
+      ${tierData.habitusInfo ? `<div class="habitus-caveat-banner">⚠⚠ VERIFY ANATOMY ACTUALLY FITS WITHIN THE REDUCED FOV BEFORE SCANNING. Oversampling was cut from ${tierData.habitusInfo.basePct}% to ${candidate.oversamplingPercent}% based on an estimated body habitus (BMI ~${Math.round(tierData.habitusInfo.bmi)}, ${escapeHtml(tierData.habitusInfo.category)}) — a rough proxy from height/weight, not a direct measurement of this patient's actual girth in the phase direction. This is a coverage/safety parameter, not just a speed knob — treat this caution as stronger than the standard "verify at console" tag elsewhere in this app.</div>` : ''}
       ${matrixCaveat ? `<div class="warning-banner show">⚠ ${escapeHtml(matrixCaveat)}</div>` : ''}
       ${trCaveat ? `<div class="warning-banner show">⚠ ${escapeHtml(trCaveat)}</div>` : ''}
       ${tierData.limitedSavings ? `<div class="warning-banner show">Limited additional time savings available within resolution limits for this priority — matrix/voxel is already at or near the ≤${voxelIncreaseCapPct(priority)}% ceiling (see the resolution-ceiling constants if this should be looser or tighter).</div>` : ''}
@@ -5025,7 +5299,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // The modal has no separate "Exam/anatomy" field of its own — the
     // saved protocol's own name/region already carry that information.
     const examLabel = [optimizerProtocol.name, optimizerProtocol.region, optimizerProtocol.subRegion].filter(Boolean).join(' ');
-    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions });
+    const heightCm = heightToCm(parseFloat(optHeightEl.value), optHeightUnitEl.value);
+    const weightKg = weightToKg(parseFloat(optWeightEl.value), optWeightUnitEl.value);
+    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg });
 
     if (!outcome.ok) {
       optimizerErrorEl.textContent = outcome.reason;
@@ -5055,6 +5331,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // Proposed = the selected tier's suggestion, ready for manual review.
     applyProtocolToInputs(optimizerOutcome.start, curInputs, 'cur');
     applyProtocolToInputs(tierData.candidate, propInputs, 'prop');
+    document.getElementById('cur-planning-note').innerHTML = planningNoteHtml(optimizerProtocol);
+    document.getElementById('prop-planning-note').innerHTML = planningNoteHtml(optimizerProtocol);
     render();
     closeOptimizerModal();
     switchView('calculator');
