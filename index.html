@@ -684,6 +684,31 @@
     font-size: 0.78rem;
     margin-top: 4px;
   }
+  /* Aggressive mode — the loudest caution in the app: solid red fill,
+     white text, deliberately heavier than the habitus or standard
+     "verify at console" treatments. */
+  .aggressive-caveat-card {
+    background: var(--bad);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.78rem;
+    border-radius: 6px;
+    padding: 5px 8px;
+    margin-top: 6px;
+  }
+  .aggressive-caveat-banner {
+    background: var(--bad);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.92rem;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 0 0 12px;
+  }
+  .aggressive-caveat-banner ul { margin: 8px 0 0; padding-left: 18px; font-weight: 600; font-size: 0.82rem; }
+  .optimizer-tier-card[data-tier="aggressive"] { grid-column: 1 / -1; border-color: var(--bad); }
+  .aggressive-toggle { display: flex; gap: 8px; align-items: flex-start; font-size: 0.82rem; margin: 6px 0 10px; cursor: pointer; }
+  .aggressive-toggle input { margin-top: 3px; }
   .habitus-caveat-banner {
     background: rgba(240, 103, 79, 0.14);
     border: 2px solid var(--bad);
@@ -1037,6 +1062,10 @@
           <input type="text" id="nsa-exception-input" placeholder="e.g. wrist, TMJ" style="width:160px;">
           <button type="button" class="btn-secondary" id="nsa-exception-add-btn">+ Add exception</button>
         </div>
+        <label class="aggressive-toggle">
+          <input type="checkbox" id="calc-aggressive-toggle">
+          <span><strong>Include Aggressive option</strong> — adds a separate fourth result that relaxes the normal safety caps (SENSE above the practical ceiling, larger voxel-size increase than your clinical priority allows, NSA below your personal rule if SNR still clears a floor). Off by default and never remembered — turn it on only when you mean to.</span>
+        </label>
         <div class="empty-state" id="calc-optimizer-empty">Select a sequence type above (with a valid Current protocol) to see optimized options.</div>
         <div id="calc-optimizer-body" style="display:none;">
           <div id="calc-optimizer-nsa-step"></div>
@@ -1051,6 +1080,7 @@
 
     <div class="panel" style="max-width: 460px; margin-bottom: 16px;">
       <h2><span class="dot proposed"></span> Proposed protocol</h2>
+      <div id="prop-aggressive-note"></div>
       <div id="prop-planning-note"></div>
       <div class="field">
         <label for="prop-sequenceType">Sequence type (optional)</label>
@@ -1609,6 +1639,10 @@
         </div>
       </div>
       <div class="lib-note" id="opt-oversampling-derived" style="margin-top:-6px;"></div>
+      <label class="aggressive-toggle">
+        <input type="checkbox" id="opt-aggressive-toggle">
+        <span><strong>Include Aggressive option</strong> — adds a separate fourth result that relaxes the normal safety caps (SENSE above the practical ceiling, larger voxel-size increase than your clinical priority allows, NSA below your personal rule if SNR still clears a floor). Off by default and never remembered.</span>
+      </label>
       <div class="lib-note" id="optimizer-error" style="display:none;"></div>
       <div class="modal-footer">
         <button type="button" class="btn-secondary" id="optimizer-cancel-btn">Cancel</button>
@@ -2087,6 +2121,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const calcWeightEl = document.getElementById('calc-weight');
   const calcWeightUnitEl = document.getElementById('calc-weight-unit');
   const calcHabitusDerivedEl = document.getElementById('calc-habitus-derived');
+  const calcAggressiveEl = document.getElementById('calc-aggressive-toggle');
+  // Deliberately not persisted anywhere — a page reload, Reset, or opening
+  // the modal always starts with Aggressive off.
+  calcAggressiveEl.addEventListener('change', () => computeCalcOptimizer());
 
   function updateCalcHabitusDerived() {
     const heightCm = heightToCm(parseFloat(calcHeightEl.value), calcHeightUnitEl.value);
@@ -2652,7 +2690,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const examLabel = examLabelEl.value;
     const heightCm = heightToCm(parseFloat(calcHeightEl.value), calcHeightUnitEl.value);
     const weightKg = weightToKg(parseFloat(calcWeightEl.value), calcWeightUnitEl.value);
-    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg });
+    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg, aggressive: calcAggressiveEl.checked });
 
     if (!outcome.ok) {
       calcOptimizerOutcome = null;
@@ -2680,9 +2718,24 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     renderCalcOptimizerTiers();
   }
 
+  // Once an Aggressive suggestion is loaded into Proposed it's just a set
+  // of manual-comparison numbers, so the warning has to travel with it.
+  // Cleared whenever anything else is loaded into Proposed, and on Reset.
+  function setProposedAggressiveNote(isAggressive) {
+    document.getElementById('prop-aggressive-note').innerHTML = isAggressive
+      ? '<div class="aggressive-caveat-banner">⚠⚠ Proposed was loaded from the Aggressive option — outside normal safety margins, verify carefully before use.</div>'
+      : '';
+  }
+
+  // The three standard tiers always; Aggressive only when explicitly
+  // requested (its toggle is off by default and never remembered).
+  function tierKeysFor(outcome) {
+    return outcome.aggressiveRequested ? ['fastest', 'balanced', 'quality', 'aggressive'] : ['fastest', 'balanced', 'quality'];
+  }
+
   function renderCalcOptimizerTiers() {
     calcOptimizerNsaStepEl.innerHTML = buildNsaStepHtml(calcOptimizerOutcome.nsaStep);
-    calcOptimizerTierGridEl.innerHTML = ['fastest', 'balanced', 'quality']
+    calcOptimizerTierGridEl.innerHTML = tierKeysFor(calcOptimizerOutcome)
       .map(key => tierCardHtml(key, calcOptimizerOutcome, calcOptimizerSelectedTier, 'calc-optimizer-tier-radio'))
       .join('');
     calcOptimizerDetailEl.innerHTML = calcOptimizerSelectedTier
@@ -2706,6 +2759,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // — it carries no planning note of its own, so copy over whatever's
     // currently shown for Current, since that's what the optimizer ran on.
     document.getElementById('prop-planning-note').innerHTML = document.getElementById('cur-planning-note').innerHTML;
+    setProposedAggressiveNote(calcOptimizerSelectedTier === 'aggressive');
     render();
   });
 
@@ -2948,6 +3002,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     gK.value = DEFAULT_G_FACTOR_K;
     document.getElementById('cur-planning-note').innerHTML = '';
     document.getElementById('prop-planning-note').innerHTML = '';
+    calcAggressiveEl.checked = false;
+    document.getElementById('prop-aggressive-note').innerHTML = '';
     curInputs.tr.focus();
     render();
   });
@@ -3615,6 +3671,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       case 'load-proposed':
         applyProtocolToInputs(protocol, propInputs, 'prop');
         document.getElementById('prop-planning-note').innerHTML = planningNoteHtml(protocol);
+        setProposedAggressiveNote(false);
         render();
         switchView('calculator');
         break;
@@ -4237,6 +4294,37 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // ceilings vary by coil/system, so this just keeps the search from
   // suggesting acceleration nobody would realistically dial in.
   const SENSE_PRACTICAL_CEILING = 3;
+
+  // --- Aggressive mode (explicit opt-in only — never a default) --------
+  // Starting points, same spirit as the other tunable constants here, not
+  // clinical standards. Aggressive relaxes three conservative caps at once:
+  //  - SENSE may be searched up to AGGRESSIVE_SENSE_CEILING instead of
+  //    SENSE_PRACTICAL_CEILING (standard SENSE only — a CS-SENSE factor is
+  //    still held fixed, since its effect on voxel size/time can't be
+  //    modeled at all; see optimizeProtocolTiers).
+  //  - The clinical-priority voxel-size cap is multiplied by
+  //    AGGRESSIVE_VOXEL_CAP_MULTIPLIER (see tierVoxelCapPct).
+  //  - NSA may go below the personal NSA rule's result, but only if the
+  //    combined SNR estimate vs. the Current protocol stays at or above
+  //    AGGRESSIVE_NSA_MIN_SNR_RATIO.
+  const AGGRESSIVE_SENSE_CEILING = 4.5;
+  const AGGRESSIVE_VOXEL_CAP_MULTIPLIER = 2;
+  const AGGRESSIVE_NSA_MIN_SNR_RATIO = 0.70;
+
+  // The higher SENSE goes past the normal practical ceiling, the stronger
+  // the wording — null at or below the ceiling.
+  function senseAggressionLevel(sense) {
+    if (!(sense > SENSE_PRACTICAL_CEILING)) return null;
+    if (sense <= 3.5) return 'elevated';
+    if (sense <= 4) return 'high';
+    return 'extreme';
+  }
+  const SENSE_AGGRESSION_TEXT = {
+    elevated: 'above the typical practical ceiling — expect noticeably amplified noise and g-factor artifact',
+    high: 'well above the typical practical ceiling — high risk of strongly amplified noise and unfolding artifact',
+    extreme: 'far above the typical practical ceiling — very likely to produce degraded or non-diagnostic images on most coils',
+  };
+
   const BALANCED_MIN_SNR_RATIO = 0.90; // "negligible" SNR loss: up to ~10%
   const QUALITY_MAX_TIME_RATIO = 1.15; // "modest" time increase: up to ~15%
 
@@ -4287,6 +4375,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const base = voxelIncreaseCapPct(priority);
     if (tierKey === 'balanced') return base * BALANCED_VOXEL_INCREASE_FRACTION;
     if (tierKey === 'quality') return base * QUALITY_VOXEL_INCREASE_FRACTION;
+    if (tierKey === 'aggressive') return base * AGGRESSIVE_VOXEL_CAP_MULTIPLIER;
     return base; // fastest
   }
 
@@ -4435,6 +4524,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     fastest: { label: 'Fastest', hint: 'Absolute minimum time — not optimized for image quality.' },
     balanced: { label: 'Balanced', hint: 'Meaningfully faster, SNR loss kept negligible (within ~10%).' },
     quality: { label: 'Quality-first', hint: 'Protects or improves SNR, accepts a modest time cost if needed.' },
+    aggressive: { label: 'Aggressive', hint: 'Relaxed safety caps — only shown when you turn it on.' },
   };
 
   // ---------------------------------------------------------------------
@@ -4570,7 +4660,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   }
 
   function optimizeProtocolTiers(start, opts) {
-    const { sequenceType, priority, gFactorK, examLabel, exceptions, heightCm, weightKg } = opts;
+    const { sequenceType, priority, gFactorK, examLabel, exceptions, heightCm, weightKg, aggressive: aggressiveMode } = opts;
     const trRange = findTrRange(sequenceType);
     if (!trRange || !Number.isFinite(trRange.minTr) || !Number.isFinite(trRange.maxTr)) {
       return { ok: false, reason: `No TR range defined for "${sequenceType}" yet. Add it in the TR Ranges tab first.` };
@@ -4786,11 +4876,72 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     }
     if (quality) quality.matrixLocked = qualityLocked;
 
-    if (!fastest && !balanced && !quality) {
+    // Aggressive — a fourth, separate result that only exists when the
+    // caller explicitly turned it on (never part of the default output).
+    // Same objective as Fastest (minimum time), but over a wider search
+    // space: SENSE up to AGGRESSIVE_SENSE_CEILING (standard SENSE only —
+    // a CS-SENSE factor is still held fixed), the clinical-priority voxel
+    // cap multiplied by AGGRESSIVE_VOXEL_CAP_MULTIPLIER, and NSA allowed
+    // below the personal rule's result. Because that space is a superset
+    // of Fastest's (and it reuses Fastest's oversampling target), it's
+    // never slower than Fastest. The only SNR constraint is on the NSA
+    // relaxation: a candidate that drops NSA below what the personal rule
+    // produced must still clear AGGRESSIVE_NSA_MIN_SNR_RATIO overall.
+    let aggressive = null;
+    if (aggressiveMode) {
+      const aggressiveMatrixScales = matrixScaleCandidates(matrixScaleFloorForPct(tierVoxelCapPct('aggressive', priority)));
+      const aggressiveSenseCandidates = csSense
+        ? [searchBase.sense]
+        : stepsUp(searchBase.sense, Math.max(AGGRESSIVE_SENSE_CEILING, searchBase.sense), 0.5);
+      // Where the personal rule fixed NSA, include everything down to 1 in
+      // addition to the rule's own value; otherwise the usual free search.
+      const aggressiveNsaCandidates = nsaStep.ruleApplies
+        ? Array.from(new Set([searchBase.nsa, ...nsaSearchDown(searchBase.nsa)])).sort((a, b) => b - a)
+        : nsaDownCandidates;
+
+      for (const sense of aggressiveSenseCandidates) {
+        for (const nsa of aggressiveNsaCandidates) {
+          for (const scale of aggressiveMatrixScales) {
+            const { candidate, result } = buildCandidate(sense, nsa, scale, speedTr, fastestOversamplingPct);
+            if (!passesPriorityGuard(result)) continue;
+            const belowRule = nsaStep.ruleApplies && nsa < searchBase.nsa - 1e-9;
+            if (belowRule && !(result.snr.comparable && result.snr.ratio >= AGGRESSIVE_NSA_MIN_SNR_RATIO)) continue;
+            const better = !aggressive
+              || result.time.proposedMs < aggressive.result.time.proposedMs - 1e-6
+              || (Math.abs(result.time.proposedMs - aggressive.result.time.proposedMs) < 1e-6 && result.snr.ratio > aggressive.result.snr.ratio);
+            if (better) aggressive = { candidate, result };
+          }
+        }
+      }
+
+      if (aggressive) {
+        const c = aggressive.candidate;
+        const normalVoxelCapPct = tierVoxelCapPct('fastest', priority);
+        const voxelIncreasePct = (Math.max(start.freqMatrix / c.freqMatrix, start.phaseMatrix / c.phaseMatrix) - 1) * 100;
+        const senseLevel = csSense ? null : senseAggressionLevel(c.sense);
+        const nsaBelowRule = nsaStep.ruleApplies && c.nsa < searchBase.nsa - 1e-9;
+        aggressive.matrixLocked = false;
+        aggressive.aggressiveInfo = {
+          senseLevel,
+          voxelIncreasePct,
+          normalVoxelCapPct,
+          voxelBeyondNormalCap: voxelIncreasePct > normalVoxelCapPct + 2, // +2: matrix rounds to even numbers
+          nsaBelowRule,
+          ruleNsa: searchBase.nsa,
+          // True only if at least one of the relaxed limits was actually
+          // used — otherwise this just matches Fastest.
+          usedRelaxedLimit: Boolean(senseLevel) || voxelIncreasePct > normalVoxelCapPct + 2 || nsaBelowRule,
+          csSense,
+        };
+        if (habitusInfo) aggressive.habitusInfo = habitusInfo;
+      }
+    }
+
+    if (!fastest && !balanced && !quality && !aggressive) {
       return { ok: false, reason: `No option found within these constraints for "${sequenceType}" — double-check the TR range is set correctly and that the priority isn't over-restrictive.` };
     }
 
-    return { ok: true, trRange, nsaStep, tiers: { fastest, balanced, quality } };
+    return { ok: true, trRange, nsaStep, aggressiveRequested: Boolean(aggressiveMode), tiers: { fastest, balanced, quality, aggressive } };
   }
 
   function tierChangeOneLiner(start, candidate) {
@@ -4857,6 +5008,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     matrix: 'Matrix/voxel changes need console verification — TSE factor and other settings can reject a combination this math allows.',
     etl: 'TSE/turbo factor is in the time model now, but testing shows it doesn\'t scale time perfectly linearly, and changing it can also affect achievable voxel size — verify at console.',
     habitus: 'Reduced based on an estimated body habitus (BMI from height/weight) — see the prominent caution below; this is a coverage/safety parameter, not just a speed knob.',
+    aggressive: 'Part of the Aggressive option, which deliberately relaxes the normal safety caps — see the prominent caution; "high confidence" in the model doesn\'t extend to values pushed past the limits it was checked against.',
   };
 
   // Overrides the oversampling row's confidence to 'verify' when the
@@ -4866,6 +5018,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // estimate derived from height/weight, so it doesn't apply here. Kept
   // consistent between the compact tier card and the detail panel by
   // sharing this one function.
+  // Aggressive suggestions deliberately sit outside the ranges the model
+  // was validated against, so no row of one may read "High confidence" —
+  // every such row is forced to 'verify'. Returns a new array.
+  function applyAggressiveConfidenceOverride(confRows, aggressiveInfo) {
+    if (!aggressiveInfo) return confRows;
+    return confRows.map(r => (r.level === 'high' ? { ...r, level: 'verify', reasonKey: 'aggressive' } : r));
+  }
+
   function applyHabitusConfidenceOverride(confRows, habitusInfo) {
     if (!habitusInfo) return confRows;
     const row = { key: 'oversampling', level: 'verify', reasonKey: 'habitus' };
@@ -4972,10 +5132,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       reasons.push(`relative SNR held at ${result.snr.ratio.toFixed(2)}× (≥ ${BALANCED_MIN_SNR_RATIO} target for this tier)`);
     } else if (tierKey === 'quality') {
       reasons.push(`relative SNR at ${result.snr.ratio.toFixed(2)}×, time increase capped at +${Math.round((QUALITY_MAX_TIME_RATIO - 1) * 100)}%`);
+    } else if (tierKey === 'aggressive') {
+      reasons.push(`minimum time with the normal caps relaxed (SENSE up to ${AGGRESSIVE_SENSE_CEILING}, voxel-size ceiling ×${AGGRESSIVE_VOXEL_CAP_MULTIPLIER}, NSA allowed below your personal rule if combined SNR stays ≥ ${AGGRESSIVE_NSA_MIN_SNR_RATIO}); relative SNR ${result.snr.ratio.toFixed(2)}×`);
     }
     if (candidate.accelType === 'cs-sense') {
       reasons.push('CS-SENSE factor held constant — not searched');
-    } else if (candidate.sense >= SENSE_PRACTICAL_CEILING) {
+    } else if (tierKey !== 'aggressive' && candidate.sense >= SENSE_PRACTICAL_CEILING) {
       reasons.push(`SENSE at the typical practical limit (${SENSE_PRACTICAL_CEILING}) — not a hardware cap, actual limits vary by coil/system`);
     }
     return reasons.join(', ') + '.';
@@ -5015,6 +5177,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   };
 
   function tierTradeoffNote(tierKey, priority) {
+    if (tierKey === 'aggressive') {
+      return 'The fastest result with the normal safety caps relaxed — expect visibly noisier and/or coarser images than any other option here; only worth it under real time pressure, and only after checking every flagged item.';
+    }
     const set = TIER_TRADEOFF_NOTES[priority] || TIER_TRADEOFF_NOTES[''];
     return set[tierKey] || '';
   }
@@ -5033,6 +5198,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const optWeightEl = document.getElementById('opt-weight');
   const optWeightUnitEl = document.getElementById('opt-weight-unit');
   const optHabitusDerivedEl = document.getElementById('opt-habitus-derived');
+  const optAggressiveEl = document.getElementById('opt-aggressive-toggle');
   function updateOptHabitusDerived() {
     const heightCm = heightToCm(parseFloat(optHeightEl.value), optHeightUnitEl.value);
     const weightKg = weightToKg(parseFloat(optWeightEl.value), optWeightUnitEl.value);
@@ -5076,6 +5242,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     optSlicesEl.value = protocol.slices ?? '';
     // Height/weight are patient-specific, not part of the saved protocol
     // at all (unlike FOV/slices) - always starts blank for a new patient.
+    optAggressiveEl.checked = false;
     optHeightEl.value = '';
     optHeightUnitEl.value = 'cm';
     optWeightEl.value = '';
@@ -5144,7 +5311,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // TR doesn't feed relativeSnr() at all, so a TR-only confidence issue
     // (e.g. a range violation) shouldn't taint the SNR badge — only the
     // time estimate actually depends on TR.
-    const confRows = applyHabitusConfidenceOverride(suggestionConfidenceRows(outcome.start, candidate, outcome.trRange), tierData.habitusInfo);
+    const confRows = applyAggressiveConfidenceOverride(applyHabitusConfidenceOverride(suggestionConfidenceRows(outcome.start, candidate, outcome.trRange), tierData.habitusInfo), tierData.aggressiveInfo);
     // CS-SENSE time isn't comparable at all (see compareProtocols) — show
     // that directly rather than a confidence-tagged number that's still
     // implicitly claiming a specific percentage.
@@ -5164,9 +5331,35 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         ${matrixCaveat ? '<div class="tier-matrix-caveat">⚠ Verify matrix/voxel at console</div>' : ''}
         ${trCaveat ? '<div class="tier-matrix-caveat">⚠ Verify TR/slice-fit at console</div>' : ''}
         ${tierData.limitedSavings ? '<div class="tier-matrix-caveat">Limited savings within resolution limits</div>' : ''}
+        ${tierData.aggressiveInfo ? '<div class="aggressive-caveat-card">⚠⚠ Aggressive — outside normal safety margins, verify carefully before use</div>' : ''}
         ${tierData.habitusInfo ? `<div class="habitus-caveat-card">⚠⚠ VERIFY ANATOMY FITS WITHIN REDUCED FOV — oversampling cut for estimated habitus (BMI ~${Math.round(tierData.habitusInfo.bmi)})</div>` : ''}
         <div class="tier-tradeoff">${escapeHtml(tradeoff)}</div>
       </label>`;
+  }
+
+  // Louder than every other caution in the app (including the habitus
+  // one): every Aggressive suggestion gets this, plus a specific line for
+  // each relaxed limit it actually used.
+  function aggressiveBannerHtml(info, candidate, result, priority) {
+    const priorityLabel = (CLINICAL_PRIORITIES[priority] && CLINICAL_PRIORITIES[priority].label) || 'the default (no priority selected)';
+    const items = [];
+    if (info.senseLevel) {
+      items.push(`SENSE ${candidate.sense} is ${SENSE_AGGRESSION_TEXT[info.senseLevel]} (normal ceiling: ${SENSE_PRACTICAL_CEILING}).`);
+    }
+    if (info.voxelBeyondNormalCap) {
+      items.push(`Voxel size up ~${Math.round(info.voxelIncreasePct)}% — beyond the normal ≤${Math.round(info.normalVoxelCapPct * 10) / 10}% ceiling for ${priorityLabel}.`);
+    }
+    if (info.nsaBelowRule) {
+      items.push(`NSA ${info.ruleNsa}→${candidate.nsa}, below your personal NSA rule's result — allowed only because the combined SNR estimate (${result.snr.ratio.toFixed(2)}×) stays at or above the ${AGGRESSIVE_NSA_MIN_SNR_RATIO} floor.`);
+    }
+    if (info.csSense) {
+      items.push('CS-SENSE factor is still held fixed — the relaxed SENSE ceiling does not apply to it, since its effect can\'t be modeled.');
+    }
+    if (!info.usedRelaxedLimit) {
+      items.push('None of the relaxed limits ended up being used — this matches what Fastest already finds for this protocol.');
+    }
+    return `<div class="aggressive-caveat-banner">⚠⚠ Aggressive — outside normal safety margins, verify carefully before use.
+      <ul>${items.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul></div>`;
   }
 
   function buildOptimizerDetailHtml(outcome, selectedTier) {
@@ -5182,7 +5375,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const trCaveat = trDecreaseCaveat(start, candidate);
     const csSense = start.accelType === 'cs-sense';
 
-    const confRows = applyHabitusConfidenceOverride(suggestionConfidenceRows(start, candidate, trRange), tierData.habitusInfo);
+    const confRows = applyAggressiveConfidenceOverride(applyHabitusConfidenceOverride(suggestionConfidenceRows(start, candidate, trRange), tierData.habitusInfo), tierData.aggressiveInfo);
     // TR isn't part of relativeSnr() at all, so a TR-only confidence issue
     // shouldn't taint the SNR estimate's badge — only time depends on TR.
     const timeConfTag = confidenceTagFromRows(confRows);
@@ -5211,6 +5404,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       : '';
 
     return `
+      ${tierData.aggressiveInfo ? aggressiveBannerHtml(tierData.aggressiveInfo, candidate, result, priority) : ''}
       <div class="optimizer-compare">
         <div class="oc-head">Parameter</div><div class="oc-head">Current</div><div class="oc-head">Suggested</div>
         ${optimizerCompareRow('TR (ms)', start.tr, candidate.tr, confidenceRow(confRows, 'tr'))}
@@ -5257,7 +5451,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
   function renderOptimizerTiers() {
     optimizerNsaStepEl.innerHTML = buildNsaStepHtml(optimizerOutcome.nsaStep);
-    optimizerTierGridEl.innerHTML = ['fastest', 'balanced', 'quality']
+    optimizerTierGridEl.innerHTML = tierKeysFor(optimizerOutcome)
       .map(key => tierCardHtml(key, optimizerOutcome, optimizerSelectedTier, 'optimizer-tier-radio'))
       .join('');
     renderOptimizerDetail();
@@ -5301,7 +5495,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const examLabel = [optimizerProtocol.name, optimizerProtocol.region, optimizerProtocol.subRegion].filter(Boolean).join(' ');
     const heightCm = heightToCm(parseFloat(optHeightEl.value), optHeightUnitEl.value);
     const weightKg = weightToKg(parseFloat(optWeightEl.value), optWeightUnitEl.value);
-    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg });
+    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg, aggressive: optAggressiveEl.checked });
 
     if (!outcome.ok) {
       optimizerErrorEl.textContent = outcome.reason;
@@ -5333,6 +5527,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     applyProtocolToInputs(tierData.candidate, propInputs, 'prop');
     document.getElementById('cur-planning-note').innerHTML = planningNoteHtml(optimizerProtocol);
     document.getElementById('prop-planning-note').innerHTML = planningNoteHtml(optimizerProtocol);
+    setProposedAggressiveNote(optimizerSelectedTier === 'aggressive');
     render();
     closeOptimizerModal();
     switchView('calculator');
