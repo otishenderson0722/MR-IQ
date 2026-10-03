@@ -707,6 +707,65 @@
   }
   .aggressive-caveat-banner ul { margin: 8px 0 0; padding-left: 18px; font-weight: 600; font-size: 0.82rem; }
   .optimizer-tier-card[data-tier="aggressive"] { grid-column: 1 / -1; border-color: var(--bad); }
+  /* Outcome log */
+  /* Opens on top of the Optimize modal when logging from there. */
+  #outcome-modal-overlay { z-index: 70; }
+  .outcome-log-row { margin-top: 12px; }
+  .suggestion-log-row {
+    font-size: 0.8rem;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+  }
+  .suggestion-log-row .dim { color: var(--text-dim); display: block; margin-top: 2px; font-size: 0.74rem; }
+  .outcome-entry {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .outcome-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .outcome-head .spacer { flex: 1; }
+  .outcome-badge { font-size: 0.74rem; font-weight: 700; border-radius: 999px; padding: 2px 9px; border: 1px solid; white-space: nowrap; }
+  .outcome-badge.good { color: var(--good); border-color: var(--good); background: rgba(63, 185, 80, 0.12); }
+  .outcome-badge.bad { color: var(--bad); border-color: var(--bad); background: rgba(240, 103, 79, 0.12); }
+  .outcome-badge.warn { color: var(--warn-border); border-color: var(--warn-border); background: rgba(217, 138, 61, 0.12); }
+  .outcome-badge.neutral { color: var(--text-dim); border-color: var(--border); background: var(--panel-2); }
+  .outcome-meta { color: var(--text-dim); font-size: 0.8rem; }
+  .outcome-params {
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+    background: var(--panel-2);
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
+  .outcome-text { white-space: pre-wrap; font-size: 0.86rem; }
+  .outcome-entry details { font-size: 0.8rem; color: var(--text-dim); }
+  .outcome-entry details summary { cursor: pointer; }
+  .outcome-choices { display: flex; flex-direction: column; gap: 8px; }
+  .notes-field .outcome-choices label { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--text); font-size: 0.9rem; cursor: pointer; }
+  .outcome-choices input[type=radio] { width: auto; margin: 0; }
+  .outcome-toast {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    background: var(--panel);
+    border: 1px solid var(--good);
+    color: var(--good);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: none;
+    z-index: 80;
+  }
+  .outcome-toast.show { display: block; }
   .aggressive-toggle { display: flex; gap: 8px; align-items: flex-start; font-size: 0.82rem; margin: 6px 0 10px; cursor: pointer; }
   .aggressive-toggle input { margin-top: 3px; }
   .habitus-caveat-banner {
@@ -837,6 +896,7 @@
     <button type="button" data-view="acr">ACR Reference</button>
     <button type="button" data-view="tr-ranges">TR Ranges</button>
     <button type="button" data-view="mar">MAR Reference</button>
+    <button type="button" data-view="outcomes">Outcome Log</button>
   </nav>
 
   <div class="settings-row">
@@ -1081,6 +1141,7 @@
     <div class="panel" style="max-width: 460px; margin-bottom: 16px;">
       <h2><span class="dot proposed"></span> Proposed protocol</h2>
       <div id="prop-aggressive-note"></div>
+      <div id="prop-suggestion-log"></div>
       <div id="prop-planning-note"></div>
       <div class="field">
         <label for="prop-sequenceType">Sequence type (optional)</label>
@@ -1285,7 +1346,7 @@
       <button type="button" class="btn-secondary" id="import-btn">Import backup</button>
       <input type="file" id="import-file-input" accept="application/json" style="display:none">
     </div>
-    <div class="lib-note">Everything (protocols, ACR minimums, TR ranges) is stored in this browser only — Export backup bundles all three so you can move to another computer.</div>
+    <div class="lib-note">Everything (protocols, ACR minimums, TR ranges, the outcome log) is stored in this browser only — Export backup bundles them so you can move to another computer.</div>
 
     <div id="compliance-panel"></div>
 
@@ -1351,6 +1412,29 @@
         <span class="lib-note" style="margin:0;" id="tr-range-save-status"></span>
       </div>
     </div>
+  </div>
+
+  <div class="view" id="view-outcomes">
+    <div class="panel" style="margin-bottom: 16px;">
+      <h2>Outcome log</h2>
+      <div class="lib-note" style="margin-bottom:0;">
+        Your own record of how optimizer suggestions actually went at the console, each tied to the exact
+        parameters that were suggested. Log one with “Log real-world result” under any suggestion (or on the
+        Proposed panel after loading one). This is for your review only — nothing here ever changes the
+        optimizer's math or caps; you decide whether a pattern is worth tightening anything.
+      </div>
+    </div>
+    <div class="settings-row" id="outcome-filters" style="flex-wrap: wrap;">
+      <label for="outcome-filter-seq">Sequence type</label>
+      <select id="outcome-filter-seq"></select>
+      <label for="outcome-filter-priority">Clinical priority</label>
+      <select id="outcome-filter-priority"></select>
+      <label for="outcome-filter-outcome">Result</label>
+      <select id="outcome-filter-outcome"></select>
+      <input type="text" id="outcome-filter-search" placeholder="Search protocol, anatomy, notes…" style="width: 220px;">
+    </div>
+    <div class="lib-note" id="outcome-count"></div>
+    <div id="outcome-list"></div>
   </div>
 
   <div class="view" id="view-mar">
@@ -1567,6 +1651,39 @@
     </form>
   </div>
 </div>
+
+<div class="modal-overlay" id="outcome-modal-overlay">
+  <div class="modal" style="max-width: 520px;">
+    <div class="modal-header">
+      <h3>Log real-world result</h3>
+      <button type="button" class="modal-close" id="outcome-close-btn" aria-label="Close">&times;</button>
+    </div>
+    <div class="lib-note" id="outcome-summary" style="margin-top:-8px;"></div>
+    <div class="notes-field">
+      <label>How did it go at the console?</label>
+      <div class="outcome-choices">
+        <label><input type="radio" name="outcome-type" value="worked"> Worked well</label>
+        <label><input type="radio" name="outcome-type" value="quality"> Image quality issue</label>
+        <label><input type="radio" name="outcome-type" value="time-off"> Time estimate was off</label>
+        <label><input type="radio" name="outcome-type" value="other"> Other note</label>
+      </div>
+    </div>
+    <div class="field" id="outcome-actual-field" style="display:none;">
+      <label for="outcome-actual">Actual scan time (m:ss, or seconds)</label>
+      <input type="text" id="outcome-actual" placeholder="e.g. 2:26">
+    </div>
+    <div class="notes-field">
+      <label for="outcome-text" id="outcome-text-label">Note (optional)</label>
+      <textarea id="outcome-text" rows="3" maxlength="2000"></textarea>
+    </div>
+    <div class="lib-note" id="outcome-error" style="display:none; color: var(--bad);"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" id="outcome-cancel-btn">Cancel</button>
+      <button type="button" class="btn-primary" id="outcome-save-btn">Save result</button>
+    </div>
+  </div>
+</div>
+<div class="outcome-toast" id="outcome-toast"></div>
 
 <div class="modal-overlay" id="optimizer-modal-overlay">
   <div class="modal" style="max-width: 560px;">
@@ -2760,6 +2877,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // currently shown for Current, since that's what the optimizer ran on.
     document.getElementById('prop-planning-note').innerHTML = document.getElementById('cur-planning-note').innerHTML;
     setProposedAggressiveNote(calcOptimizerSelectedTier === 'aggressive');
+    setProposedSuggestionContext(buildSuggestionSnapshot(calcOptimizerOutcome, calcOptimizerSelectedTier, { protocolName: '', exam: examLabelEl.value.trim() }));
     render();
   });
 
@@ -3004,6 +3122,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     document.getElementById('prop-planning-note').innerHTML = '';
     calcAggressiveEl.checked = false;
     document.getElementById('prop-aggressive-note').innerHTML = '';
+    setProposedSuggestionContext(null);
     curInputs.tr.focus();
     render();
   });
@@ -3019,6 +3138,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     document.getElementById('view-acr').classList.toggle('active', view === 'acr');
     document.getElementById('view-tr-ranges').classList.toggle('active', view === 'tr-ranges');
     document.getElementById('view-mar').classList.toggle('active', view === 'mar');
+    document.getElementById('view-outcomes').classList.toggle('active', view === 'outcomes');
+    if (view === 'outcomes') renderOutcomeLog();
   }
   viewNavButtons.forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 
@@ -3672,6 +3793,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         applyProtocolToInputs(protocol, propInputs, 'prop');
         document.getElementById('prop-planning-note').innerHTML = planningNoteHtml(protocol);
         setProposedAggressiveNote(false);
+        setProposedSuggestionContext(null);
         render();
         switchView('calculator');
         break;
@@ -3958,6 +4080,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       protocols,
       acrReferences,
       trRanges,
+      outcomeLog,
     };
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -3986,19 +4109,31 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         let incomingProtocols = [];
         let incomingAcr = [];
         let incomingTr = [];
+        let incomingOutcomes = [];
         if (Array.isArray(parsed)) {
           incomingProtocols = parsed;
         } else if (parsed && typeof parsed === 'object') {
           if (Array.isArray(parsed.protocols)) incomingProtocols = parsed.protocols;
           if (Array.isArray(parsed.acrReferences)) incomingAcr = parsed.acrReferences;
           if (Array.isArray(parsed.trRanges)) incomingTr = parsed.trRanges;
+          if (Array.isArray(parsed.outcomeLog)) incomingOutcomes = parsed.outcomeLog;
         }
 
         const validProtocols = incomingProtocols.filter(p => p && typeof p === 'object' && p.name && p.region);
         const validAcr = incomingAcr.filter(r => r && typeof r === 'object' && r.region && Array.isArray(r.sequences));
         const validTr = incomingTr.filter(r => r && typeof r === 'object' && r.sequenceType);
 
-        if (validProtocols.length === 0 && validAcr.length === 0 && validTr.length === 0) {
+        // Skip any entry already in the log (same id) so re-importing the
+        // same backup doesn't duplicate it.
+        const knownOutcomeIds = new Set(outcomeLog.map(e => e.id));
+        const validOutcomes = incomingOutcomes.filter(e =>
+          e && typeof e === 'object' && e.id && OUTCOME_TYPES[e.outcome] && e.loggedAt && !knownOutcomeIds.has(e.id));
+
+        if (validProtocols.length === 0 && validAcr.length === 0 && validTr.length === 0 && validOutcomes.length === 0) {
+          if (incomingOutcomes.length > 0) {
+            alert('Nothing new to import — those logged results are already in your outcome log.');
+            return;
+          }
           alert('That file doesn’t look like a MR IQ backup.');
           return;
         }
@@ -4007,6 +4142,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         if (validProtocols.length) parts.push(`${validProtocols.length} protocol(s)`);
         if (validAcr.length) parts.push(`${validAcr.length} ACR reference entr${validAcr.length === 1 ? 'y' : 'ies'}`);
         if (validTr.length) parts.push(`${validTr.length} TR range entr${validTr.length === 1 ? 'y' : 'ies'}`);
+        if (validOutcomes.length) parts.push(`${validOutcomes.length} logged result(s)`);
         const hasReferenceData = validAcr.length > 0 || validTr.length > 0;
         const confirmMsg = `Import ${parts.join(', ')}?`
           + ' Protocols are added alongside your current library.'
@@ -4032,6 +4168,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
             if (idx >= 0) acrReferences[idx] = record; else acrReferences.push(record);
           });
           persistAcrReferences();
+        }
+
+        if (validOutcomes.length) {
+          outcomeLog = outcomeLog.concat(validOutcomes);
+          persistOutcomeLog();
+          renderOutcomeLog();
         }
 
         if (validTr.length) {
@@ -5442,6 +5584,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       ${resSummary ? `<div class="info-note show">${escapeHtml(resSummary)}</div>` : ''}
       ${trSummary ? `<div class="info-note show">${escapeHtml(trSummary)}</div>` : ''}
       ${csSense ? `<div class="info-note show">CS-SENSE factor held constant — optimizer does not adjust acceleration for this reconstruction type; adjust CS factor manually and re-enter voxel size to explore that dimension.</div>` : ''}
+      <div class="outcome-log-row"><button type="button" class="btn-secondary" data-action="log-outcome">📝 Log real-world result…</button></div>
     `;
   }
 
@@ -5528,6 +5671,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     document.getElementById('cur-planning-note').innerHTML = planningNoteHtml(optimizerProtocol);
     document.getElementById('prop-planning-note').innerHTML = planningNoteHtml(optimizerProtocol);
     setProposedAggressiveNote(optimizerSelectedTier === 'aggressive');
+    setProposedSuggestionContext(buildSuggestionSnapshot(optimizerOutcome, optimizerSelectedTier, modalSnapshotContext()));
     render();
     closeOptimizerModal();
     switchView('calculator');
@@ -5841,6 +5985,352 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   vendorSelectEl.addEventListener('change', () => {
     renderMarVendorGrid();
     updateMarVendorHint();
+  });
+
+  // ---------------------------------------------------------------------
+  // Outcome log — the user's own record of how optimizer suggestions
+  // actually went at the console, each tied to the exact parameters that
+  // were suggested. Strictly a log for human review: nothing here is ever
+  // read back by the optimizer, so no cap or formula can silently shift
+  // based on a handful of entries. Patient height/weight are deliberately
+  // NOT stored (only the fact that oversampling was habitus-reduced).
+  // ---------------------------------------------------------------------
+  const OUTCOME_LOG_KEY = 'mriq.outcomeLog.v1';
+  const OUTCOME_TYPES = {
+    worked: { label: 'Worked well', cls: 'good' },
+    quality: { label: 'Image quality issue', cls: 'bad' },
+    'time-off': { label: 'Time estimate was off', cls: 'warn' },
+    other: { label: 'Other note', cls: 'neutral' },
+  };
+
+  function loadOutcomeLog() {
+    try {
+      const raw = localStorage.getItem(OUTCOME_LOG_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed.filter(e => e && OUTCOME_TYPES[e.outcome]) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function persistOutcomeLog() {
+    try {
+      localStorage.setItem(OUTCOME_LOG_KEY, JSON.stringify(outcomeLog));
+      return true;
+    } catch (e) {
+      setStorageStatus('Could not save the outcome log to browser storage (it may be full, disabled, or this is a private/incognito window). Use Export backup so you don’t lose it.');
+      return false;
+    }
+  }
+
+  let outcomeLog = loadOutcomeLog();
+
+  const finiteOrNull = v => (Number.isFinite(v) ? v : null);
+
+  function snapshotParams(p) {
+    return {
+      tr: finiteOrNull(p.tr),
+      nsa: finiteOrNull(p.nsa),
+      sense: finiteOrNull(p.sense),
+      accelType: p.accelType || 'sense',
+      freqMatrix: finiteOrNull(p.freqMatrix),
+      phaseMatrix: finiteOrNull(p.phaseMatrix),
+      oversamplingPercent: finiteOrNull(p.oversamplingPercent) ?? 0,
+      etl: finiteOrNull(p.etl),
+      slices: finiteOrNull(p.slices),
+      csVoxelFreq: finiteOrNull(p.csVoxelFreq),
+      csVoxelPhase: finiteOrNull(p.csVoxelPhase),
+    };
+  }
+
+  // Freezes a suggestion exactly as the optimizer generated it (not
+  // whatever the form fields say later), so a logged result always refers
+  // to the parameters that were actually suggested.
+  function buildSuggestionSnapshot(outcome, tierKey, ctx) {
+    const tierData = outcome && tierKey ? outcome.tiers[tierKey] : null;
+    if (!tierData) return null;
+    const { result, candidate } = tierData;
+    return {
+      sequenceType: outcome.sequenceType || '',
+      priority: outcome.priority || '',
+      tier: tierKey,
+      protocolName: (ctx && ctx.protocolName) || '',
+      exam: (ctx && ctx.exam) || '',
+      start: snapshotParams(outcome.start),
+      suggested: snapshotParams(candidate),
+      estimate: {
+        timeComparable: Boolean(result.time.comparable),
+        startTimeMs: finiteOrNull(result.time.currentMs),
+        suggestedTimeMs: finiteOrNull(result.time.proposedMs),
+        timePercent: finiteOrNull(result.time.percentChange),
+        snrComparable: Boolean(result.snr.comparable),
+        snrPercent: finiteOrNull(result.snr.percentChange),
+        snrRatio: finiteOrNull(result.snr.ratio),
+      },
+      flags: { aggressive: Boolean(tierData.aggressiveInfo), habitusReduced: Boolean(tierData.habitusInfo) },
+    };
+  }
+
+  function modalSnapshotContext() {
+    const p = optimizerProtocol;
+    return p
+      ? { protocolName: p.name, exam: [p.region, p.subRegion].filter(Boolean).join(' · ') }
+      : { protocolName: '', exam: '' };
+  }
+
+  function tierDisplayLabel(key) {
+    return (OPTIMIZER_TIERS[key] && OPTIMIZER_TIERS[key].label) || key;
+  }
+  function priorityDisplayLabel(priority) {
+    return (CLINICAL_PRIORITIES[priority] && CLINICAL_PRIORITIES[priority].label) || 'No priority';
+  }
+
+  function paramsText(p) {
+    const accel = p.accelType === 'none' ? 'No accel.' : `${p.accelType === 'cs-sense' ? 'CS-SENSE' : 'SENSE'} ${p.sense}`;
+    const parts = [`TR ${p.tr}`, `NSA ${p.nsa}`, accel, `Matrix ${p.freqMatrix}×${p.phaseMatrix}`, `Oversampling ${p.oversamplingPercent || 0}%`];
+    if (p.etl) parts.push(`TSE ${p.etl}`);
+    if (p.slices) parts.push(`${p.slices} slices`);
+    return parts.join(' · ');
+  }
+
+  // --- Proposed-panel entry point: after "Load selected into Proposed",
+  // the suggestion is just numbers in form fields, so this keeps a handle
+  // on the suggestion as generated. Cleared whenever anything else is
+  // loaded into Proposed, and on Reset.
+  let proposedSuggestionSnapshot = null;
+  function setProposedSuggestionContext(snapshot) {
+    proposedSuggestionSnapshot = snapshot;
+    document.getElementById('prop-suggestion-log').innerHTML = snapshot
+      ? `<div class="suggestion-log-row">Loaded from the <strong>${escapeHtml(tierDisplayLabel(snapshot.tier))}</strong> suggestion (${escapeHtml(snapshot.sequenceType)} · ${escapeHtml(priorityDisplayLabel(snapshot.priority))}). <button type="button" class="btn-link" data-action="log-proposed-suggestion">📝 Log real-world result</button><span class="dim">Logs the suggestion as it was generated, not any edits you make to these fields afterward.</span></div>`
+      : '';
+  }
+  document.getElementById('prop-suggestion-log').addEventListener('click', (e) => {
+    if (e.target.closest('[data-action="log-proposed-suggestion"]') && proposedSuggestionSnapshot) {
+      openOutcomeModal(proposedSuggestionSnapshot);
+    }
+  });
+
+  // --- Entry points from the two optimizer detail panels.
+  calcOptimizerDetailEl.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-action="log-outcome"]')) return;
+    openOutcomeModal(buildSuggestionSnapshot(calcOptimizerOutcome, calcOptimizerSelectedTier, { protocolName: '', exam: examLabelEl.value.trim() }));
+  });
+  optimizerDetailEl.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-action="log-outcome"]')) return;
+    openOutcomeModal(buildSuggestionSnapshot(optimizerOutcome, optimizerSelectedTier, modalSnapshotContext()));
+  });
+
+  // --- Log-a-result modal -------------------------------------------------
+  const outcomeOverlayEl = document.getElementById('outcome-modal-overlay');
+  const outcomeSummaryEl = document.getElementById('outcome-summary');
+  const outcomeActualFieldEl = document.getElementById('outcome-actual-field');
+  const outcomeActualEl = document.getElementById('outcome-actual');
+  const outcomeTextEl = document.getElementById('outcome-text');
+  const outcomeTextLabelEl = document.getElementById('outcome-text-label');
+  const outcomeErrorEl = document.getElementById('outcome-error');
+  const outcomeToastEl = document.getElementById('outcome-toast');
+  let pendingOutcomeSnapshot = null;
+
+  const OUTCOME_TEXT_PROMPTS = {
+    worked: { label: 'Note (optional)', placeholder: 'Anything worth remembering about how it looked or ran.', required: false },
+    quality: { label: 'Describe the image quality issue', placeholder: 'e.g. blurry, noisy, wrap-around at the edges, poor fat suppression…', required: true },
+    'time-off': { label: 'Note (optional)', placeholder: 'Anything that might explain the difference.', required: false },
+    other: { label: 'Note', placeholder: 'What happened?', required: true },
+  };
+
+  function selectedOutcomeType() {
+    const r = outcomeOverlayEl.querySelector('input[name="outcome-type"]:checked');
+    return r ? r.value : null;
+  }
+
+  function refreshOutcomeFormFields() {
+    const type = selectedOutcomeType();
+    const prompt = OUTCOME_TEXT_PROMPTS[type] || OUTCOME_TEXT_PROMPTS.worked;
+    outcomeTextLabelEl.textContent = prompt.label;
+    outcomeTextEl.placeholder = prompt.placeholder;
+    outcomeActualFieldEl.style.display = type === 'time-off' ? 'block' : 'none';
+    outcomeErrorEl.style.display = 'none';
+  }
+  outcomeOverlayEl.querySelectorAll('input[name="outcome-type"]').forEach(r => r.addEventListener('change', refreshOutcomeFormFields));
+
+  // "2:26" -> 146, "1:02:03" -> 3723, "146" -> 146 (plain numbers are seconds).
+  function parseActualSeconds(str) {
+    const t = (str || '').trim();
+    let m = t.match(/^(\d+):([0-5]?\d)(?::([0-5]?\d))?$/);
+    if (m) {
+      return m[3] !== undefined
+        ? Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3])
+        : Number(m[1]) * 60 + Number(m[2]);
+    }
+    m = t.match(/^(\d+(?:\.\d+)?)$/);
+    return m ? parseFloat(m[1]) : null;
+  }
+
+  function openOutcomeModal(snapshot) {
+    if (!snapshot) return;
+    pendingOutcomeSnapshot = snapshot;
+    outcomeOverlayEl.querySelectorAll('input[name="outcome-type"]').forEach(r => { r.checked = false; });
+    outcomeTextEl.value = '';
+    outcomeActualEl.value = '';
+    refreshOutcomeFormFields();
+    const est = snapshot.estimate;
+    outcomeSummaryEl.innerHTML =
+      `<strong>${escapeHtml(tierDisplayLabel(snapshot.tier))}</strong> · ${escapeHtml(snapshot.sequenceType)} · ${escapeHtml(priorityDisplayLabel(snapshot.priority))}`
+      + `${snapshot.protocolName ? ' · ' + escapeHtml(snapshot.protocolName) : (snapshot.exam ? ' · ' + escapeHtml(snapshot.exam) : '')}<br>`
+      + `${escapeHtml(tierChangeOneLiner(snapshot.start, snapshot.suggested))}`
+      + `${est.timeComparable && est.suggestedTimeMs ? `<br>Estimated scan time: ${escapeHtml(formatSeconds(est.suggestedTimeMs))}` : ''}`;
+    outcomeOverlayEl.classList.add('show');
+  }
+
+  function closeOutcomeModal() {
+    outcomeOverlayEl.classList.remove('show');
+    pendingOutcomeSnapshot = null;
+  }
+  document.getElementById('outcome-close-btn').addEventListener('click', closeOutcomeModal);
+  document.getElementById('outcome-cancel-btn').addEventListener('click', closeOutcomeModal);
+  outcomeOverlayEl.addEventListener('click', (e) => { if (e.target === outcomeOverlayEl) closeOutcomeModal(); });
+
+  let outcomeToastTimer = null;
+  function showOutcomeToast(message) {
+    outcomeToastEl.textContent = message;
+    outcomeToastEl.classList.add('show');
+    clearTimeout(outcomeToastTimer);
+    outcomeToastTimer = setTimeout(() => outcomeToastEl.classList.remove('show'), 3500);
+  }
+
+  document.getElementById('outcome-save-btn').addEventListener('click', () => {
+    if (!pendingOutcomeSnapshot) return;
+    const showError = (msg) => { outcomeErrorEl.textContent = msg; outcomeErrorEl.style.display = 'block'; };
+    const type = selectedOutcomeType();
+    if (!type) { showError('Pick how it went first.'); return; }
+    const text = outcomeTextEl.value.trim();
+    if (OUTCOME_TEXT_PROMPTS[type].required && !text) {
+      showError(type === 'quality' ? 'Describe the image quality issue so the entry is useful later.' : 'Add a short note about what happened.');
+      return;
+    }
+    let actualSeconds = null;
+    if (type === 'time-off') {
+      actualSeconds = parseActualSeconds(outcomeActualEl.value);
+      if (!(actualSeconds > 0)) { showError('Enter the actual scan time as m:ss (e.g. 2:26) or a number of seconds.'); return; }
+    }
+    const entry = { id: makeId(), loggedAt: new Date().toISOString(), outcome: type, text, actualSeconds, ...pendingOutcomeSnapshot };
+    outcomeLog.push(entry);
+    if (!persistOutcomeLog()) {
+      outcomeLog.pop();
+      showError('Could not save to browser storage (it may be full, disabled, or this is a private/incognito window).');
+      return;
+    }
+    closeOutcomeModal();
+    showOutcomeToast('Result logged ✓ — see the Outcome Log tab');
+    if (document.getElementById('view-outcomes').classList.contains('active')) renderOutcomeLog();
+  });
+
+  // --- Outcome Log view -----------------------------------------------------
+  const outcomeFilterSeqEl = document.getElementById('outcome-filter-seq');
+  const outcomeFilterPriorityEl = document.getElementById('outcome-filter-priority');
+  const outcomeFilterOutcomeEl = document.getElementById('outcome-filter-outcome');
+  const outcomeFilterSearchEl = document.getElementById('outcome-filter-search');
+  const outcomeCountEl = document.getElementById('outcome-count');
+  const outcomeListEl = document.getElementById('outcome-list');
+  const NO_PRIORITY_FILTER = '__none';
+
+  function setFilterOptions(selectEl, options) {
+    const previous = selectEl.value;
+    selectEl.innerHTML = options.map(o => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`).join('');
+    selectEl.value = options.some(o => o.value === previous) ? previous : '';
+  }
+
+  function outcomeEntryHtml(e) {
+    const type = OUTCOME_TYPES[e.outcome];
+    const est = e.estimate || {};
+    const when = new Date(e.loggedAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    const flags = [
+      e.flags && e.flags.aggressive ? '<span class="outcome-badge bad">Aggressive</span>' : '',
+      e.flags && e.flags.habitusReduced ? '<span class="outcome-badge warn">Habitus-reduced oversampling</span>' : '',
+    ].join('');
+    const context = [e.protocolName, e.exam].filter(Boolean).join(' — ');
+    let timeLine = '';
+    if (e.outcome === 'time-off' && e.actualSeconds > 0) {
+      const estText = est.timeComparable && est.suggestedTimeMs ? formatSeconds(est.suggestedTimeMs) : 'not shown (Verify at console case)';
+      timeLine = `<div class="outcome-text"><strong>Estimated ${escapeHtml(estText)} → actual ${escapeHtml(formatSeconds(e.actualSeconds * 1000))}</strong></div>`;
+    }
+    const timeEst = est.timeComparable
+      ? `${formatPercent(est.timePercent)} time (${formatSeconds(est.startTimeMs)} → ${formatSeconds(est.suggestedTimeMs)})`
+      : 'time: not estimated (Verify at console)';
+    const snrEst = est.snrComparable ? `${formatPercent(est.snrPercent)} SNR` : 'SNR: N/A';
+    return `
+      <div class="outcome-entry" data-id="${escapeHtml(e.id)}">
+        <div class="outcome-head">
+          <span class="outcome-badge ${type.cls}">${escapeHtml(type.label)}</span>
+          ${flags}
+          <span class="outcome-meta">${escapeHtml(when)} · ${escapeHtml(tierDisplayLabel(e.tier))} · ${escapeHtml(e.sequenceType)} · ${escapeHtml(priorityDisplayLabel(e.priority))}</span>
+          <span class="spacer"></span>
+          <button type="button" class="btn-danger" data-action="delete-outcome">Delete</button>
+        </div>
+        ${context ? `<div class="outcome-meta">${escapeHtml(context)}</div>` : ''}
+        <div class="outcome-params">Suggested: ${escapeHtml(paramsText(e.suggested))}</div>
+        ${timeLine}
+        ${e.text ? `<div class="outcome-text">${escapeHtml(e.text)}</div>` : ''}
+        <details>
+          <summary>Compare with the Current protocol</summary>
+          <div>Current: ${escapeHtml(paramsText(e.start))}</div>
+          <div>Suggested: ${escapeHtml(paramsText(e.suggested))}</div>
+          <div>Changes: ${escapeHtml(tierChangeOneLiner(e.start, e.suggested))}</div>
+          <div>Model estimate then: ${escapeHtml(timeEst)} · ${escapeHtml(snrEst)}</div>
+        </details>
+      </div>`;
+  }
+
+  function renderOutcomeLog() {
+    const uniq = (list) => Array.from(new Set(list)).sort((a, b) => a.localeCompare(b));
+    setFilterOptions(outcomeFilterSeqEl, [{ value: '', label: 'All sequence types' }]
+      .concat(uniq(outcomeLog.map(e => e.sequenceType).filter(Boolean)).map(v => ({ value: v, label: v }))));
+    const priorityValues = uniq(outcomeLog.map(e => e.priority || NO_PRIORITY_FILTER));
+    setFilterOptions(outcomeFilterPriorityEl, [{ value: '', label: 'All priorities' }]
+      .concat(priorityValues.map(v => ({ value: v, label: v === NO_PRIORITY_FILTER ? 'No priority' : priorityDisplayLabel(v) }))));
+    setFilterOptions(outcomeFilterOutcomeEl, [{ value: '', label: 'All results' }]
+      .concat(Object.keys(OUTCOME_TYPES).map(k => ({ value: k, label: OUTCOME_TYPES[k].label }))));
+
+    const seq = outcomeFilterSeqEl.value;
+    const pri = outcomeFilterPriorityEl.value;
+    const res = outcomeFilterOutcomeEl.value;
+    const q = outcomeFilterSearchEl.value.trim().toLowerCase();
+
+    const shown = outcomeLog
+      .filter(e => (!seq || e.sequenceType === seq)
+        && (!pri || (pri === NO_PRIORITY_FILTER ? !e.priority : e.priority === pri))
+        && (!res || e.outcome === res)
+        && (!q || [e.protocolName, e.exam, e.text, e.sequenceType, tierDisplayLabel(e.tier), priorityDisplayLabel(e.priority)]
+          .join(' ').toLowerCase().includes(q)))
+      .sort((a, b) => b.loggedAt.localeCompare(a.loggedAt));
+
+    if (outcomeLog.length === 0) {
+      outcomeCountEl.textContent = '';
+      outcomeListEl.innerHTML = '<div class="empty-state">Nothing logged yet. After you apply a suggestion at the console, use “Log real-world result” under it to record how it went.</div>';
+      return;
+    }
+    const counts = {};
+    shown.forEach(e => { counts[e.outcome] = (counts[e.outcome] || 0) + 1; });
+    const breakdown = Object.keys(OUTCOME_TYPES).filter(k => counts[k]).map(k => `${counts[k]} ${OUTCOME_TYPES[k].label.toLowerCase()}`).join(', ');
+    outcomeCountEl.textContent = `Showing ${shown.length} of ${outcomeLog.length} logged result${outcomeLog.length === 1 ? '' : 's'}${breakdown ? ' — ' + breakdown : ''}.`;
+    outcomeListEl.innerHTML = shown.length
+      ? shown.map(outcomeEntryHtml).join('')
+      : '<div class="empty-state">No logged results match these filters.</div>';
+  }
+
+  [outcomeFilterSeqEl, outcomeFilterPriorityEl, outcomeFilterOutcomeEl].forEach(el => el.addEventListener('change', renderOutcomeLog));
+  outcomeFilterSearchEl.addEventListener('input', renderOutcomeLog);
+
+  outcomeListEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="delete-outcome"]');
+    if (!btn) return;
+    const id = btn.closest('.outcome-entry').dataset.id;
+    if (!confirm('Delete this logged result? This can’t be undone.')) return;
+    const before = outcomeLog;
+    outcomeLog = outcomeLog.filter(x => x.id !== id);
+    if (!persistOutcomeLog()) outcomeLog = before;
+    renderOutcomeLog();
   });
 
   renderRegionTabs();
