@@ -227,6 +227,167 @@
     color: var(--text);
     border-bottom-color: var(--accent);
   }
+  /* Phone: tabs scroll sideways instead of overflowing the page. */
+  @media (max-width: 700px) {
+    .view-nav { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+    .view-nav button { flex: 0 0 auto; }
+  }
+
+  /* Quick tab — phone-first, one-handed. The page header and the global
+     vendor rows are hidden while it's active to keep everything on one screen. */
+  body.quick-active { padding: 6px 8px; }
+  body.quick-active header.header-row,
+  body.quick-active .wrap > .settings-row { display: none; }
+  body.quick-active .view-nav { margin-bottom: 6px; }
+  body.quick-active .view-nav button { padding: 6px 12px; }
+  .quick-screen { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 6px; touch-action: manipulation; }
+  .quick-screen > * { min-width: 0; }
+  .quick-strip { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+  .quick-strip select, .quick-strip .quick-aggr {
+    min-width: 0;
+    width: 100%;
+    min-height: 38px;
+    font-size: 16px;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2px 8px;
+    text-overflow: ellipsis;
+  }
+  .quick-strip .quick-aggr { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 700; color: var(--bad); }
+  .quick-strip .quick-aggr input { width: 22px; height: 22px; margin: 0; flex: 0 0 auto; }
+  .quick-protocols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+  .quick-pbtn {
+    min-height: 44px;
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px 10px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+  .quick-pbtn.selected { border-color: var(--accent); background: rgba(79, 168, 224, 0.16); }
+  .quick-empty { color: var(--text-dim); font-size: 0.9rem; padding: 8px 4px; }
+  .quick-infoline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .quick-infoline:empty { display: none; }
+  .quick-seqrow { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-dim); }
+  .quick-seqrow select, .quick-seqchip {
+    min-height: 34px;
+    font-size: 16px;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2px 10px;
+  }
+  .quick-seqchip { cursor: pointer; font-weight: 700; font-size: 0.85rem; }
+  #quick-planning .planning-note-callout { font-size: 0.76rem; padding: 4px 8px; }
+  #quick-planning .planning-note-label { display: inline; margin: 0 6px 0 0; }
+  .quick-timewarn { color: var(--warn-border); font-size: 0.7rem; font-weight: 700; line-height: 1.2; flex: 1 1 130px; min-width: 0; }
+  .quick-timewarn:empty { display: none; }
+  .quick-row {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    font: inherit;
+  }
+  .quick-row .good { color: var(--good); font-weight: 700; }
+  .quick-row .bad { color: var(--bad); font-weight: 700; }
+  .quick-row-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .quick-tier { font-weight: 800; font-size: 0.95rem; }
+  .quick-metrics { font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+  .quick-changes { font-size: 0.76rem; color: var(--text); margin-top: 1px; }
+  .quick-changes .quick-flag { color: var(--warn-border); font-weight: 700; }
+  .quick-row.unavailable { cursor: default; color: var(--text-dim); font-size: 0.85rem; }
+  .quick-row.aggressive { border-color: var(--bad); }
+  .quick-row .aggressive-strip {
+    background: var(--bad);
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.72rem;
+    border-radius: 5px;
+    padding: 3px 6px;
+    margin-top: 3px;
+  }
+  .quick-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+  .q-cell { display: flex; align-items: center; gap: 3px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 3px; min-width: 0; }
+  .q-mid { flex: 1 1 auto; min-width: 0; text-align: center; }
+  .q-label { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .q-sub { font-size: 0.6rem; color: var(--text-dim); min-height: 0.75rem; white-space: nowrap; }
+  .q-step {
+    flex: 0 0 42px;
+    height: 44px;
+    font-size: 1.5rem;
+    line-height: 1;
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    padding: 0;
+  }
+  .q-step:active { background: var(--accent); color: #fff; }
+  .q-input {
+    width: 100%;
+    min-width: 0;
+    height: 24px;
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    background: transparent;
+    color: var(--text);
+    border: none;
+    padding: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .q-text { flex: 1; text-align: center; font-weight: 700; color: var(--text-dim); font-size: 0.9rem; }
+  .q-reset { min-height: 48px; font-size: 0.85rem; background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+  .q-wide { grid-column: 1 / -1; font-size: 0.72rem; color: var(--text-dim); }
+  .quick-sheet-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 8, 12, 0.65);
+    z-index: 60;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .quick-sheet-overlay.show { display: flex; }
+  .quick-sheet {
+    background: var(--panel);
+    width: 100%;
+    max-width: 560px;
+    max-height: 88vh;
+    overflow-y: auto;
+    border-radius: 14px 14px 0 0;
+    padding: 12px 14px 20px;
+  }
+  .quick-sheet .outcome-log-row { display: none; }
+  .quick-sheet-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .quick-sheet-head button { min-height: 44px; min-width: 44px; font-size: 1rem; }
   .view { display: none; }
   .view.active { display: block; }
 
@@ -896,6 +1057,7 @@
   </header>
 
   <nav class="view-nav">
+    <button type="button" data-view="quick">Quick</button>
     <button type="button" class="active" data-view="calculator">Calculator</button>
     <button type="button" data-view="library">Protocol Library</button>
     <button type="button" data-view="acr">ACR Reference</button>
@@ -925,6 +1087,31 @@
       <option value="coronal">Coronal</option>
     </select>
     <span style="color: var(--text-dim)">— Philips shows FOV/Matrix/Voxel size by anatomical axis (AP/RL/FH), not frequency/phase; this picks which pair applies in the Calculator.</span>
+  </div>
+
+  <div class="view" id="view-quick">
+    <div class="quick-screen">
+      <div class="quick-strip">
+        <select id="quick-facility" aria-label="Facility"></select>
+        <select id="quick-scanner" aria-label="Scanner"></select>
+        <select id="quick-priority" aria-label="Clinical priority" autocomplete="off">
+          <option value="">Priority: none</option>
+          <option value="cord-nerve">Cord/nerve detail</option>
+          <option value="marrow-alignment">Marrow/alignment</option>
+          <option value="enhancement-pathology">Enhancement/subtle pathology</option>
+          <option value="broad-survey">Broad survey/screening</option>
+        </select>
+        <label class="quick-aggr"><input type="checkbox" id="quick-aggressive" autocomplete="off"> Aggressive</label>
+      </div>
+      <div class="quick-protocols" id="quick-protocols"></div>
+      <div id="quick-planning"></div>
+      <div class="quick-infoline"><div id="quick-seq"></div><div class="quick-timewarn" id="quick-timewarn"></div></div>
+      <div id="quick-results"></div>
+      <div class="quick-fields" id="quick-fields"></div>
+    </div>
+  </div>
+  <div class="quick-sheet-overlay" id="quick-sheet-overlay">
+    <div class="quick-sheet" id="quick-sheet"></div>
   </div>
 
   <div class="view active" id="view-calculator">
@@ -3237,7 +3424,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     document.getElementById('view-tr-ranges').classList.toggle('active', view === 'tr-ranges');
     document.getElementById('view-mar').classList.toggle('active', view === 'mar');
     document.getElementById('view-outcomes').classList.toggle('active', view === 'outcomes');
+    document.getElementById('view-quick').classList.toggle('active', view === 'quick');
+    document.body.classList.toggle('quick-active', view === 'quick');
     if (view === 'outcomes') renderOutcomeLog();
+    if (view === 'quick') renderQuick();
   }
   viewNavButtons.forEach(btn => btn.addEventListener('click', () => switchView(btn.dataset.view)));
 
@@ -4079,7 +4269,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   pf.vendor.addEventListener('change', updatePfVendorLabels);
   pf.sliceOrientation.addEventListener('change', updatePfVendorLabels);
 
+  // Set by the Quick tab when a sequence type is picked for a protocol; the
+  // form has no field for it, so carry it through edit/duplicate unchanged.
+  let modalSequenceType = '';
+
   function openModal(mode, prefill) {
+    modalSequenceType = (prefill && prefill.sequenceType) || '';
     editingId = mode === 'edit' ? prefill.id : null;
     modalTitle.textContent = mode === 'edit' ? 'Edit Protocol' : 'Add Protocol';
     modalSaveBtn.textContent = mode === 'edit' ? 'Save changes' : 'Save protocol';
@@ -4186,6 +4381,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       acrSequenceId: pf.acrSequence.value || '',
       notes: pf.notes.value.trim(),
       planningNotes: pf.planningNotes.value.trim(),
+      sequenceType: modalSequenceType,
       updatedAt: new Date().toISOString(),
     };
 
@@ -6611,6 +6807,346 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
   document.addEventListener('input', (e) => { if (calcStateReady && CALC_STATE_IDS.has(e.target.id)) saveCalculatorState(); }, true);
   document.addEventListener('change', (e) => { if (calcStateReady && CALC_STATE_IDS.has(e.target.id)) saveCalculatorState(); }, true);
+
+  // ---------------------------------------------------------------------
+  // Quick tab — for use at the scanner, phone-first and one-handed. Pick a
+  // facility + scanner, tap one of its saved protocols, and the existing
+  // optimizer runs immediately on the loaded values. It keeps its OWN
+  // working copy of the protocol (never touches the Calculator's panels),
+  // shows only the four things that change patient to patient — NSA, TR,
+  // acceleration factor and matrix (ACQ voxel size for CS-SENSE) — and never
+  // saves edits back to the protocol. The only thing it writes to a protocol
+  // is a sequence type you pick when it can't be inferred from the name.
+  // ---------------------------------------------------------------------
+  const QUICK_SELECTION_KEY = 'mriq.quickSelection.v1';
+  const quickEls = {
+    facility: document.getElementById('quick-facility'),
+    scanner: document.getElementById('quick-scanner'),
+    priority: document.getElementById('quick-priority'),
+    aggressive: document.getElementById('quick-aggressive'),
+    protocols: document.getElementById('quick-protocols'),
+    seq: document.getElementById('quick-seq'),
+    timewarn: document.getElementById('quick-timewarn'),
+    planning: document.getElementById('quick-planning'),
+    results: document.getElementById('quick-results'),
+    fields: document.getElementById('quick-fields'),
+    sheetOverlay: document.getElementById('quick-sheet-overlay'),
+    sheet: document.getElementById('quick-sheet'),
+  };
+  // Priority and Aggressive are deliberately NOT persisted anywhere — a page
+  // reload always starts with no priority and Aggressive off.
+  const quick = { facility: '', scanner: '', protocolId: null, work: null, editingSeq: false, outcome: null };
+
+  (function loadQuickSelection() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(QUICK_SELECTION_KEY));
+      if (saved && typeof saved === 'object') {
+        quick.facility = typeof saved.facility === 'string' ? saved.facility : '';
+        quick.scanner = typeof saved.scanner === 'string' ? saved.scanner : '';
+      }
+    } catch (e) { /* first run */ }
+  })();
+  function saveQuickSelection() {
+    try { localStorage.setItem(QUICK_SELECTION_KEY, JSON.stringify({ facility: quick.facility, scanner: quick.scanner })); } catch (e) { /* convenience only */ }
+  }
+
+  const quickUniq = (list) => Array.from(new Set(list)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const quickProtocol = () => protocols.find(p => p.id === quick.protocolId) || null;
+  function quickScannerProtocols() {
+    return protocols
+      .filter(p => p.facility === quick.facility && scannerLabel(p) === quick.scanner)
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  }
+
+  // The optimizer needs a sequence type and saved protocols don't carry one,
+  // so: a type you picked before (saved on the protocol) wins, otherwise it's
+  // inferred from the name the same way the Health Score does (exactly one
+  // configured type must appear as a whole word), otherwise it's unknown.
+  function quickSequenceInfo(p) {
+    const usable = trRanges.filter(r => r.sequenceType && Number.isFinite(r.minTr) && Number.isFinite(r.maxTr));
+    if (p.sequenceType && usable.some(r => r.sequenceType === p.sequenceType)) return { type: p.sequenceType, source: 'saved', options: usable.map(r => r.sequenceType) };
+    const matches = usable.filter(r => new RegExp(`\\b${r.sequenceType.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(p.name));
+    if (matches.length === 1) return { type: matches[0].sequenceType, source: 'name', options: usable.map(r => r.sequenceType) };
+    return { type: '', source: 'none', options: usable.map(r => r.sequenceType) };
+  }
+
+  const fmtQuickNum = (v) => (Number.isFinite(v) ? String(Math.round(v * 100) / 100) : '');
+  const fmtClock = (ms) => { const sec = Math.round(ms / 1000); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
+
+  function renderQuick() {
+    const facilities = quickUniq(protocols.map(p => p.facility).filter(Boolean));
+    if (!facilities.includes(quick.facility)) quick.facility = facilities[0] || '';
+    quickEls.facility.innerHTML = facilities.length
+      ? facilities.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('')
+      : '<option value="">No facilities</option>';
+    quickEls.facility.value = quick.facility;
+
+    const scanners = quickUniq(protocols.filter(p => p.facility === quick.facility).map(scannerLabel));
+    if (!scanners.includes(quick.scanner)) quick.scanner = scanners[0] || '';
+    quickEls.scanner.innerHTML = scanners.length
+      ? scanners.map(sc => `<option value="${escapeHtml(sc)}">${escapeHtml(sc)}</option>`).join('')
+      : '<option value="">No scanners</option>';
+    quickEls.scanner.value = quick.scanner;
+    saveQuickSelection();
+
+    const list = quickScannerProtocols();
+    if (!list.some(p => p.id === quick.protocolId)) { quick.protocolId = null; quick.work = null; quick.outcome = null; }
+    quickEls.protocols.innerHTML = list.length
+      ? list.map(p => `<button type="button" class="quick-pbtn${p.id === quick.protocolId ? ' selected' : ''}" data-id="${escapeHtml(p.id)}" title="${escapeHtml(p.region + (p.subRegion ? ' · ' + p.subRegion : ''))}">${escapeHtml(p.name)}</button>`).join('')
+      : `<div class="quick-empty" style="grid-column:1/-1;">${protocols.length ? 'No saved protocols for this scanner.' : 'No saved protocols yet — add some in the Protocol Library, or Import a backup there.'}</div>`;
+    renderQuickProtocolDetail();
+  }
+
+  // Everything below the buttons for the currently loaded protocol.
+  function renderQuickProtocolDetail() {
+    const p = quickProtocol();
+    quickEls.planning.innerHTML = p ? planningNoteHtml(p) : '';
+    renderQuickSeq();
+    renderQuickFields();
+    runQuick();
+  }
+
+  function renderQuickSeq() {
+    const p = quickProtocol();
+    if (!p) { quickEls.seq.innerHTML = ''; return; }
+    const info = quickSequenceInfo(p);
+    if (!info.options.length) {
+      quickEls.seq.innerHTML = '<div class="quick-empty">No sequence types with a TR range yet — add some in the TR Ranges tab.</div>';
+      return;
+    }
+    if (!info.type || quick.editingSeq) {
+      quickEls.seq.innerHTML = `<div class="quick-seqrow"><span>${info.type ? 'Sequence type:' : 'Can’t tell the sequence type from the name — pick one (remembered for this protocol):'}</span>
+        <select id="quick-seq-select" aria-label="Sequence type"><option value="">Pick…</option>${info.options.map(o => `<option value="${escapeHtml(o)}"${o === info.type ? ' selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select></div>`;
+    } else {
+      quickEls.seq.innerHTML = `<div class="quick-seqrow"><button type="button" class="quick-seqchip" data-action="edit-seq" aria-label="Sequence type — tap to change">${escapeHtml(info.type)} · ${info.source === 'saved' ? 'saved' : 'from name'} ✎</button></div>`;
+    }
+  }
+
+  function quickLoad(p) {
+    quick.protocolId = p.id;
+    quick.editingSeq = false;
+    quick.work = {
+      tr: p.tr, nsa: p.nsa,
+      sense: p.accelType === 'none' ? 1 : p.sense,
+      freq: p.freqMatrix, phase: p.phaseMatrix,
+      vfreq: p.csVoxelFreq, vphase: p.csVoxelPhase,
+    };
+    Array.from(quickEls.protocols.querySelectorAll('.quick-pbtn')).forEach(b => b.classList.toggle('selected', b.dataset.id === p.id));
+    renderQuickProtocolDetail();
+  }
+
+  function quickStart(p) {
+    const w = quick.work;
+    return {
+      tr: w.tr, nsa: w.nsa, sense: w.sense,
+      freqMatrix: w.freq, phaseMatrix: w.phase,
+      accelType: p.accelType || 'sense',
+      csVoxelFreq: w.vfreq, csVoxelPhase: w.vphase,
+      oversamplingPercent: p.oversamplingPercent || 0,
+      etl: p.etl, slices: p.slices,
+    };
+  }
+
+  // --- the four editable things --------------------------------------------
+  const QUICK_STEPS = {
+    nsa: { step: 1, min: 1 },
+    tr: { step: 10, min: 1 },
+    sense: { step: 0.5, min: 1 },
+    freq: { step: 2, min: 16 },
+    phase: { step: 2, min: 16 },
+    vfreq: { step: 0.1, min: 0.1 },
+    vphase: { step: 0.1, min: 0.1 },
+  };
+
+  function quickCell(key, label) {
+    return `<div class="q-cell">
+      <button type="button" class="q-step" data-step="${key}" data-dir="-1" aria-label="Decrease ${escapeHtml(label)}">−</button>
+      <div class="q-mid"><div class="q-label">${escapeHtml(label)}</div>
+        <input class="q-input" data-field="${key}" type="number" inputmode="decimal" step="any" aria-label="${escapeHtml(label)}">
+        <div class="q-sub" data-sub="${key}"></div></div>
+      <button type="button" class="q-step" data-step="${key}" data-dir="1" aria-label="Increase ${escapeHtml(label)}">+</button>
+    </div>`;
+  }
+
+  function renderQuickFields() {
+    const p = quickProtocol();
+    if (!p) { quickEls.fields.innerHTML = ''; return; }
+    const terms = vendorTerms(p.vendor);
+    const cs = p.accelType === 'cs-sense';
+    const none = p.accelType === 'none';
+    const axes = axisPairLabel(p.vendor, p.sliceOrientation).split(' × ');
+    QUICK_STEPS.sense.step = cs ? 0.1 : 0.5;
+    quickEls.fields.innerHTML =
+      quickCell('nsa', terms.nsa)
+      + quickCell('tr', 'TR (ms)')
+      + (none
+        ? '<div class="q-cell"><div class="q-text">No acceleration</div></div>'
+        : quickCell('sense', cs ? 'CS-SENSE factor' : terms.sense))
+      + '<button type="button" class="q-reset" data-action="reset-saved">↺ Saved values</button>'
+      + (cs
+        ? quickCell('vfreq', `ACQ voxel ${axes[0] || 'freq'}`) + quickCell('vphase', `ACQ voxel ${axes[1] || 'phase'}`)
+          + `<div class="q-wide">Matrix ${fmtQuickNum(quick.work.freq)}×${fmtQuickNum(quick.work.phase)} stays as saved — for CS-SENSE you edit the ACQ voxel size (mm).</div>`
+        : quickCell('freq', `Matrix ${axes[0] || 'freq'}`) + quickCell('phase', `Matrix ${axes[1] || 'phase'}`));
+    syncQuickFields();
+  }
+
+  function syncQuickFields() {
+    const p = quickProtocol();
+    if (!p || !quick.work) return;
+    quickEls.fields.querySelectorAll('.q-input').forEach(inp => {
+      if (document.activeElement === inp) return; // never fight the user's typing
+      inp.value = fmtQuickNum(quick.work[inp.dataset.field]);
+    });
+    // Voxel size beside the matrix, only when a FOV is saved.
+    const sub = (key, fov, m) => {
+      const el = quickEls.fields.querySelector(`[data-sub="${key}"]`);
+      if (el) el.textContent = (Number.isFinite(fov) && fov > 0 && Number.isFinite(m) && m > 0) ? `${(Math.round(fov / m * 100) / 100)} mm` : '';
+    };
+    sub('freq', p.fovFreq, quick.work.freq);
+    sub('phase', p.fovPhase, quick.work.phase);
+  }
+
+  function quickStep(key, dir) {
+    if (!quick.work) return;
+    const def = QUICK_STEPS[key];
+    if (key === 'sense') def.step = (quickProtocol() && quickProtocol().accelType === 'cs-sense') ? 0.1 : 0.5;
+    const v = Number.isFinite(quick.work[key]) ? quick.work[key] : def.min;
+    let next = Math.round((v + dir * def.step) * 100) / 100;
+    if (next < def.min) next = dir < 0 ? Math.min(v, def.min) : def.min; // a start below the minimum (e.g. NSA 0.75) isn't forced up by "minus"
+    quick.work[key] = next;
+    syncQuickFields();
+    runQuick();
+  }
+
+  // Hold a stepper to keep going.
+  let quickHoldTimer = null;
+  let quickHoldInterval = null;
+  function stopQuickHold() {
+    clearTimeout(quickHoldTimer); clearInterval(quickHoldInterval);
+    quickHoldTimer = quickHoldInterval = null;
+  }
+  quickEls.fields.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('.q-step');
+    if (!b) return;
+    e.preventDefault();
+    const key = b.dataset.step;
+    const dir = Number(b.dataset.dir);
+    stopQuickHold();
+    quickStep(key, dir);
+    quickHoldTimer = setTimeout(() => { quickHoldInterval = setInterval(() => quickStep(key, dir), 90); }, 450);
+  });
+  ['pointerup', 'pointercancel'].forEach(ev => document.addEventListener(ev, stopQuickHold));
+  quickEls.fields.addEventListener('contextmenu', (e) => { if (e.target.closest('.q-step')) e.preventDefault(); });
+  // Keyboard activation (Enter/Space) arrives as a click with no pointer.
+  quickEls.fields.addEventListener('click', (e) => {
+    const b = e.target.closest('.q-step');
+    if (b && e.detail === 0) quickStep(b.dataset.step, Number(b.dataset.dir));
+  });
+  quickEls.fields.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-action="reset-saved"]')) return;
+    const p = quickProtocol();
+    if (p) quickLoad(p);
+  });
+  quickEls.fields.addEventListener('input', (e) => {
+    const inp = e.target.closest('.q-input');
+    if (!inp || !quick.work) return;
+    const v = parseFloat(inp.value);
+    quick.work[inp.dataset.field] = Number.isFinite(v) && v > 0 ? v : NaN;
+    syncQuickFields();
+    runQuick();
+  });
+
+  // --- running the optimizer and showing the tiers -----------------------------
+  function quickTierRowHtml(key, outcome) {
+    const meta = tierDisplayLabel(key);
+    const tierData = outcome.tiers[key];
+    if (!tierData) return `<div class="quick-row unavailable">${escapeHtml(meta)} — no valid option within these constraints.</div>`;
+    const { result, candidate } = tierData;
+    const timeHtml = result.time.comparable
+      ? `<span class="${result.time.percentChange <= 0 ? 'good' : 'bad'}">${escapeHtml(formatPercent(result.time.percentChange))} time</span> <span>(${escapeHtml(fmtClock(result.time.proposedMs))})</span>`
+      : '<span style="color:var(--warn-border);font-weight:700;">time: verify at console</span>';
+    const snrHtml = result.snr.comparable
+      ? `<span class="${result.snr.percentChange >= 0 ? 'good' : 'bad'}">${escapeHtml(formatPercent(result.snr.percentChange))} SNR</span>`
+      : '<span>SNR: N/A</span>';
+    const verify = [];
+    if (matrixChangeCaveat(outcome.start, candidate)) verify.push('matrix');
+    if (trDecreaseCaveat(outcome.start, candidate)) verify.push('TR');
+    const flags = [];
+    if (verify.length) flags.push(`⚠ verify ${verify.join(', ')}`);
+    if (tierData.limitedSavings) flags.push('limited savings');
+    return `<button type="button" class="quick-row${key === 'aggressive' ? ' aggressive' : ''}" data-tier="${key}">
+      <div class="quick-row-top"><span class="quick-tier">${escapeHtml(meta)}</span><span class="quick-metrics">${timeHtml} · ${snrHtml}</span></div>
+      <div class="quick-changes">${escapeHtml(tierChangeOneLiner(outcome.start, candidate))}${flags.length ? ` <span class="quick-flag">${escapeHtml(flags.join(' · '))}</span>` : ''}</div>
+      ${tierData.aggressiveInfo ? '<div class="aggressive-strip">⚠⚠ Aggressive — outside safety margins, verify</div>' : ''}
+    </button>`;
+  }
+
+  function runQuick() {
+    const p = quickProtocol();
+    quick.outcome = null;
+    quickEls.timewarn.textContent = '';
+    if (!p) { quickEls.results.innerHTML = '<div class="quick-empty">Tap a protocol to load it and see the options.</div>'; return; }
+    const info = quickSequenceInfo(p);
+    if (!info.type) { quickEls.results.innerHTML = '<div class="quick-empty">Pick a sequence type above to see the options.</div>'; return; }
+    const start = quickStart(p);
+    if (!isValid(start)) { quickEls.results.innerHTML = '<div class="quick-empty">Enter valid positive values in the fields below.</div>'; return; }
+    const outcome = optimizeProtocolTiers(start, {
+      sequenceType: info.type,
+      priority: quickEls.priority.value,
+      gFactorK: parseFloat(gK.value) || DEFAULT_G_FACTOR_K,
+      examLabel: [p.name, p.region, p.subRegion].filter(Boolean).join(' '),
+      exceptions: nsaExceptions,
+      aggressive: quickEls.aggressive.checked,
+    });
+    if (!outcome.ok) { quickEls.results.innerHTML = `<div class="quick-empty">${escapeHtml(outcome.reason)}</div>`; return; }
+    quick.outcome = { ...outcome, start, sequenceType: info.type, priority: quickEls.priority.value, fovFreq: p.fovFreq, fovPhase: p.fovPhase };
+    // One line for the whole screen instead of a warning on every row: time
+    // numbers are only shown without ETL/slice count when both are blank.
+    const anyTime = tierKeysFor(quick.outcome).some(k => quick.outcome.tiers[k] && quick.outcome.tiers[k].result.time.comparable);
+    const warn = anyTime ? timeInputsWarning([start]) : null;
+    quickEls.timewarn.textContent = warn ? `⚠ Time unverified — ${warn.short}` : '';
+    quickEls.results.innerHTML = tierKeysFor(quick.outcome).map(k => quickTierRowHtml(k, quick.outcome)).join('');
+  }
+
+  // --- wiring --------------------------------------------------------------------
+  quickEls.facility.addEventListener('change', () => { quick.facility = quickEls.facility.value; quick.scanner = ''; quick.protocolId = null; quick.work = null; renderQuick(); });
+  quickEls.scanner.addEventListener('change', () => { quick.scanner = quickEls.scanner.value; quick.protocolId = null; quick.work = null; renderQuick(); });
+  quickEls.priority.addEventListener('change', runQuick);
+  quickEls.aggressive.addEventListener('change', runQuick);
+
+  quickEls.protocols.addEventListener('click', (e) => {
+    const btn = e.target.closest('.quick-pbtn');
+    if (!btn) return;
+    const p = protocols.find(x => x.id === btn.dataset.id);
+    if (p) quickLoad(p);
+  });
+
+  quickEls.seq.addEventListener('click', (e) => {
+    if (e.target.closest('[data-action="edit-seq"]')) { quick.editingSeq = true; renderQuickSeq(); }
+  });
+  quickEls.seq.addEventListener('change', (e) => {
+    if (e.target.id !== 'quick-seq-select') return;
+    const p = quickProtocol();
+    if (!p || !e.target.value) return;
+    p.sequenceType = e.target.value;   // remembered on this protocol
+    persistProtocols();
+    quick.editingSeq = false;
+    renderQuickSeq();
+    runQuick();
+  });
+
+  quickEls.results.addEventListener('click', (e) => {
+    const row = e.target.closest('.quick-row[data-tier]');
+    if (!row || !quick.outcome) return;
+    const key = row.dataset.tier;
+    quickEls.sheet.innerHTML = `<div class="quick-sheet-head"><strong>${escapeHtml(tierDisplayLabel(key))} — details</strong><button type="button" class="btn-secondary" id="quick-sheet-close">Close</button></div>`
+      + buildOptimizerDetailHtml(quick.outcome, key);
+    quickEls.sheetOverlay.classList.add('show');
+  });
+  const closeQuickSheet = () => quickEls.sheetOverlay.classList.remove('show');
+  quickEls.sheetOverlay.addEventListener('click', (e) => {
+    if (e.target === quickEls.sheetOverlay || e.target.closest('#quick-sheet-close')) closeQuickSheet();
+  });
 
   renderRegionTabs();
   renderScannerFilterOptions();
