@@ -713,7 +713,8 @@
   .outcome-log-row { margin-top: 12px; }
   .time-input-warning { color: var(--warn-border); font-size: 0.78rem; font-weight: 700; margin-top: 6px; }
   .time-input-warning:empty { display: none; }
-  .nsa-hint { color: var(--bad); font-size: 0.78rem; font-weight: 600; margin: -6px 0 8px; }
+  .nsa-hint { color: var(--warn-border); font-size: 0.78rem; font-weight: 600; margin: -6px 0 8px; }
+  .nsa-hint.error { color: var(--bad); }
   .nsa-hint:empty { display: none; }
   .suggestion-log-row {
     font-size: 0.8rem;
@@ -986,7 +987,7 @@
           <div class="section-divider" style="margin-top:0;">Summary</div>
           <div class="field">
             <label for="cur-nsa" id="cur-nsa-label">NSA</label>
-            <input type="number" id="cur-nsa" value="1" min="1" step="1" inputmode="numeric">
+            <input type="number" id="cur-nsa" value="1" min="0.1" step="0.1" inputmode="decimal">
           </div>
           <div class="nsa-hint" id="cur-nsa-hint"></div>
           <div class="field">
@@ -1166,7 +1167,7 @@
         <div class="section-divider" style="margin-top:0;">Summary</div>
         <div class="field">
           <label for="prop-nsa" id="prop-nsa-label">NSA</label>
-          <input type="number" id="prop-nsa" value="1" min="1" step="1" inputmode="numeric">
+          <input type="number" id="prop-nsa" value="1" min="0.1" step="0.1" inputmode="decimal">
         </div>
         <div class="nsa-hint" id="prop-nsa-hint"></div>
         <div class="field">
@@ -1560,8 +1561,9 @@
       </div>
       <div class="field">
         <label for="pf-nsa" id="pf-nsa-label">NSA</label>
-        <input type="number" id="pf-nsa" min="1" step="1" inputmode="numeric" required>
+        <input type="number" id="pf-nsa" min="0.1" step="any" inputmode="decimal" required>
       </div>
+      <div class="nsa-hint" id="pf-nsa-hint"></div>
       <div class="field">
         <label for="pf-oversampling" id="pf-oversampling-label">Phase oversampling</label>
         <div class="matrix-row">
@@ -2589,8 +2591,6 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const etlLabel = etlFieldLabel(vendor);
     applyConsoleTabOrder(vendor);
     applyVendorMatrixStyle(vendor);
-    applyNsaInputAttrs(curInputs.nsa, vendor);
-    applyNsaInputAttrs(propInputs.nsa, vendor);
     curNsaLabelEl.textContent = terms.nsa;
     curEtlLabelEl.textContent = etlLabel;
     propNsaLabelEl.textContent = terms.nsa;
@@ -2645,53 +2645,39 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   function isValid(p) {
     const core = [p.tr, p.nsa, p.sense, p.freqMatrix, p.phaseMatrix].every(v => Number.isFinite(v) && v > 0);
     if (!core) return false;
-    if (!nsaAllowed(p.nsa, vendorSelectEl.value)) return false; // whole numbers >= 1 (plus 0.5/0.75 on GE)
     if (p.accelType === 'cs-sense') {
       return Number.isFinite(p.csVoxelFreq) && p.csVoxelFreq > 0 && Number.isFinite(p.csVoxelPhase) && p.csVoxelPhase > 0;
     }
     return true;
   }
 
-  // NSA is whole numbers of 1 or more only. Typing a decimal point, sign or
-  // exponent is blocked outright; anything else that sneaks in (paste, spinner)
-  // is snapped to the nearest whole number >= 1 when the field is committed.
-  // Until then isValid() rejects it and a hint says why.
-  function enforceWholeNsa(el, afterSnap, getVendor) {
-    const vendorOf = getVendor || (() => '');
+  // NSA accepts any positive value on every vendor (Philips allows 0.1
+  // increments on some protocols, GE allows values like 0.5 and 0.75), so
+  // fractional values are never blocked or flagged as errors — only a note
+  // below 1, since some consoles reject those. Sign/exponent keystrokes are
+  // blocked since NSA can't be negative. This governs INPUT only: the
+  // optimizer still generates whole-number NSA, and saved protocols are
+  // never rewritten.
+  function restrictNsaKeys(el) {
     el.addEventListener('keydown', (e) => {
-      // GE is the one vendor that needs a decimal point (NEX 0.5 / 0.75).
-      const blocked = vendorOf() === 'GE' ? [',', 'e', 'E', '+', '-'] : ['.', ',', 'e', 'E', '+', '-'];
-      if (blocked.includes(e.key)) e.preventDefault();
-    });
-    el.addEventListener('change', () => {
-      const v = parseFloat(el.value);
-      if (Number.isFinite(v) && !nsaAllowed(v, vendorOf())) {
-        el.value = snapNsa(v, vendorOf());
-        if (afterSnap) afterSnap();
-      }
+      if (['e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
     });
   }
-
-  // Which NSA values the input accepts: whole numbers of 1 or more for every
-  // vendor, plus 0.5 and 0.75 on GE only (GE's NEX can be fractional). This
-  // governs INPUT only — the optimizer still generates whole numbers, and
-  // already-saved protocols are never rewritten.
-  function nsaAllowed(v, vendor) {
-    if (!Number.isFinite(v)) return false;
-    if (Number.isInteger(v) && v >= 1) return true;
-    return vendor === 'GE' && (v === 0.5 || v === 0.75);
+  const NSA_BELOW_ONE_NOTE = 'Some consoles reject NSA below 1 — confirm at the console.';
+  function setNsaHint(el, value) {
+    const v = parseFloat(value);
+    let text = '';
+    let isError = false;
+    if (value !== '' && Number.isFinite(v)) {
+      if (v <= 0) { text = 'NSA must be greater than 0.'; isError = true; }
+      else if (v < 1) text = NSA_BELOW_ONE_NOTE;
+    }
+    el.textContent = text;
+    el.classList.toggle('error', isError);
   }
-  function snapNsa(v, vendor) {
-    if (vendor === 'GE' && v < 1) return [0.5, 0.75, 1].reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a));
-    return Math.max(1, Math.round(v));
-  }
-  function nsaRuleText(vendor) {
-    return vendor === 'GE' ? 'NSA must be 0.5, 0.75, or a whole number of 1 or more.' : 'NSA must be a whole number of 1 or more.';
-  }
-  // GE gets a decimal-friendly input; every other vendor stays whole-number.
-  function applyNsaInputAttrs(el, vendor) {
-    el.min = vendor === 'GE' ? '0.5' : '1';
-    el.step = vendor === 'GE' ? 'any' : '1';
+  function refreshNsaHints() {
+    setNsaHint(document.getElementById('cur-nsa-hint'), curInputs.nsa.value);
+    setNsaHint(document.getElementById('prop-nsa-hint'), propInputs.nsa.value);
   }
   // Time is shown as a plain number only when slice count is blank (an entered
   // slice count hides it — see hasUnreliableTime), so a displayed time always
@@ -2708,11 +2694,6 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     return null;
   }
 
-  function nsaHintText(value, vendor) {
-    const v = parseFloat(value);
-    return (value !== '' && Number.isFinite(v) && !nsaAllowed(v, vendor))
-      ? nsaRuleText(vendor) : '';
-  }
 
   function formatSeconds(ms) {
     const s = ms / 1000;
@@ -2968,6 +2949,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   });
 
   function render() {
+    refreshNsaHints();
     const current = readSet(curInputs, 'cur');
     const proposed = readSet(propInputs, 'prop');
     const k = parseFloat(gK.value);
@@ -3001,8 +2983,6 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       timeValueEl.textContent = '—';
       timeSubEl.textContent = 'Enter valid positive values for all fields.';
       timeWarningEl.textContent = '';
-      document.getElementById('cur-nsa-hint').textContent = nsaHintText(curInputs.nsa.value, vendorSelectEl.value);
-      document.getElementById('prop-nsa-hint').textContent = nsaHintText(propInputs.nsa.value, vendorSelectEl.value);
       snrValueEl.textContent = '—';
       snrSubEl.textContent = '';
       bannerEl.classList.remove('show');
@@ -3057,8 +3037,6 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (!result.time.proposedUnreliable) shownTimeSets.push(proposed);
     const timeWarn = timeInputsWarning(shownTimeSets);
     timeWarningEl.textContent = timeWarn ? '⚠ ' + timeWarn.text : '';
-    document.getElementById('cur-nsa-hint').textContent = '';
-    document.getElementById('prop-nsa-hint').textContent = '';
 
     // SNR: an increase is "good", a decrease is "bad" — except when current
     // and proposed use different SNR bases (one CS-SENSE, one not), where
@@ -3215,10 +3193,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   [...Object.values(curInputs), ...Object.values(propInputs), gK].forEach(el => {
     el.addEventListener('input', render);
   });
-  [curInputs.nsa, propInputs.nsa].forEach(el => enforceWholeNsa(el, render, () => vendorSelectEl.value));
-  // Switching vendor can make the current NSA entries valid or invalid
-  // (GE vs everyone else), so refresh the validity/hint state too.
-  vendorSelectEl.addEventListener('change', render);
+  [curInputs.nsa, propInputs.nsa].forEach(restrictNsaKeys);
   [curSequenceTypeEl, propSequenceTypeEl].forEach(el => {
     el.addEventListener('change', render);
   });
@@ -4052,7 +4027,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     planningNotes: document.getElementById('pf-planning-notes'),
   };
 
-  enforceWholeNsa(pf.nsa, null, () => pf.vendor.value);
+  restrictNsaKeys(pf.nsa);
+  pf.nsa.addEventListener('input', () => setNsaHint(document.getElementById('pf-nsa-hint'), pf.nsa.value));
   matrixStyleGroups.pf = setupMatrixStyleGroup('pf', () => {});
   accelTypeGroups.pf = setupAccelTypeGroup('pf', () => {});
   oversamplingGroups.pf = setupOversamplingGroup('pf', () => {});
@@ -4089,7 +4065,6 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const vendor = pf.vendor.value;
     const terms = vendorTerms(vendor);
     pf.nsaLabel.textContent = terms.nsa;
-    applyNsaInputAttrs(pf.nsa, vendor);
     pf.etlLabel.textContent = etlFieldLabel(vendor);
     accelTypeGroups.pf.refreshLabel();
 
@@ -4119,6 +4094,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     pf.etl.value = prefill?.etl ?? '';
     pf.te.value = prefill?.te ?? '';
     pf.nsa.value = prefill?.nsa ?? '';
+    setNsaHint(document.getElementById('pf-nsa-hint'), pf.nsa.value);
     pf.sense.value = prefill?.sense ?? '';
     accelTypeGroups.pf.set(prefill?.accelType || 'sense');
     pf.csVoxelFreq.value = prefill?.csVoxelFreq ?? '';
@@ -4162,8 +4138,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   protocolForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const nsaValue = parseFloat(pf.nsa.value);
-    if (!nsaAllowed(nsaValue, pf.vendor.value)) {
-      alert(nsaRuleText(pf.vendor.value));
+    if (!(Number.isFinite(nsaValue) && nsaValue > 0)) {
+      alert('NSA must be greater than 0.');
       return;
     }
     const accelType = pf.accelType.value || 'sense';
@@ -4841,7 +4817,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // starting protocol's own NSA happens to be fractional, so the search
   // itself never proposes something the console would reject outright.
   function nsaSearchDown(startNsa) {
-    // A start below 1 (GE's 0.5/0.75) has no whole number at or below it, and
+    // A start below 1 (e.g. 0.5, 0.75) has no whole number at or below it, and
     // the only whole numbers available are HIGHER, which would make a
     // speed-oriented search slower than the start. Keep the user's own value
     // rather than generate a fractional (or a longer-scan) candidate.
