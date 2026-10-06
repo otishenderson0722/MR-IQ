@@ -1351,7 +1351,7 @@
         <select class="lib-search" id="scanner-filter">
           <option value="">All scanners</option>
         </select>
-        <input type="text" class="lib-search" id="lib-search" placeholder="Search name, facility, scanner, notes…">
+        <input type="text" class="lib-search" id="lib-search" placeholder="Search name, facility, scanner, notes, planning notes…">
         <button type="button" class="btn-primary" id="add-protocol-btn">+ Add Protocol</button>
       </div>
     </div>
@@ -1363,7 +1363,7 @@
       <button type="button" class="btn-secondary" id="import-btn">Import backup</button>
       <input type="file" id="import-file-input" accept="application/json" style="display:none">
     </div>
-    <div class="lib-note">Everything (protocols, ACR minimums, TR ranges, the outcome log) is stored in this browser only — Export backup bundles them so you can move to another computer.</div>
+    <div class="lib-note">Everything (protocols, ACR minimums, TR ranges, NSA rule exceptions, the outcome log) is stored in this browser only — Export backup bundles them so you can move to another computer.</div>
 
     <div id="compliance-panel"></div>
 
@@ -2136,6 +2136,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
 (function () {
   const ids = ['tr', 'nsa', 'sense', 'freq', 'phase', 'te', 'etl', 'slices', 'thickness'];
+  // Stays false until the saved Calculator inputs have been restored at the
+  // end of the script, so nothing written during setup can overwrite them.
+  let calcStateReady = false;
   const curInputs = Object.fromEntries(ids.map(id => [id, document.getElementById('cur-' + id)]));
   const propInputs = Object.fromEntries(ids.map(id => [id, document.getElementById('prop-' + id)]));
 
@@ -2949,6 +2952,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   });
 
   function render() {
+    if (calcStateReady) saveCalculatorState();
     refreshNsaHints();
     const current = readSet(curInputs, 'cur');
     const proposed = readSet(propInputs, 'prop');
@@ -4249,6 +4253,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       acrReferences,
       trRanges,
       outcomeLog,
+      nsaExceptions,
     };
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -4278,6 +4283,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         let incomingAcr = [];
         let incomingTr = [];
         let incomingOutcomes = [];
+        let incomingExceptions = [];
         if (Array.isArray(parsed)) {
           incomingProtocols = parsed;
         } else if (parsed && typeof parsed === 'object') {
@@ -4285,6 +4291,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           if (Array.isArray(parsed.acrReferences)) incomingAcr = parsed.acrReferences;
           if (Array.isArray(parsed.trRanges)) incomingTr = parsed.trRanges;
           if (Array.isArray(parsed.outcomeLog)) incomingOutcomes = parsed.outcomeLog;
+          if (Array.isArray(parsed.nsaExceptions)) incomingExceptions = parsed.nsaExceptions;
         }
 
         const validProtocols = incomingProtocols.filter(p => p && typeof p === 'object' && p.name && p.region);
@@ -4297,9 +4304,20 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         const validOutcomes = incomingOutcomes.filter(e =>
           e && typeof e === 'object' && e.id && OUTCOME_TYPES[e.outcome] && e.loggedAt && !knownOutcomeIds.has(e.id));
 
-        if (validProtocols.length === 0 && validAcr.length === 0 && validTr.length === 0 && validOutcomes.length === 0) {
-          if (incomingOutcomes.length > 0) {
-            alert('Nothing new to import — those logged results are already in your outcome log.');
+        // NSA exceptions are merged into the current list (case-insensitive,
+        // existing entries kept) rather than replacing it, so importing never
+        // removes an exception you've added here.
+        const cleanedExceptions = incomingExceptions.filter(x => typeof x === 'string' && x.trim()).map(x => x.trim());
+        const newExceptions = [];
+        cleanedExceptions.forEach(x => {
+          const lower = x.toLowerCase();
+          const known = nsaExceptions.some(k => k.toLowerCase() === lower) || newExceptions.some(k => k.toLowerCase() === lower);
+          if (!known) newExceptions.push(x); // first spelling wins
+        });
+
+        if (validProtocols.length === 0 && validAcr.length === 0 && validTr.length === 0 && validOutcomes.length === 0 && newExceptions.length === 0) {
+          if (incomingOutcomes.length > 0 || cleanedExceptions.length > 0) {
+            alert('Nothing new to import — those logged results / NSA exceptions are already in this browser.');
             return;
           }
           alert('That file doesn’t look like a MR IQ backup.');
@@ -4311,6 +4329,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         if (validAcr.length) parts.push(`${validAcr.length} ACR reference entr${validAcr.length === 1 ? 'y' : 'ies'}`);
         if (validTr.length) parts.push(`${validTr.length} TR range entr${validTr.length === 1 ? 'y' : 'ies'}`);
         if (validOutcomes.length) parts.push(`${validOutcomes.length} logged result(s)`);
+        if (newExceptions.length) parts.push(`${newExceptions.length} NSA exception${newExceptions.length === 1 ? '' : 's'}`);
         const hasReferenceData = validAcr.length > 0 || validTr.length > 0;
         const confirmMsg = `Import ${parts.join(', ')}?`
           + ' Protocols are added alongside your current library.'
@@ -4336,6 +4355,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
             if (idx >= 0) acrReferences[idx] = record; else acrReferences.push(record);
           });
           persistAcrReferences();
+        }
+
+        if (newExceptions.length) {
+          nsaExceptions = nsaExceptions.concat(newExceptions);
+          persistNsaExceptions();
+          renderNsaExceptionChips();
         }
 
         if (validOutcomes.length) {
@@ -5732,8 +5757,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         ${optimizerCompareRow('Phase oversampling', `${start.oversamplingPercent || 0}%`, `${candidate.oversamplingPercent || 0}%`, confidenceRow(confRows, 'oversampling'))}
       </div>
       <div class="lib-note" style="margin-top:-6px;">${tierData.habitusInfo
-        ? 'Oversampling is normally a fold-over/aliasing safeguard, not a speed knob — reduced here only because height/weight were entered (see the caution below).'
-        : 'Oversampling is a fold-over/aliasing safeguard, not a speed knob — every tier keeps it unchanged from the starting protocol unless height/weight are entered above.'}</div>
+        ? `Oversampling is normally a fold-over/aliasing safeguard, not a speed knob — reduced here because height/weight were entered (see the caution below). Separately, the T1 NSA 2→1 offset can add up to ${Math.max(...NSA_RULE_OVERSAMPLING_ADDS)} oversampling points before that reduction is applied.`
+        : `Oversampling is a fold-over/aliasing safeguard, not a speed knob — tiers keep it unchanged from the starting protocol, except that the T1 NSA 2→1 offset can add up to ${Math.max(...NSA_RULE_OVERSAMPLING_ADDS)} oversampling points to hold SNR, and entering height/weight can reduce it.`}</div>
       <div class="results" style="margin: 14px 0;">
         <div class="result-card">
           <h3>Relative scan time ${result.time.comparable ? timeConfTag : ''}</h3>
@@ -6515,6 +6540,78 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     renderOutcomeLog();
   });
 
+  // ---------------------------------------------------------------------
+  // Calculator memory — the Current and Proposed panels' inputs (every
+  // field in them, including each panel's sequence type, acceleration,
+  // matrix input style and fold-over entry) plus the vendor/slice
+  // orientation selectors that decide how those inputs are labeled, are
+  // kept in this browser between sessions. What's on screen is what's
+  // remembered, so "Reset fields" is remembered as cleared. NOT remembered:
+  // clinical priority, exam label, g-factor K, patient height/weight (patient
+  // data), the Aggressive toggle (deliberately never), and the planning-note
+  // / suggestion banners (those belong to a loaded protocol, not an input).
+  // ---------------------------------------------------------------------
+  const CALC_STATE_KEY = 'mriq.calculatorState.v1';
+  const CALC_PANEL_FIELDS = ['tr', 'nsa', 'sense', 'freq', 'phase', 'te', 'etl', 'slices', 'thickness',
+    'accel-type', 'cs-voxel-freq', 'cs-voxel-phase',
+    'matrix-style', 'fov-freq', 'fov-phase', 'voxel-freq', 'voxel-phase', 'base-res', 'phase-res-pct',
+    'oversampling', 'oversampling-unit', 'oversampling-h', 'oversampling-f', 'oversampling-axis',
+    'sequenceType'];
+  const CALC_GLOBAL_IDS = ['vendor-select', 'slice-orientation-select'];
+  const CALC_STATE_IDS = new Set([
+    ...CALC_GLOBAL_IDS,
+    ...['cur', 'prop'].flatMap(p => CALC_PANEL_FIELDS.map(f => `${p}-${f}`)),
+  ]);
+
+  function saveCalculatorState() {
+    try {
+      const state = { cur: {}, prop: {}, globals: {} };
+      ['cur', 'prop'].forEach(p => CALC_PANEL_FIELDS.forEach(f => {
+        const el = document.getElementById(`${p}-${f}`);
+        if (el) state[p][f] = el.value;
+      }));
+      CALC_GLOBAL_IDS.forEach(id => { state.globals[id] = document.getElementById(id).value; });
+      localStorage.setItem(CALC_STATE_KEY, JSON.stringify(state));
+    } catch (e) {
+      // Convenience only — never block the calculator if storage is unavailable.
+    }
+  }
+
+  function restoreCalculatorState() {
+    let state = null;
+    try { state = JSON.parse(localStorage.getItem(CALC_STATE_KEY)); } catch (e) { return; }
+    if (!state || typeof state !== 'object') return;
+    const put = (id, v) => {
+      const el = document.getElementById(id);
+      if (el && typeof v === 'string') el.value = v;
+    };
+    // Vendor first: its change handler applies a vendor-driven matrix style
+    // to both panels, which the per-panel restore below then overrides.
+    const g = state.globals || {};
+    if (typeof g['vendor-select'] === 'string') {
+      put('vendor-select', g['vendor-select']);
+      vendorSelectEl.dispatchEvent(new Event('change'));
+    }
+    if (typeof g['slice-orientation-select'] === 'string') {
+      put('slice-orientation-select', g['slice-orientation-select']);
+      sliceOrientationSelectEl.dispatchEvent(new Event('change'));
+    }
+    ['cur', 'prop'].forEach(p => {
+      const s = state[p];
+      if (!s || typeof s !== 'object') return;
+      // Style first (shows/hides the right sections), then every field's value.
+      if (typeof s['matrix-style'] === 'string') matrixStyleGroups[p].setStyle(s['matrix-style']);
+      CALC_PANEL_FIELDS.forEach(f => put(`${p}-${f}`, s[f]));
+      accelTypeGroups[p].refreshLabel();
+      // Re-run the fold-over group's own display logic (derived % note, axis letters).
+      document.getElementById(`${p}-oversampling-axis`).dispatchEvent(new Event('change'));
+      document.getElementById(`${p}-oversampling`).dispatchEvent(new Event('input'));
+    });
+  }
+
+  document.addEventListener('input', (e) => { if (calcStateReady && CALC_STATE_IDS.has(e.target.id)) saveCalculatorState(); }, true);
+  document.addEventListener('change', (e) => { if (calcStateReady && CALC_STATE_IDS.has(e.target.id)) saveCalculatorState(); }, true);
+
   renderRegionTabs();
   renderScannerFilterOptions();
   renderFacilityFilterOptions();
@@ -6531,6 +6628,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // drives the inline optimizer, whose helpers (OPTIMIZER_TIERS,
   // TIER_TRADEOFF_NOTES, tierCardHtml, etc.) are declared further down
   // this file and must exist first.
+  // Restore the remembered Calculator inputs (needs the sequence-type options
+  // rendered above), then allow saving again and do the first render.
+  restoreCalculatorState();
+  calcStateReady = true;
   render();
 })();
 </script>
