@@ -711,6 +711,10 @@
   /* Opens on top of the Optimize modal when logging from there. */
   #outcome-modal-overlay { z-index: 70; }
   .outcome-log-row { margin-top: 12px; }
+  .time-input-warning { color: var(--warn-border); font-size: 0.78rem; font-weight: 700; margin-top: 6px; }
+  .time-input-warning:empty { display: none; }
+  .nsa-hint { color: var(--bad); font-size: 0.78rem; font-weight: 600; margin: -6px 0 8px; }
+  .nsa-hint:empty { display: none; }
   .suggestion-log-row {
     font-size: 0.8rem;
     background: var(--panel-2);
@@ -982,8 +986,9 @@
           <div class="section-divider" style="margin-top:0;">Summary</div>
           <div class="field">
             <label for="cur-nsa" id="cur-nsa-label">NSA</label>
-            <input type="number" id="cur-nsa" value="1" min="0.5" step="0.5">
+            <input type="number" id="cur-nsa" value="1" min="1" step="1" inputmode="numeric">
           </div>
+          <div class="nsa-hint" id="cur-nsa-hint"></div>
           <div class="field">
             <label for="cur-matrix-style">Matrix input style</label>
             <select id="cur-matrix-style">
@@ -1161,8 +1166,9 @@
         <div class="section-divider" style="margin-top:0;">Summary</div>
         <div class="field">
           <label for="prop-nsa" id="prop-nsa-label">NSA</label>
-          <input type="number" id="prop-nsa" value="1" min="0.5" step="0.5">
+          <input type="number" id="prop-nsa" value="1" min="1" step="1" inputmode="numeric">
         </div>
+        <div class="nsa-hint" id="prop-nsa-hint"></div>
         <div class="field">
           <label for="prop-matrix-style">Matrix input style</label>
           <select id="prop-matrix-style">
@@ -1302,6 +1308,7 @@
         <h3>Relative scan time <span id="time-confidence"></span></h3>
         <div class="result-value" id="time-value">—</div>
         <div class="result-sub" id="time-sub">—</div>
+        <div class="time-input-warning" id="time-warning"></div>
         <div class="bar-track"><div class="bar-fill" id="time-bar" style="width:0%"></div></div>
       </div>
       <div class="result-card">
@@ -1553,7 +1560,7 @@
       </div>
       <div class="field">
         <label for="pf-nsa" id="pf-nsa-label">NSA</label>
-        <input type="number" id="pf-nsa" min="0.5" step="0.5" required>
+        <input type="number" id="pf-nsa" min="1" step="1" inputmode="numeric" required>
       </div>
       <div class="field">
         <label for="pf-oversampling" id="pf-oversampling-label">Phase oversampling</label>
@@ -2636,10 +2643,48 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   function isValid(p) {
     const core = [p.tr, p.nsa, p.sense, p.freqMatrix, p.phaseMatrix].every(v => Number.isFinite(v) && v > 0);
     if (!core) return false;
+    if (!Number.isInteger(p.nsa) || p.nsa < 1) return false; // NSA is whole numbers of 1 or more only
     if (p.accelType === 'cs-sense') {
       return Number.isFinite(p.csVoxelFreq) && p.csVoxelFreq > 0 && Number.isFinite(p.csVoxelPhase) && p.csVoxelPhase > 0;
     }
     return true;
+  }
+
+  // NSA is whole numbers of 1 or more only. Typing a decimal point, sign or
+  // exponent is blocked outright; anything else that sneaks in (paste, spinner)
+  // is snapped to the nearest whole number >= 1 when the field is committed.
+  // Until then isValid() rejects it and a hint says why.
+  function enforceWholeNsa(el, afterSnap) {
+    el.addEventListener('keydown', (e) => {
+      if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+    });
+    el.addEventListener('change', () => {
+      const v = parseFloat(el.value);
+      if (Number.isFinite(v) && (!Number.isInteger(v) || v < 1)) {
+        el.value = Math.max(1, Math.round(v));
+        if (afterSnap) afterSnap();
+      }
+    });
+  }
+  // Time is shown as a plain number only when slice count is blank (an entered
+  // slice count hides it — see hasUnreliableTime), so a displayed time always
+  // lacks slice count; ETL may or may not be there. Either gap can make the
+  // real scan time several times different, so the number gets a visible flag
+  // rather than being removed. `paramSets` = the params whose time is shown.
+  function timeInputsWarning(paramSets) {
+    if (!paramSets.length) return null;
+    const etlMissing = paramSets.some(p => !(Number.isFinite(p.etl) && p.etl > 0));
+    const slicesMissing = paramSets.some(p => !hasSliceCount(p));
+    if (etlMissing && slicesMissing) return { text: 'ETL/slice count not entered — real time can be several times different.', short: 'ETL/slice count not entered' };
+    if (etlMissing) return { text: 'ETL not entered — real time can be several times different.', short: 'ETL not entered' };
+    if (slicesMissing) return { text: 'Slice count not entered — real time can be several times different.', short: 'slice count not entered' };
+    return null;
+  }
+
+  function nsaHintText(value) {
+    const v = parseFloat(value);
+    return (value !== '' && Number.isFinite(v) && (!Number.isInteger(v) || v < 1))
+      ? 'NSA must be a whole number of 1 or more.' : '';
   }
 
   function formatSeconds(ms) {
@@ -2903,6 +2948,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
     const timeValueEl = document.getElementById('time-value');
     const timeSubEl = document.getElementById('time-sub');
+    const timeWarningEl = document.getElementById('time-warning');
     const timeBarEl = document.getElementById('time-bar');
     const snrValueEl = document.getElementById('snr-value');
     const snrSubEl = document.getElementById('snr-sub');
@@ -2927,6 +2973,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (!isValid(current) || !isValid(proposed)) {
       timeValueEl.textContent = '—';
       timeSubEl.textContent = 'Enter valid positive values for all fields.';
+      timeWarningEl.textContent = '';
+      document.getElementById('cur-nsa-hint').textContent = nsaHintText(curInputs.nsa.value);
+      document.getElementById('prop-nsa-hint').textContent = nsaHintText(propInputs.nsa.value);
       snrValueEl.textContent = '—';
       snrSubEl.textContent = '';
       bannerEl.classList.remove('show');
@@ -2972,6 +3021,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       (result.time.currentUnreliable ? 'Verify at console' : formatSeconds(result.time.currentMs))
       + ' → ' +
       (result.time.proposedUnreliable ? 'Verify at console' : formatSeconds(result.time.proposedMs));
+    // Flag (never remove) any time number shown without ETL/slice count.
+    const shownTimeSets = [];
+    if (!result.time.currentUnreliable) shownTimeSets.push(current);
+    if (!result.time.proposedUnreliable) shownTimeSets.push(proposed);
+    const timeWarn = timeInputsWarning(shownTimeSets);
+    timeWarningEl.textContent = timeWarn ? '⚠ ' + timeWarn.text : '';
+    document.getElementById('cur-nsa-hint').textContent = '';
+    document.getElementById('prop-nsa-hint').textContent = '';
 
     // SNR: an increase is "good", a decrease is "bad" — except when current
     // and proposed use different SNR bases (one CS-SENSE, one not), where
@@ -3128,6 +3185,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   [...Object.values(curInputs), ...Object.values(propInputs), gK].forEach(el => {
     el.addEventListener('input', render);
   });
+  [curInputs.nsa, propInputs.nsa].forEach(el => enforceWholeNsa(el, render));
   [curSequenceTypeEl, propSequenceTypeEl].forEach(el => {
     el.addEventListener('change', render);
   });
@@ -3961,6 +4019,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     planningNotes: document.getElementById('pf-planning-notes'),
   };
 
+  enforceWholeNsa(pf.nsa);
   matrixStyleGroups.pf = setupMatrixStyleGroup('pf', () => {});
   accelTypeGroups.pf = setupAccelTypeGroup('pf', () => {});
   oversamplingGroups.pf = setupOversamplingGroup('pf', () => {});
@@ -4068,6 +4127,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
   protocolForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    const nsaValue = parseFloat(pf.nsa.value);
+    if (!Number.isInteger(nsaValue) || nsaValue < 1) {
+      alert('NSA must be a whole number of 1 or more.');
+      return;
+    }
     const accelType = pf.accelType.value || 'sense';
     const sense = accelType === 'none' ? 1 : parseFloat(pf.sense.value);
     if (accelType !== 'none' && !(Number.isFinite(sense) && sense > 0)) {
@@ -5567,6 +5631,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         ${matrixCaveat ? '<div class="tier-matrix-caveat">⚠ Verify matrix/voxel at console</div>' : ''}
         ${trCaveat ? '<div class="tier-matrix-caveat">⚠ Verify TR/slice-fit at console</div>' : ''}
         ${tierData.limitedSavings ? '<div class="tier-matrix-caveat">Limited savings within resolution limits</div>' : ''}
+        ${result.time.comparable && timeInputsWarning([outcome.start, candidate]) ? `<div class="tier-matrix-caveat">⚠ Time unverified — ${escapeHtml(timeInputsWarning([outcome.start, candidate]).short)}</div>` : ''}
         ${tierData.aggressiveInfo ? '<div class="aggressive-caveat-card">⚠⚠ Aggressive — outside normal safety margins, verify carefully before use</div>' : ''}
         ${tierData.habitusInfo ? `<div class="habitus-caveat-card">⚠⚠ VERIFY ANATOMY FITS WITHIN REDUCED FOV — oversampling cut for estimated habitus (BMI ~${Math.round(tierData.habitusInfo.bmi)})</div>` : ''}
         <div class="tier-tradeoff">${escapeHtml(tradeoff)}</div>
@@ -5659,7 +5724,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           <h3>Relative scan time ${result.time.comparable ? timeConfTag : ''}</h3>
           ${result.time.comparable
             ? `<div class="result-value ${result.time.percentChange < 0 ? 'good' : result.time.percentChange > 0 ? 'bad' : ''}">${formatPercent(result.time.percentChange)}</div>
-          <div class="result-sub">${formatSeconds(result.time.currentMs)} → ${formatSeconds(result.time.proposedMs)}</div>`
+          <div class="result-sub">${formatSeconds(result.time.currentMs)} → ${formatSeconds(result.time.proposedMs)}</div>
+          ${timeInputsWarning([start, candidate]) ? `<div class="time-input-warning">⚠ ${escapeHtml(timeInputsWarning([start, candidate]).text)}</div>` : ''}`
             : `<div class="result-value cs-time-unavailable" style="font-size:1.1rem;">Verify at console</div>
           <div class="result-sub">${result.time.currentUnreliable ? 'Verify at console' : formatSeconds(result.time.currentMs)} → ${result.time.proposedUnreliable ? 'Verify at console' : formatSeconds(result.time.proposedMs)}</div>`
           }
