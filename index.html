@@ -1039,6 +1039,10 @@
             <input type="number" id="cur-slices" min="1" step="1" placeholder="e.g. 24">
           </div>
           <div class="field">
+            <label for="cur-thickness">Slice thickness (mm, optional)</label>
+            <input type="number" id="cur-thickness" min="0.1" step="0.1" placeholder="e.g. 4">
+          </div>
+          <div class="field">
             <label id="cur-oversampling-label">Fold-over suppression</label>
             <select id="cur-oversampling-axis" style="margin-bottom:6px; width:100%;">
               <option value="hf">H/F</option>
@@ -1214,6 +1218,10 @@
           <input type="number" id="prop-slices" min="1" step="1" placeholder="e.g. 24">
         </div>
         <div class="field">
+          <label for="prop-thickness">Slice thickness (mm, optional)</label>
+          <input type="number" id="prop-thickness" min="0.1" step="0.1" placeholder="e.g. 4">
+        </div>
+        <div class="field">
           <label id="prop-oversampling-label">Fold-over suppression</label>
           <select id="prop-oversampling-axis" style="margin-bottom:6px; width:100%;">
             <option value="hf">H/F</option>
@@ -1307,6 +1315,7 @@
     <div class="info-note" id="tr-note"></div>
     <div class="info-note" id="te-note"></div>
     <div class="info-note" id="etl-note"></div>
+    <div class="info-note" id="thickness-note"></div>
     <div class="info-note" id="resolution-note"></div>
     <div class="info-note" id="cs-voxel-note"></div>
     <div class="info-note" id="oversampling-note"></div>
@@ -1537,6 +1546,10 @@
       <div class="field">
         <label for="pf-etl" id="pf-etl-label">Echo train length (optional)</label>
         <input type="number" id="pf-etl" min="1" step="1">
+      </div>
+      <div class="field">
+        <label for="pf-te">TE (ms, optional)</label>
+        <input type="number" id="pf-te" min="1" step="1">
       </div>
       <div class="field">
         <label for="pf-nsa" id="pf-nsa-label">NSA</label>
@@ -2113,7 +2126,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 }
 
 (function () {
-  const ids = ['tr', 'nsa', 'sense', 'freq', 'phase', 'te', 'etl', 'slices'];
+  const ids = ['tr', 'nsa', 'sense', 'freq', 'phase', 'te', 'etl', 'slices', 'thickness'];
   const curInputs = Object.fromEntries(ids.map(id => [id, document.getElementById('cur-' + id)]));
   const propInputs = Object.fromEntries(ids.map(id => [id, document.getElementById('prop-' + id)]));
 
@@ -2871,6 +2884,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const tierData = calcOptimizerOutcome.tiers[calcOptimizerSelectedTier];
     if (!tierData) return;
     applyProtocolToInputs(tierData.candidate, propInputs, 'prop');
+    copyCurrentExtrasToProposed();
     propSequenceTypeEl.value = calcOptimizerOutcome.sequenceType;
     // The tier candidate is a derived parameter set, not a protocol record
     // — it carries no planning note of its own, so copy over whatever's
@@ -2899,6 +2913,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const trNoteEl = document.getElementById('tr-note');
     const teNoteEl = document.getElementById('te-note');
     const etlNoteEl = document.getElementById('etl-note');
+    const thicknessNoteEl = document.getElementById('thickness-note');
     const csVoxelNoteEl = document.getElementById('cs-voxel-note');
     const oversamplingNoteEl = document.getElementById('oversampling-note');
     const priorityFlagEl = document.getElementById('priority-flag-banner');
@@ -2919,6 +2934,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       trNoteEl.classList.remove('show');
       teNoteEl.classList.remove('show');
       etlNoteEl.classList.remove('show');
+      thicknessNoteEl.classList.remove('show');
       csVoxelNoteEl.classList.remove('show');
       oversamplingNoteEl.classList.remove('show');
       priorityFlagEl.classList.remove('show');
@@ -3084,6 +3100,18 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // still flagged with its own note whenever it changes, same as TE
     // above — its real-world non-linearity and voxel-size interaction mean
     // a changed value is always worth a second look at console.
+    // The SNR model assumes slice thickness is unchanged between Current and
+    // Proposed (relativeSnr never reads it), so a difference makes the SNR
+    // percentage misleading — say so rather than let it pass silently.
+    const curThk = parseFloat(curInputs.thickness.value);
+    const propThk = parseFloat(propInputs.thickness.value);
+    if (Number.isFinite(curThk) && Number.isFinite(propThk) && curThk > 0 && propThk > 0 && curThk !== propThk) {
+      thicknessNoteEl.textContent = `Slice thickness differs (${curThk} → ${propThk} mm) — the SNR estimate assumes it's unchanged, so it doesn't reflect this difference.`;
+      thicknessNoteEl.classList.add('show');
+    } else {
+      thicknessNoteEl.classList.remove('show');
+    }
+
     const etlConf = confidenceRow(confRows, 'etl');
     if (etlConf) {
       const curEtl = Number.isFinite(current.etl) && current.etl > 0 ? current.etl : 1;
@@ -3784,13 +3812,17 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
     switch (btn.dataset.action) {
       case 'load-current':
+        applyProtocolGlobals(protocol);
         applyProtocolToInputs(protocol, curInputs, 'cur');
+        applyProtocolExtras(protocol, 'cur');
         document.getElementById('cur-planning-note').innerHTML = planningNoteHtml(protocol);
         render();
         switchView('calculator');
         break;
       case 'load-proposed':
+        applyProtocolGlobals(protocol);
         applyProtocolToInputs(protocol, propInputs, 'prop');
+        applyProtocolExtras(protocol, 'prop');
         document.getElementById('prop-planning-note').innerHTML = planningNoteHtml(protocol);
         setProposedAggressiveNote(false);
         setProposedSuggestionContext(null);
@@ -3821,13 +3853,55 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     }
   });
 
+  // Everything on a saved protocol that isn't part of the physics
+  // parameter set applyProtocolToInputs handles: FOV (freq/phase) and slice
+  // thickness. Kept separate because applyProtocolToInputs is also fed bare
+  // optimizer candidates, which carry none of these. FOV is only written to
+  // the (possibly hidden) FOV fields — it's what the optimizer's voxel-size
+  // row reads — and the Voxel+FOV style's own voxel fields are left alone:
+  // pre-filling them could later overwrite a matrix edited in Raw style.
+  // `overrides` lets a caller supply FOV that was edited elsewhere (the
+  // Optimize modal's own FOV fields) instead of the stored value.
+  function applyProtocolExtras(p, panel, overrides) {
+    const o = overrides || {};
+    const fovFreq = o.fovFreq !== undefined ? o.fovFreq : p.fovFreq;
+    const fovPhase = o.fovPhase !== undefined ? o.fovPhase : p.fovPhase;
+    const thickness = o.sliceThicknessMm !== undefined ? o.sliceThicknessMm : p.sliceThicknessMm;
+    const pos = v => (Number.isFinite(v) && v > 0 ? v : '');
+    document.getElementById(`${panel}-fov-freq`).value = pos(fovFreq);
+    document.getElementById(`${panel}-fov-phase`).value = pos(fovPhase);
+    document.getElementById(`${panel}-thickness`).value = pos(thickness);
+  }
+
+  // Vendor and slice orientation are ONE selector each for the whole
+  // Calculator (both panels share them), so loading a protocol into either
+  // panel sets them for both. Left alone when the protocol has none saved.
+  function applyProtocolGlobals(p) {
+    if (p.vendor && p.vendor !== vendorSelectEl.value) {
+      vendorSelectEl.value = p.vendor;
+      vendorSelectEl.dispatchEvent(new Event('change'));
+    }
+    if (p.vendor === 'Philips' && p.sliceOrientation && p.sliceOrientation !== sliceOrientationSelectEl.value) {
+      sliceOrientationSelectEl.value = p.sliceOrientation;
+      sliceOrientationSelectEl.dispatchEvent(new Event('change'));
+    }
+  }
+
+  // An optimizer suggestion is derived from Current, so Proposed inherits
+  // Current's FOV, slice thickness and TE (the optimizer never changes them).
+  function copyCurrentExtrasToProposed() {
+    ['fov-freq', 'fov-phase', 'thickness', 'te'].forEach(k => {
+      document.getElementById(`prop-${k}`).value = document.getElementById(`cur-${k}`).value;
+    });
+  }
+
   function applyProtocolToInputs(p, inputs, panel) {
     inputs.tr.value = p.tr;
     inputs.etl.value = p.etl ?? '';
     inputs.slices.value = p.slices ?? '';
     inputs.nsa.value = p.nsa;
     inputs.sense.value = p.sense;
-    inputs.te.value = ''; // TE isn't tracked in the protocol library — avoid stale carryover
+    inputs.te.value = p.te ?? ''; // bare optimizer candidates carry no TE — blank rather than stale
     // FOV/voxel/Siemens inputs aren't tracked either — reset the style
     // group to raw so a stale FOV/voxel from an earlier comparison doesn't
     // imply a voxel size that no longer matches, then set the raw matrix.
@@ -3865,6 +3939,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     sliceOrientation: document.getElementById('pf-slice-orientation'),
     tr: document.getElementById('pf-tr'),
     etl: document.getElementById('pf-etl'),
+    te: document.getElementById('pf-te'),
     etlLabel: document.getElementById('pf-etl-label'),
     nsa: document.getElementById('pf-nsa'),
     nsaLabel: document.getElementById('pf-nsa-label'),
@@ -3949,6 +4024,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     updatePfVendorLabels();
     pf.tr.value = prefill?.tr ?? '';
     pf.etl.value = prefill?.etl ?? '';
+    pf.te.value = prefill?.te ?? '';
     pf.nsa.value = prefill?.nsa ?? '';
     pf.sense.value = prefill?.sense ?? '';
     accelTypeGroups.pf.set(prefill?.accelType || 'sense');
@@ -4016,6 +4092,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       sliceOrientation: pf.vendor.value === 'Philips' ? pf.sliceOrientation.value : '',
       tr: parseFloat(pf.tr.value),
       etl: parseFloat(pf.etl.value),
+      te: parseFloat(pf.te.value),
       nsa: parseFloat(pf.nsa.value),
       sense,
       accelType,
@@ -4046,6 +4123,21 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     closeModal();
   });
 
+  // The non-physics fields a panel holds that a saved protocol can also
+  // store, so "Save as protocol" from a loaded panel doesn't drop them.
+  function savedExtrasFromPanel(panel) {
+    const num = id => { const v = parseFloat(document.getElementById(id).value); return Number.isFinite(v) ? v : null; };
+    const vendor = vendorSelectEl.value;
+    return {
+      te: num(`${panel}-te`),
+      fovFreq: num(`${panel}-fov-freq`),
+      fovPhase: num(`${panel}-fov-phase`),
+      sliceThicknessMm: num(`${panel}-thickness`),
+      vendor,
+      sliceOrientation: vendor === 'Philips' ? sliceOrientationSelectEl.value : '',
+    };
+  }
+
   // Quick "save as protocol" from the calculator columns
   document.getElementById('save-current-btn').addEventListener('click', () => {
     const values = readSet(curInputs, 'cur');
@@ -4054,6 +4146,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       tr: values.tr, etl: values.etl, slices: values.slices, nsa: values.nsa, sense: values.sense, freqMatrix: values.freqMatrix, phaseMatrix: values.phaseMatrix,
       accelType: values.accelType, csVoxelFreq: values.csVoxelFreq, csVoxelPhase: values.csVoxelPhase,
       oversamplingPercent: values.oversamplingPercent,
+      ...savedExtrasFromPanel('cur'),
     });
   });
   document.getElementById('save-proposed-btn').addEventListener('click', () => {
@@ -4063,6 +4156,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       tr: values.tr, etl: values.etl, slices: values.slices, nsa: values.nsa, sense: values.sense, freqMatrix: values.freqMatrix, phaseMatrix: values.phaseMatrix,
       accelType: values.accelType, csVoxelFreq: values.csVoxelFreq, csVoxelPhase: values.csVoxelPhase,
       oversamplingPercent: values.oversamplingPercent,
+      ...savedExtrasFromPanel('prop'),
     });
   });
 
@@ -5666,8 +5760,15 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // Load both sides so the Calculator's comparison matches what the
     // optimizer just showed — Current = the saved protocol as-is,
     // Proposed = the selected tier's suggestion, ready for manual review.
+    applyProtocolGlobals(optimizerProtocol);
     applyProtocolToInputs(optimizerOutcome.start, curInputs, 'cur');
     applyProtocolToInputs(tierData.candidate, propInputs, 'prop');
+    // FOV comes from the modal's own (editable) fields; TE/thickness from the saved protocol.
+    const modalExtras = { fovFreq: optimizerOutcome.fovFreq, fovPhase: optimizerOutcome.fovPhase };
+    applyProtocolExtras(optimizerProtocol, 'cur', modalExtras);
+    applyProtocolExtras(optimizerProtocol, 'prop', modalExtras);
+    curInputs.te.value = optimizerProtocol.te ?? '';
+    propInputs.te.value = optimizerProtocol.te ?? '';
     document.getElementById('cur-planning-note').innerHTML = planningNoteHtml(optimizerProtocol);
     document.getElementById('prop-planning-note').innerHTML = planningNoteHtml(optimizerProtocol);
     setProposedAggressiveNote(optimizerSelectedTier === 'aggressive');
