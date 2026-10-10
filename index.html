@@ -297,6 +297,7 @@
   #quick-planning .planning-note-label { display: inline; margin: 0 6px 0 0; }
   .quick-timewarn { color: var(--warn-border); font-size: 0.7rem; font-weight: 700; line-height: 1.2; flex: 1 1 130px; min-width: 0; }
   .quick-timewarn:empty { display: none; }
+  .quick-timewarn.info { color: var(--text-dim); font-weight: 600; }
   .quick-row {
     display: block;
     width: 100%;
@@ -831,6 +832,7 @@
   .optimizer-tier-card .tier-metrics { margin: 8px 0 6px; font-size: 0.82rem; font-variant-numeric: tabular-nums; display: flex; gap: 10px; }
   .optimizer-tier-card .tier-metrics .good { color: var(--good); font-weight: 600; }
   .optimizer-tier-card .tier-metrics .bad { color: var(--bad); font-weight: 600; }
+  .optimizer-tier-card .tier-metrics .tier-clock { color: var(--text-dim); }
   .optimizer-tier-card .tier-oneliner { color: var(--text-dim); font-size: 0.76rem; line-height: 1.4; }
   .tier-matrix-caveat { color: var(--warn-border); font-size: 0.74rem; font-weight: 600; margin-top: 4px; }
   .cs-time-unavailable { color: var(--warn-border); font-weight: 600; }
@@ -1294,6 +1296,11 @@
             <input type="number" id="cur-tr" value="500" min="1" step="1">
           </div>
           <div class="tr-range-indicator" id="cur-tr-range"></div>
+          <div class="field">
+            <label for="cur-console-time">Console time (TA, optional)</label>
+            <input type="text" id="cur-console-time" inputmode="numeric" autocomplete="off" placeholder="m:ss — e.g. 2:26">
+            <div class="lib-note" style="margin-top:2px;">The scan time the console shows for the Current values above. Proposed time is then scaled from it by NSA, phase steps, acceleration factor and oversampling only — any TR change shows "Verify at console".</div>
+          </div>
         </div>
 
         <div class="panel-footer">
@@ -1305,9 +1312,10 @@
         <h2>⚡ Optimized options</h2>
         <div class="lib-note" style="margin-top:-6px;">
           First applies your personal NSA rule (T1/T2 default cap, see below) as its own labeled step, then searches
-          TR (within your accepted range), SENSE (up to a typical practical limit — not a hardware cap; actual caps
-          vary by coil/system), and matrix — with NSA now fixed at the rule's result rather than searched freely —
-          for three tiered options. Matrix/voxel size is capped at a maximum increase set by the selected clinical
+          SENSE (up to a typical practical limit — not a hardware cap; actual caps vary by coil/system) and matrix —
+          with NSA now fixed at the rule's result rather than searched freely — for three tiered options. TR stays at
+          your current value in every tier except Quality-first, which may raise it (labeled as affecting contrast and
+          time unpredictably): scan time doesn't scale reliably with TR, so TR is never used to save time. Matrix/voxel size is capped at a maximum increase set by the selected clinical
           priority (tighter for Cord/nerve detail, looser for Broad survey/screening) — even "Fastest" respects this
           ceiling rather than chasing time/SNR without limit. Nothing is applied automatically — pick a tier and
           load it into Proposed to review it yourself. Any matrix/voxel change should be verified against your
@@ -1516,7 +1524,7 @@
     <div class="info-note" id="oversampling-note"></div>
 
     <footer>
-      <strong>Model notes:</strong> Scan time ≈ TR × NSA × phase steps × (1 + oversampling%) ÷ (SENSE × TSE/turbo factor). TSE/turbo factor is now included (previously excluded entirely, which produced a ~9.5× real-world discrepancy on a TSE cervical axial T2 — est. ~19 min vs an actual ~2 min); it doesn't scale time perfectly linearly in practice and can also affect achievable voxel size, similar to the CS-SENSE factor, so treat this as a major improvement over the prior order-of-magnitude error, not a claim of precise linearity — verify any meaningful TSE factor change at console. Multi-package slice timing (additional TR passes once slice count exceeds what fits per TR) still isn't modeled — there's no reliable way to estimate max-slices-per-TR with what this app tracks — so entering a slice count flags the time estimate as "Verify at console" instead of silently under-predicting (confirmed ~6× off on an axial brain T2, 24 slices, est. ~19s vs an actual ~2:00). Still excludes partial Fourier and prep pulses (fat sat, IR).
+      <strong>Model notes:</strong> Scan time ≈ TR × NSA × phase steps × (1 + oversampling%) ÷ (SENSE × TSE/turbo factor). TSE/turbo factor is now included (previously excluded entirely, which produced a ~9.5× real-world discrepancy on a TSE cervical axial T2 — est. ~19 min vs an actual ~2 min); it doesn't scale time perfectly linearly in practice and can also affect achievable voxel size, similar to the CS-SENSE factor, so treat this as a major improvement over the prior order-of-magnitude error, not a claim of precise linearity — verify any meaningful TSE factor change at console. Multi-package slice timing (additional TR passes once slice count exceeds what fits per TR) still isn't modeled — there's no reliable way to estimate max-slices-per-TR with what this app tracks — so entering a slice count flags the time estimate as "Verify at console" instead of silently under-predicting (confirmed ~6× off on an axial brain T2, 24 slices, est. ~19s vs an actual ~2:00). Still excludes partial Fourier and prep pulses (fat sat, IR). <strong>Console time (TA):</strong> TR is no longer treated as a time lever at all — real scans showed time doesn't scale with TR when slice count limits it (TR 548 → 400 was predicted at 1:11 and took 2:26). If you enter the console's own time for the Current values, the proposed time is that number scaled only by NSA, phase steps, acceleration factor and oversampling, and any proposal where TR, TSE factor, slice count or a CS-SENSE factor changed shows "Verify at console" instead of a number.
       SNR ≈ (1 / (freq × phase)) × √(NSA × phase steps × (1 + oversampling%)) ÷ (g(R) × √R), assuming FOV and slice thickness stay constant between current and proposed — so voxel size is inferred from matrix size only. TR is not part of this SNR number — its effect on signal (via T1 recovery/saturation) is tissue-dependent, so it's called out qualitatively below instead of folded into the percentage.
       Phase oversampling is modeled like NSA — √(more phase-direction data) — since both just acquire more data in the phase direction, but it doesn't feed voxelFactor: the extra lines extend FOV, not resolution, and are cropped away on recon. Oversampling primarily prevents fold-over/aliasing artifact; the SNR increase is a secondary benefit, not the primary reason to adjust it — don't reduce oversampling below what's needed to prevent aliasing just to save time, even though the calculator will show a time savings for doing so.
       For CS-SENSE, the g-factor model above is skipped — SNR is instead estimated from the ACQ voxel size you enter directly, as (voxel freq × voxel phase) × √(NSA × (1 + oversampling%)), since CS-SENSE's iterative, variable-density reconstruction isn't something this simple model can approximate — treat those estimates as less precise than standard-SENSE ones, and only compare them against other CS-SENSE estimates (see the "not comparable" note when mixing with standard SENSE). Scan time for CS-SENSE isn't estimated at all — dividing by the CS factor like standard SENSE was confirmed ~4x off against actual console time (TR 741, NSA 2, 214×172, CS factor 2.1, TSE factor 7 → this app showed 35.8s, console showed ~150s), and there's no reliable approximation to use instead; the app shows "Verify at console" in its place.
@@ -1837,6 +1845,10 @@
       <div class="field">
         <label for="pf-slices">Number of slices (optional)</label>
         <input type="number" id="pf-slices" min="1" step="1" placeholder="e.g. 24">
+      </div>
+      <div class="field">
+        <label for="pf-console-time">Console time (TA, optional)</label>
+        <input type="text" id="pf-console-time" inputmode="numeric" autocomplete="off" placeholder="m:ss — e.g. 2:26">
       </div>
       <div class="field">
         <label for="pf-acr-sequence">ACR sequence</label>
@@ -2190,6 +2202,88 @@ function acquisitionTimeMs(params) {
   return (tr * nsa * phaseMatrix * oversamplingFactor(params)) / (effectiveAccelFactor(params) * tseFactor(params));
 }
 
+// --- Console time (TA) -----------------------------------------------------
+// Real-world evidence: TR 548 -> 400 was predicted at 1:11 but the console
+// scan took 2:26. When slice count limits TR the scanner adds/removes
+// packages, so time does NOT scale with TR. The only reliable way to get an
+// absolute time is to start from the console's own TA for the CURRENT
+// protocol and scale it ONLY by the factors that scale reliably: NSA, phase
+// steps, acceleration factor and oversampling. Anything else that changed
+// (TR, TSE factor, slice count, a CS-SENSE factor) means "Verify at console".
+function parseConsoleTime(text) {
+  const t = String(text == null ? '' : text).trim();
+  if (!t) return NaN;
+  let sec = NaN;
+  let m = /^(\d+):([0-5]?\d)(?:\.\d+)?$/.exec(t);
+  if (m) sec = Number(m[1]) * 60 + Number(m[2]);
+  else if ((m = /^(\d+):([0-5]?\d):([0-5]?\d)$/.exec(t))) sec = Number(m[1]) * 3600 + Number(m[2]) * 60 + Number(m[3]);
+  else if (/^\d+(\.\d+)?$/.test(t)) sec = Number(t); // plain number = seconds
+  return Number.isFinite(sec) && sec > 0 ? sec : NaN;
+}
+
+function formatConsoleTime(sec) {
+  const total = Math.round(sec);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`;
+}
+
+// Entered console time in seconds, or null when blank/invalid.
+function consoleTimeSecOf(params) {
+  const v = params && params.consoleTimeSec;
+  return Number.isFinite(v) && v > 0 ? v : null;
+}
+
+// NSA x phase steps x oversampling / acceleration — the part of the time
+// formula that scales reliably (no TR, no TSE factor).
+function reliableTimeFactor(params) {
+  return (params.nsa * params.phaseMatrix * oversamplingFactor(params)) / effectiveAccelFactor(params);
+}
+
+// Why a console-anchored time can't be scaled from `from` to `to`.
+function consoleTimeVerifyReasons(from, to) {
+  const reasons = [];
+  if (to.tr !== from.tr) reasons.push('TR changed');
+  const anyCs = from.accelType === 'cs-sense' || to.accelType === 'cs-sense';
+  if (anyCs && (from.accelType !== to.accelType || effectiveAccelFactor(from) !== effectiveAccelFactor(to))) {
+    reasons.push('CS-SENSE factor changed');
+  }
+  if (tseFactor(from) !== tseFactor(to)) reasons.push('TSE factor changed');
+  const slicesOf = p => (hasSliceCount(p) ? p.slices : 0);
+  if (slicesOf(from) !== slicesOf(to)) reasons.push('slice count changed');
+  return reasons;
+}
+
+// The console time re-anchored to a start that differs from the protocol it
+// was read for (e.g. NSA edited in Quick) — or null if it can't be re-anchored
+// reliably, in which case the app falls back to the plain formula.
+function rebaseConsoleTimeSec(consoleSec, fromParams, toParams) {
+  if (!Number.isFinite(consoleSec) || consoleSec <= 0) return null;
+  if (consoleTimeVerifyReasons(fromParams, toParams).length) return null;
+  return consoleSec * reliableTimeFactor(toParams) / reliableTimeFactor(fromParams);
+}
+
+// A saved protocol's physics fields in the shape the time/SNR model reads.
+function paramsFromProtocol(p) {
+  return {
+    tr: p.tr, nsa: p.nsa, sense: p.accelType === 'none' ? 1 : p.sense,
+    freqMatrix: p.freqMatrix, phaseMatrix: p.phaseMatrix,
+    accelType: p.accelType || 'sense', csVoxelFreq: p.csVoxelFreq, csVoxelPhase: p.csVoxelPhase,
+    oversamplingPercent: p.oversamplingPercent || 0, etl: p.etl, slices: p.slices,
+  };
+}
+
+// One line explaining where a console-anchored time came from (or why none
+// is shown). Null when the time isn't console-based.
+function timeBasisNote(time) {
+  if (!time || !time.consoleBased) return null;
+  if (time.comparable) {
+    return { kind: 'info', text: `Scaled from your console time (${formatConsoleTime(time.currentMs / 1000)}) by NSA, phase steps, acceleration factor and oversampling only.` };
+  }
+  return { kind: 'warn', text: `Verify at console — ${time.verifyReasons.join(', ')}. Scan time doesn't scale reliably with that (slice packages), so no number is shown.` };
+}
+
 function relativeSnr(params, k = DEFAULT_G_FACTOR_K) {
   const { nsa, freqMatrix, phaseMatrix } = params;
   const osFactor = oversamplingFactor(params);
@@ -2293,16 +2387,45 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const proposedTimeUnreliable = hasUnreliableTime(proposed);
   const timeComparable = !currentTimeUnreliable && !proposedTimeUnreliable;
 
+  let time = {
+    currentMs: timeCurrentMs,
+    proposedMs: timeProposedMs,
+    ratio: timeRatio,
+    percentChange: (timeRatio - 1) * 100,
+    comparable: timeComparable,
+    currentUnreliable: currentTimeUnreliable,
+    proposedUnreliable: proposedTimeUnreliable,
+    // The plain formula's ratio (TR and TSE included), kept for the
+    // optimizer's "modest time increase" budget either way.
+    modelRatio: timeRatio,
+    consoleBased: false,
+    verifyReasons: [],
+  };
+
+  // Console time entered for Current: anchor to it and scale ONLY by the
+  // reliable factors. This replaces the unreliable-time flags above (a
+  // console time makes a slice-count/CS-SENSE protocol usable) but any TR /
+  // TSE / slice / CS-factor change means no proposed number at all.
+  const consoleSec = consoleTimeSecOf(current);
+  if (consoleSec !== null) {
+    const reasons = consoleTimeVerifyReasons(current, proposed);
+    const ratio = reliableTimeFactor(proposed) / reliableTimeFactor(current);
+    time = {
+      currentMs: consoleSec * 1000,
+      proposedMs: consoleSec * 1000 * ratio,
+      ratio,
+      percentChange: (ratio - 1) * 100,
+      comparable: reasons.length === 0,
+      currentUnreliable: false,
+      proposedUnreliable: reasons.length > 0,
+      modelRatio: timeRatio,
+      consoleBased: true,
+      verifyReasons: reasons,
+    };
+  }
+
   return {
-    time: {
-      currentMs: timeCurrentMs,
-      proposedMs: timeProposedMs,
-      ratio: timeRatio,
-      percentChange: (timeRatio - 1) * 100,
-      comparable: timeComparable,
-      currentUnreliable: currentTimeUnreliable,
-      proposedUnreliable: proposedTimeUnreliable,
-    },
+    time,
     snr: {
       currentRelative: snrCurrent,
       proposedRelative: snrProposed,
@@ -2829,6 +2952,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       // so leaving it blank behaves exactly as before slice count was
       // tracked at all.
       slices: parseFloat(inputs.slices.value),
+      // Console time (TA) only exists on the Current panel — it's the anchor
+      // the proposed time is scaled from. NaN/absent = plain formula.
+      consoleTimeSec: prefix === 'cur' ? parseConsoleTime(document.getElementById('cur-console-time').value) : NaN,
     };
   }
 
@@ -2876,6 +3002,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // rather than being removed. `paramSets` = the params whose time is shown.
   function timeInputsWarning(paramSets) {
     if (!paramSets.length) return null;
+    // A console time anchors the number, so the ETL/slice-count gap no longer applies.
+    if (paramSets.some(p => consoleTimeSecOf(p) !== null)) return null;
     const etlMissing = paramSets.some(p => !(Number.isFinite(p.etl) && p.etl > 0));
     const slicesMissing = paramSets.some(p => !hasSliceCount(p));
     if (etlMissing && slicesMissing) return { text: 'ETL/slice count not entered — real time can be several times different.', short: 'ETL/slice count not entered' };
@@ -3227,7 +3355,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (!result.time.currentUnreliable) shownTimeSets.push(current);
     if (!result.time.proposedUnreliable) shownTimeSets.push(proposed);
     const timeWarn = timeInputsWarning(shownTimeSets);
-    timeWarningEl.textContent = timeWarn ? '⚠ ' + timeWarn.text : '';
+    const timeBasis = timeBasisNote(result.time);
+    timeWarningEl.textContent = timeBasis
+      ? (timeBasis.kind === 'warn' ? '⚠ ' : 'ℹ ') + timeBasis.text
+      : (timeWarn ? '⚠ ' + timeWarn.text : '');
 
     // SNR: an increase is "good", a decrease is "bad" — except when current
     // and proposed use different SNR bases (one CS-SENSE, one not), where
@@ -3285,8 +3416,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       oversamplingNoteEl.classList.remove('show');
     }
 
-    const timeUnreliableCsSense = current.accelType === 'cs-sense' || proposed.accelType === 'cs-sense';
-    const timeUnreliableSlices = hasSliceCount(current) || hasSliceCount(proposed);
+    // A console time replaces these generic "can't estimate" notes — the time
+    // line itself says what was scaled, or why it needs verifying.
+    const timeUnreliableCsSense = !result.time.consoleBased && (current.accelType === 'cs-sense' || proposed.accelType === 'cs-sense');
+    const timeUnreliableSlices = !result.time.consoleBased && (hasSliceCount(current) || hasSliceCount(proposed));
     if (result.csSenseApprox || timeUnreliableCsSense || timeUnreliableSlices) {
       const parts = [];
       if (result.csSenseApprox) {
@@ -3349,7 +3482,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // Skip the tag when time isn't comparable at all (CS-SENSE) — the
     // "Verify at console" value itself already says so; a second tag
     // next to it would just be redundant.
-    timeConfidenceEl.innerHTML = result.time.comparable ? confidenceTagFromRows(confRows) : '';
+    timeConfidenceEl.innerHTML = (result.time.comparable && !result.time.consoleBased) ? confidenceTagFromRows(confRows) : '';
     snrConfidenceEl.innerHTML = result.snr.comparable ? confidenceTagFromRows(confRows.filter(r => r.key !== 'tr' && r.key !== 'etl')) : '';
 
     // TSE/turbo factor now feeds the time formula (see tseFactor()) but is
@@ -3392,10 +3525,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     document.getElementById(id).addEventListener('input', render);
   });
 
+  document.getElementById('cur-console-time').addEventListener('input', render);
+
   document.getElementById('reset-btn').addEventListener('click', () => {
     [...Object.values(curInputs), ...Object.values(propInputs)].forEach(el => {
       el.value = '';
     });
+    document.getElementById('cur-console-time').value = '';
     matrixStyleGroups.cur.reset();
     matrixStyleGroups.prop.reset();
     accelTypeGroups.cur.reset();
@@ -3934,7 +4070,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           ${vendorBadgeHtml}
         </div>
         ${planningNoteHtml(p)}
-        <div class="protocol-params">TR ${p.tr} ms · ${terms.nsa} ${p.nsa} · ${accelSummaryLabel(p)} · ${p.freqMatrix}×${p.phaseMatrix}${thicknessLabel}</div>
+        <div class="protocol-params">TR ${p.tr} ms · ${terms.nsa} ${p.nsa} · ${accelSummaryLabel(p)} · ${p.freqMatrix}×${p.phaseMatrix}${thicknessLabel}${Number.isFinite(p.consoleTimeSec) && p.consoleTimeSec > 0 ? ` · TA ${formatConsoleTime(p.consoleTimeSec)}` : ''}</div>
         ${acrTagHtml}
         ${healthScoreHtml(p)}
         ${notesHtml}
@@ -4131,6 +4267,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     document.getElementById(`${panel}-fov-freq`).value = pos(fovFreq);
     document.getElementById(`${panel}-fov-phase`).value = pos(fovPhase);
     document.getElementById(`${panel}-thickness`).value = pos(thickness);
+    // Console time (TA) belongs to the Current panel only.
+    if (panel === 'cur') {
+      const ta = o.consoleTimeSec !== undefined ? o.consoleTimeSec : p.consoleTimeSec;
+      document.getElementById('cur-console-time').value = Number.isFinite(ta) && ta > 0 ? formatConsoleTime(ta) : '';
+    }
   }
 
   // Vendor and slice orientation are ONE selector each for the whole
@@ -4215,6 +4356,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     matrixLabel: document.getElementById('pf-matrix-label'),
     sliceThickness: document.getElementById('pf-slice-thickness'),
     slices: document.getElementById('pf-slices'),
+    consoleTime: document.getElementById('pf-console-time'),
     acrSequence: document.getElementById('pf-acr-sequence'),
     acrHint: document.getElementById('pf-acr-hint'),
     notes: document.getElementById('pf-notes'),
@@ -4312,6 +4454,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     oversamplingGroups.pf.set(prefill?.oversamplingPercent || 0);
     pf.sliceThickness.value = prefill?.sliceThicknessMm ?? '';
     pf.slices.value = prefill?.slices ?? '';
+    pf.consoleTime.value = Number.isFinite(prefill?.consoleTimeSec) && prefill.consoleTimeSec > 0 ? formatConsoleTime(prefill.consoleTimeSec) : '';
     pf.notes.value = prefill?.notes || '';
     pf.planningNotes.value = prefill?.planningNotes || '';
     toggleSubregionField();
@@ -4353,6 +4496,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       alert('Enter the ACQ voxel size (freq × phase) for CS-SENSE.');
       return;
     }
+    const consoleTimeText = pf.consoleTime.value.trim();
+    const consoleTimeSec = consoleTimeText ? parseConsoleTime(consoleTimeText) : null;
+    if (consoleTimeText && !Number.isFinite(consoleTimeSec)) {
+      alert('Console time (TA) should look like 2:26 (minutes:seconds), or a number of seconds — or leave it blank.');
+      return;
+    }
     const record = {
       id: editingId || makeId(),
       name: pf.name.value.trim(),
@@ -4378,6 +4527,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       oversamplingPercent: oversamplingGroups.pf.readPercent(),
       sliceThicknessMm: parseFloat(pf.sliceThickness.value),
       slices: parseFloat(pf.slices.value),
+      consoleTimeSec,
       acrSequenceId: pf.acrSequence.value || '',
       notes: pf.notes.value.trim(),
       planningNotes: pf.planningNotes.value.trim(),
@@ -4402,7 +4552,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   function savedExtrasFromPanel(panel) {
     const num = id => { const v = parseFloat(document.getElementById(id).value); return Number.isFinite(v) ? v : null; };
     const vendor = vendorSelectEl.value;
+    const ta = panel === 'cur' ? parseConsoleTime(document.getElementById('cur-console-time').value) : NaN;
     return {
+      consoleTimeSec: Number.isFinite(ta) ? ta : null,
       te: num(`${panel}-te`),
       fovFreq: num(`${panel}-fov-freq`),
       fovPhase: num(`${panel}-fov-phase`),
@@ -5215,19 +5367,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // SENSE/oversampling) are pre-set by the rule above.
     const searchBase = nsaStep.candidate;
 
-    // TR doesn't appear in the SNR formula at all (see the Calculator's
-    // model notes — its real-world effect on signal via T1 recovery is
-    // tissue-dependent and handled as a qualitative flag, not a number).
-    // Fastest/Balanced exist to save time, and TR gives up nothing in the
-    // MODELED SNR by going to the range minimum, so both use it. Quality-
-    // first is the opposite case: its whole purpose is protecting SNR, and
-    // a TR *decrease* is a real-world SNR reducer (see trSummaryText) that
-    // this tier must never suggest — so it never uses the range minimum.
-    // Because the objective function below can't "discover" that on its
-    // own (equal modeled SNR + lower time would otherwise just win the
-    // tie), Quality's TR is picked separately per candidate by
-    // pickQualityTr() further down rather than fixed once up front.
-    const speedTr = trRange.minTr;
+    // TR is NOT used as a time-saving lever. Real console times don't scale
+    // with TR (when slice count limits TR the scanner adds/removes packages:
+    // TR 548 -> 400 was predicted at 1:11 and actually took 2:26), so
+    // Fastest, Balanced and Aggressive all keep TR at the starting value.
+    // Quality-first alone may raise TR (see pickQualityTr) to protect SNR/T1
+    // recovery, and that is labeled as affecting contrast and time
+    // unpredictably — it never lowers it.
+    const speedTr = start.tr;
     // Resolution ceiling (see MAX_VOXEL_INCREASE_PCT/tierVoxelCapPct
     // above) — each tier gets its OWN allowance within the priority's
     // overall cap rather than all three converging on the same maximum:
@@ -5387,7 +5534,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       const highTr = Math.max(start.tr, trRange.maxTr);
       if (highTr > start.tr) {
         const trial = buildCandidate(sense, nsa, scale, highTr);
-        if (passesPriorityGuard(trial.result) && trial.result.time.ratio <= QUALITY_MAX_TIME_RATIO) {
+        if (passesPriorityGuard(trial.result) && trial.result.time.modelRatio <= QUALITY_MAX_TIME_RATIO) {
           return highTr;
         }
       }
@@ -5401,7 +5548,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           const tr = pickQualityTr(sense, nsa, scale);
           const { candidate, result } = buildCandidate(sense, nsa, scale, tr);
           if (!passesPriorityGuard(result)) continue;
-          if (result.time.ratio > QUALITY_MAX_TIME_RATIO) continue;
+          if (result.time.modelRatio > QUALITY_MAX_TIME_RATIO) continue;
 
           const better = !quality
             || result.snr.ratio > quality.result.snr.ratio + 1e-9
@@ -5516,6 +5663,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // formula itself is internally consistent. Every TR decrease gets this
   // caution rather than assuming the predicted time savings will hold at
   // console.
+  // A raised TR (Quality-first only) is the opposite risk: it changes
+  // contrast, and the real time effect can't be predicted — it may not
+  // change at all or may add/remove slice packages.
+  function trRaiseCaveat(start, candidate) {
+    if (!(candidate.tr > start.tr)) return null;
+    return 'TR raised — affects contrast and time unpredictably. Scan time does not scale with TR when slice count limits it, so read the real time off the console.';
+  }
+
   function trDecreaseCaveat(start, candidate) {
     if (candidate.tr >= start.tr) return null;
     return 'Verify this TR still fits your full slice coverage in a single package before scanning — reducing TR can force some sequences (especially multi-slice 2D TSE/SE) into multiple concatenations to fit all slices, which this time formula doesn\'t model and would make the real scan time longer than predicted, not shorter.';
@@ -5648,10 +5803,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     let trText;
     if (tierKey === 'quality') {
       trText = candidate.tr > start.tr
-        ? `TR raised to ${candidate.tr} ms — toward the top of your ${opts.sequenceType} range (${trRange.minTr}–${trRange.maxTr} ms) — to protect T1 recovery/SNR`
-        : `TR left unchanged at ${candidate.tr} ms (raising it further would exceed this tier's time budget)`;
+        ? `TR raised to ${candidate.tr} ms — toward the top of your ${opts.sequenceType} range (${trRange.minTr}–${trRange.maxTr} ms) — to protect T1 recovery/SNR; this affects contrast and time unpredictably`
+        : `TR left unchanged at ${candidate.tr} ms (raising it would exceed this tier's time budget)`;
     } else {
-      trText = `TR set to the fastest point in your ${opts.sequenceType} range (${trRange.minTr}–${trRange.maxTr} ms)`;
+      trText = `TR kept at your current ${candidate.tr} ms — scan time doesn't scale reliably with TR (slice packages), so TR isn't used to save time`;
     }
     const reasons = [trText];
     if (matrixLocked) {
@@ -5844,6 +5999,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const tradeoff = tierTradeoffNote(key, outcome.priority);
     const matrixCaveat = matrixChangeCaveat(outcome.start, candidate);
     const trCaveat = trDecreaseCaveat(outcome.start, candidate);
+    const trRaise = trRaiseCaveat(outcome.start, candidate);
     // TR doesn't feed relativeSnr() at all, so a TR-only confidence issue
     // (e.g. a range violation) shouldn't taint the SNR badge — only the
     // time estimate actually depends on TR.
@@ -5852,7 +6008,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // that directly rather than a confidence-tagged number that's still
     // implicitly claiming a specific percentage.
     const timeMetricHtml = result.time.comparable
-      ? `<span class="${result.time.percentChange <= 0 ? 'good' : 'bad'}">${formatPercent(result.time.percentChange)} time</span>${confidenceTagFromRows(confRows)}`
+      ? `<span class="${result.time.percentChange <= 0 ? 'good' : 'bad'}">${formatPercent(result.time.percentChange)} time</span>${result.time.consoleBased ? `<span class="tier-clock">(${formatConsoleTime(result.time.proposedMs / 1000)})</span>` : confidenceTagFromRows(confRows)}`
       : `<span class="cs-time-unavailable">Verify at console (time)</span>`;
     const snrConfTag = confidenceTagFromRows(confRows.filter(r => r.key !== 'tr'));
     return `
@@ -5866,6 +6022,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         <div class="tier-oneliner">${escapeHtml(tierChangeOneLiner(outcome.start, tierData.candidate))}</div>
         ${matrixCaveat ? '<div class="tier-matrix-caveat">⚠ Verify matrix/voxel at console</div>' : ''}
         ${trCaveat ? '<div class="tier-matrix-caveat">⚠ Verify TR/slice-fit at console</div>' : ''}
+        ${trRaise ? '<div class="tier-matrix-caveat">⚠ TR raised — affects contrast and time unpredictably</div>' : ''}
         ${tierData.limitedSavings ? '<div class="tier-matrix-caveat">Limited savings within resolution limits</div>' : ''}
         ${result.time.comparable && timeInputsWarning([outcome.start, candidate]) ? `<div class="tier-matrix-caveat">⚠ Time unverified — ${escapeHtml(timeInputsWarning([outcome.start, candidate]).short)}</div>` : ''}
         ${tierData.aggressiveInfo ? '<div class="aggressive-caveat-card">⚠⚠ Aggressive — outside normal safety margins, verify carefully before use</div>' : ''}
@@ -5910,6 +6067,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const trSummary = trSummaryText(start, candidate);
     const matrixCaveat = matrixChangeCaveat(start, candidate);
     const trCaveat = trDecreaseCaveat(start, candidate);
+    const trRaise = trRaiseCaveat(start, candidate);
+    const timeBasis = timeBasisNote(result.time);
     const csSense = start.accelType === 'cs-sense';
 
     const confRows = applyAggressiveConfidenceOverride(applyHabitusConfidenceOverride(suggestionConfidenceRows(start, candidate, trRange), tierData.habitusInfo), tierData.aggressiveInfo);
@@ -5957,13 +6116,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         : `Oversampling is a fold-over/aliasing safeguard, not a speed knob — tiers keep it unchanged from the starting protocol, except that the T1 NSA 2→1 offset can add up to ${Math.max(...NSA_RULE_OVERSAMPLING_ADDS)} oversampling points to hold SNR, and entering height/weight can reduce it.`}</div>
       <div class="results" style="margin: 14px 0;">
         <div class="result-card">
-          <h3>Relative scan time ${result.time.comparable ? timeConfTag : ''}</h3>
+          <h3>Relative scan time ${result.time.comparable && !result.time.consoleBased ? timeConfTag : ''}</h3>
           ${result.time.comparable
             ? `<div class="result-value ${result.time.percentChange < 0 ? 'good' : result.time.percentChange > 0 ? 'bad' : ''}">${formatPercent(result.time.percentChange)}</div>
           <div class="result-sub">${formatSeconds(result.time.currentMs)} → ${formatSeconds(result.time.proposedMs)}</div>
-          ${timeInputsWarning([start, candidate]) ? `<div class="time-input-warning">⚠ ${escapeHtml(timeInputsWarning([start, candidate]).text)}</div>` : ''}`
+          ${timeInputsWarning([start, candidate]) ? `<div class="time-input-warning">⚠ ${escapeHtml(timeInputsWarning([start, candidate]).text)}</div>` : ''}${timeBasis ? `<div class="time-input-warning">ℹ ${escapeHtml(timeBasis.text)}</div>` : ''}`
             : `<div class="result-value cs-time-unavailable" style="font-size:1.1rem;">Verify at console</div>
-          <div class="result-sub">${result.time.currentUnreliable ? 'Verify at console' : formatSeconds(result.time.currentMs)} → ${result.time.proposedUnreliable ? 'Verify at console' : formatSeconds(result.time.proposedMs)}</div>`
+          <div class="result-sub">${result.time.currentUnreliable ? 'Verify at console' : formatSeconds(result.time.currentMs)} → ${result.time.proposedUnreliable ? 'Verify at console' : formatSeconds(result.time.proposedMs)}</div>${timeBasis ? `<div class="time-input-warning">⚠ ${escapeHtml(timeBasis.text)}</div>` : ''}`
           }
         </div>
         <div class="result-card">
@@ -5976,6 +6135,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       ${tierData.habitusInfo ? `<div class="habitus-caveat-banner">⚠⚠ VERIFY ANATOMY ACTUALLY FITS WITHIN THE REDUCED FOV BEFORE SCANNING. Oversampling was cut from ${tierData.habitusInfo.basePct}% to ${candidate.oversamplingPercent}% based on an estimated body habitus (BMI ~${Math.round(tierData.habitusInfo.bmi)}, ${escapeHtml(tierData.habitusInfo.category)}) — a rough proxy from height/weight, not a direct measurement of this patient's actual girth in the phase direction. This is a coverage/safety parameter, not just a speed knob — treat this caution as stronger than the standard "verify at console" tag elsewhere in this app.</div>` : ''}
       ${matrixCaveat ? `<div class="warning-banner show">⚠ ${escapeHtml(matrixCaveat)}</div>` : ''}
       ${trCaveat ? `<div class="warning-banner show">⚠ ${escapeHtml(trCaveat)}</div>` : ''}
+      ${trRaise ? `<div class="warning-banner show">⚠ ${escapeHtml(trRaise)}</div>` : ''}
       ${tierData.limitedSavings ? `<div class="warning-banner show">Limited additional time savings available within resolution limits for this priority — matrix/voxel is already at or near the ≤${voxelIncreaseCapPct(priority)}% ceiling (see the resolution-ceiling constants if this should be looser or tighter).</div>` : ''}
       ${resSummary ? `<div class="info-note show">${escapeHtml(resSummary)}</div>` : ''}
       ${trSummary ? `<div class="info-note show">${escapeHtml(trSummary)}</div>` : ''}
@@ -6028,6 +6188,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       etl: optimizerProtocol.etl,
       slices: parseFloat(optSlicesEl.value),
     };
+    // The saved console time belongs to the saved values; re-anchor it if the
+    // modal's one-off edits (oversampling) still allow that, else drop it.
+    start.consoleTimeSec = rebaseConsoleTimeSec(optimizerProtocol.consoleTimeSec, paramsFromProtocol(optimizerProtocol), start);
     const gFactorK = parseFloat(gK.value);
     // The modal has no separate "Exam/anatomy" field of its own — the
     // saved protocol's own name/region already carry that information.
@@ -6066,7 +6229,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     applyProtocolToInputs(optimizerOutcome.start, curInputs, 'cur');
     applyProtocolToInputs(tierData.candidate, propInputs, 'prop');
     // FOV comes from the modal's own (editable) fields; TE/thickness from the saved protocol.
-    const modalExtras = { fovFreq: optimizerOutcome.fovFreq, fovPhase: optimizerOutcome.fovPhase };
+    const modalExtras = { fovFreq: optimizerOutcome.fovFreq, fovPhase: optimizerOutcome.fovPhase, consoleTimeSec: optimizerOutcome.start.consoleTimeSec };
     applyProtocolExtras(optimizerProtocol, 'cur', modalExtras);
     applyProtocolExtras(optimizerProtocol, 'prop', modalExtras);
     curInputs.te.value = optimizerProtocol.te ?? '';
@@ -6748,7 +6911,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // / suggestion banners (those belong to a loaded protocol, not an input).
   // ---------------------------------------------------------------------
   const CALC_STATE_KEY = 'mriq.calculatorState.v1';
-  const CALC_PANEL_FIELDS = ['tr', 'nsa', 'sense', 'freq', 'phase', 'te', 'etl', 'slices', 'thickness',
+  const CALC_PANEL_FIELDS = ['tr', 'nsa', 'sense', 'freq', 'phase', 'te', 'etl', 'slices', 'thickness', 'console-time',
     'accel-type', 'cs-voxel-freq', 'cs-voxel-phase',
     'matrix-style', 'fov-freq', 'fov-phase', 'voxel-freq', 'voxel-phase', 'base-res', 'phase-res-pct',
     'oversampling', 'oversampling-unit', 'oversampling-h', 'oversampling-f', 'oversampling-axis',
@@ -6937,7 +7100,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
   function quickStart(p) {
     const w = quick.work;
-    return {
+    const start = {
       tr: w.tr, nsa: w.nsa, sense: w.sense,
       freqMatrix: w.freq, phaseMatrix: w.phase,
       accelType: p.accelType || 'sense',
@@ -6945,6 +7108,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       oversamplingPercent: p.oversamplingPercent || 0,
       etl: p.etl, slices: p.slices,
     };
+    // The saved console time belongs to the saved values; if NSA/matrix/accel
+    // were edited here it's re-anchored, and if TR was edited it's dropped
+    // (time then falls back to the plain formula with its usual warning).
+    start.consoleTimeSec = rebaseConsoleTimeSec(p.consoleTimeSec, paramsFromProtocol(p), start);
+    return start;
   }
 
   // --- the four editable things --------------------------------------------
@@ -7071,8 +7239,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const verify = [];
     if (matrixChangeCaveat(outcome.start, candidate)) verify.push('matrix');
     if (trDecreaseCaveat(outcome.start, candidate)) verify.push('TR');
+    const trRaised = trRaiseCaveat(outcome.start, candidate);
     const flags = [];
     if (verify.length) flags.push(`⚠ verify ${verify.join(', ')}`);
+    if (trRaised) flags.push('⚠ TR raised — contrast/time unpredictable');
     if (tierData.limitedSavings) flags.push('limited savings');
     return `<button type="button" class="quick-row${key === 'aggressive' ? ' aggressive' : ''}" data-tier="${key}">
       <div class="quick-row-top"><span class="quick-tier">${escapeHtml(meta)}</span><span class="quick-metrics">${timeHtml} · ${snrHtml}</span></div>
@@ -7104,7 +7274,16 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // numbers are only shown without ETL/slice count when both are blank.
     const anyTime = tierKeysFor(quick.outcome).some(k => quick.outcome.tiers[k] && quick.outcome.tiers[k].result.time.comparable);
     const warn = anyTime ? timeInputsWarning([start]) : null;
-    quickEls.timewarn.textContent = warn ? `⚠ Time unverified — ${warn.short}` : '';
+    const savedTa = Number.isFinite(p.consoleTimeSec) && p.consoleTimeSec > 0;
+    const taDropped = savedTa && !start.consoleTimeSec
+      ? consoleTimeVerifyReasons(paramsFromProtocol(p), start).join(', ')
+      : '';
+    quickEls.timewarn.textContent = warn
+      ? `⚠ Time unverified — ${warn.short}${taDropped ? ` (saved console time not used: ${taDropped})` : ''}`
+      : (start.consoleTimeSec
+        ? `Times scaled from console ${formatConsoleTime(start.consoleTimeSec)}`
+        : (taDropped ? `Saved console time not used — ${taDropped}` : ''));
+    quickEls.timewarn.classList.toggle('info', !warn);
     quickEls.results.innerHTML = tierKeysFor(quick.outcome).map(k => quickTierRowHtml(k, quick.outcome)).join('');
   }
 
