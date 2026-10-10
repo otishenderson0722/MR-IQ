@@ -285,6 +285,10 @@
     line-height: 1.15;
     overflow-wrap: anywhere;
   }
+  @media (max-width: 420px) {
+    .quick-protocols { grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 112px; }
+    .quick-pbtn { font-size: 0.82rem; padding: 3px 8px; }
+  }
   .quick-pbtn.selected { border-color: var(--accent); background: rgba(79, 168, 224, 0.16); }
   .quick-empty { color: var(--text-dim); font-size: 0.9rem; padding: 8px 4px; }
   .quick-infoline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -313,8 +317,8 @@
     color: var(--text);
     border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 6px 10px;
-    margin-bottom: 6px;
+    padding: 4px 10px;
+    margin-bottom: 5px;
     cursor: pointer;
     font: inherit;
   }
@@ -322,6 +326,7 @@
   .quick-row .bad { color: var(--bad); font-weight: 700; }
   .quick-row-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
   .quick-tier { font-weight: 800; font-size: 0.95rem; }
+  .quick-changes .role-badge { font-size: 0.6rem; padding: 0 6px; margin-right: 2px; }
   .quick-metrics { font-size: 0.82rem; font-variant-numeric: tabular-nums; }
   .quick-changes { font-size: 0.76rem; color: var(--text); margin-top: 1px; }
   .quick-changes .quick-flag { color: var(--warn-border); font-weight: 700; }
@@ -4135,7 +4140,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       : roleInfo.role === 'key'
       ? `${roleInfo.label}: quality is protected — resolution limits use the ${capLabel} caps${fromRole ? ' (set by the Key role)' : ''}, Aggressive cuts are off, and Quality-first may spend up to +${Math.round((KEY_QUALITY_MAX_TIME_RATIO - 1) * 100)}% time (instead of the usual +${Math.round((QUALITY_MAX_TIME_RATIO - 1) * 100)}%) to raise quality.`
       : `${roleInfo.label}: quality can reasonably be traded for time here — Aggressive-level cuts are offered by default, with the stronger warning.`;
-    return `<div class="role-banner role-${roleInfo.role}">${escapeHtml(text)}</div>${roleInfo.breathHold ? `<div class="info-note show">${escapeHtml(BREATH_HOLD_NOTE)}</div>` : ''}`;
+    const matched = roleInfo.categoryText ? ` Matched as: ${roleInfo.categoryText}${roleInfo.chosen ? ' (picked by you)' : ''}.` : '';
+    return `<div class="role-banner role-${roleInfo.role}">${escapeHtml(text + matched)}</div>${roleInfo.breathHold ? `<div class="info-note show">${escapeHtml(BREATH_HOLD_NOTE)}</div>` : ''}`;
   }
 
   function indicationOptionsHtml(blankLabel) {
@@ -7622,10 +7628,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       sel.value = p.roleCategory || '';
       return;
     }
+    // Short on purpose so it can share a line with the sequence-type chip; the
+    // matched category is in the tooltip and in the detail sheet.
     const text = roleInfo.role
-      ? `${roleInfo.label} · ${roleInfo.cats.length === 1 ? roleInfo.cats[0].label : roleInfo.cats[0].group}`
+      ? (roleInfo.modeled ? roleInfo.label : `${roleInfo.label} · ${roleInfo.cats[0].group}`)
       : `${roleInfo.categoryText}`;
-    quickEls.role.innerHTML = `<button type="button" class="quick-rolechip${roleInfo.role ? ' role-' + roleInfo.role : ''}" data-action="edit-role" aria-label="Role and sequence category — tap to change">${escapeHtml(text)}${roleInfo.modeled ? '' : ' · no suggestions'} ✎</button>`;
+    quickEls.role.innerHTML = `<button type="button" class="quick-rolechip${roleInfo.role ? ' role-' + roleInfo.role : ''}" data-action="edit-role" title="Matched as: ${escapeHtml(roleInfo.categoryText)} — tap to change" aria-label="Role and sequence category — tap to change">${escapeHtml(text)}${roleInfo.modeled ? '' : ' · no suggestions'} ✎</button>`;
   }
 
   function renderQuickSeq() {
@@ -7804,16 +7812,19 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (matrixChangeCaveat(outcome.start, candidate)) verify.push('matrix');
     if (trDecreaseCaveat(outcome.start, candidate)) verify.push('TR');
     const trRaised = trRaiseCaveat(outcome.start, candidate);
-    const tradeNote = qualityTradeNote(outcome.start, candidate, result);
     const flags = [];
     if (verify.length) flags.push(`⚠ verify ${verify.join(', ')}`);
     if (trRaised) flags.push('⚠ TR raised — contrast/time unpredictable');
     if (tierData.limitedSavings) flags.push('limited savings');
     const roleInfo = outcome.roleInfo;
-    const tradeHtml = tradeNote ? ` <span class="quality-trade ${tradeNote.kind}">${escapeHtml(tradeNote.text)}</span>` : '';
+    // The full role label and the plain quality-for-time statement live in the
+    // detail sheet (tap the row); the row itself only carries a small badge.
+    const badgeHtml = roleInfo && roleInfo.role
+      ? `<span class="role-badge role-${roleInfo.role}">${roleInfo.role === 'key' ? 'Key' : 'Supporting'}</span>`
+      : '';
     return `<button type="button" class="quick-row${key === 'aggressive' ? ' aggressive' : ''}" data-tier="${key}">
       <div class="quick-row-top"><span class="quick-tier">${escapeHtml(meta)}</span><span class="quick-metrics">${timeHtml} · ${snrHtml}</span></div>
-      <div class="quick-changes">${roleInfo && roleInfo.role ? `${roleBadgeHtml(roleInfo)} ` : ''}${escapeHtml(tierChangeOneLiner(outcome.start, candidate))}${flags.length ? ` <span class="quick-flag">${escapeHtml(flags.join(' · '))}</span>` : ''}${tradeHtml}</div>
+      <div class="quick-changes">${badgeHtml ? badgeHtml + ' ' : ''}${escapeHtml(tierChangeOneLiner(outcome.start, candidate))}${flags.length ? ` <span class="quick-flag">${escapeHtml(flags.join(' · '))}</span>` : ''}</div>
       ${tierData.aggressiveInfo ? '<div class="aggressive-strip">⚠⚠ Aggressive — outside safety margins, verify</div>' : ''}
     </button>`;
   }
