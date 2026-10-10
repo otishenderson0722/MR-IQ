@@ -237,13 +237,13 @@
      vendor rows are hidden while it's active to keep everything on one screen. */
   body.quick-active { padding: 6px 8px; }
   body.quick-active header.header-row,
-  body.quick-active .wrap > .settings-row { display: none; }
+  body.quick-active .wrap > .settings-row { display: none !important; }
   body.quick-active .view-nav { margin-bottom: 6px; }
   body.quick-active .view-nav button { padding: 6px 12px; }
   .quick-screen { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 6px; touch-action: manipulation; }
   .quick-screen > * { min-width: 0; }
   .quick-strip { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
-  .quick-strip select, .quick-strip .quick-aggr {
+  .quick-strip select {
     min-width: 0;
     width: 100%;
     min-height: 38px;
@@ -255,8 +255,15 @@
     padding: 2px 8px;
     text-overflow: ellipsis;
   }
-  .quick-strip .quick-aggr { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 700; color: var(--bad); }
-  .quick-strip .quick-aggr input { width: 22px; height: 22px; margin: 0; flex: 0 0 auto; }
+  .quick-aggr { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: var(--bad); cursor: pointer; }
+  .quick-aggr input { width: 20px; height: 20px; margin: 0; flex: 0 0 auto; }
+  .quick-aggr.disabled { opacity: 0.45; cursor: default; }
+  .quick-rolechip { min-height: 34px; font-size: 0.8rem; font-weight: 700; border-radius: 8px; padding: 2px 10px; cursor: pointer; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); text-align: left; }
+  .quick-rolechip.role-key { border-color: var(--warn-border); }
+  #quick-role select { min-height: 34px; font-size: 16px; background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 2px 8px; max-width: 100%; }
+  .quick-unmodeled { border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; font-size: 0.85rem; background: var(--panel-2); }
+  .quick-unmodeled.role-key { border-color: var(--warn-border); }
+  .quick-bh { font-size: 0.72rem; color: var(--text-dim); margin-top: 4px; }
   .quick-protocols {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -833,6 +840,30 @@
   .optimizer-tier-card .tier-metrics .good { color: var(--good); font-weight: 600; }
   .optimizer-tier-card .tier-metrics .bad { color: var(--bad); font-weight: 600; }
   .optimizer-tier-card .tier-metrics .tier-clock { color: var(--text-dim); }
+  .role-badge { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: 10px; vertical-align: middle; border: 1px solid var(--border); white-space: nowrap; }
+  .role-badge.role-key { color: #1b1300; background: var(--warn-border); border-color: var(--warn-border); }
+  .role-badge.role-supporting { color: var(--text-dim); background: var(--panel-2); }
+  .role-banner { border-radius: 8px; padding: 8px 10px; margin: 0 0 10px; font-size: 0.82rem; border: 1px solid var(--border); }
+  .role-banner.role-key { border-color: var(--warn-border); background: rgba(240, 180, 60, 0.12); }
+  .role-banner.role-supporting { background: var(--panel-2); color: var(--text-dim); }
+  .quality-trade { font-size: 0.78rem; margin-top: 4px; font-weight: 600; }
+  .quality-trade.trade, .quality-trade-banner.trade { color: var(--bad); }
+  .quality-trade.spend, .quality-trade-banner.spend { color: var(--good); }
+  .quality-trade-banner { border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; margin: 0 0 10px; font-size: 0.82rem; font-weight: 600; }
+  .roles-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .roles-tabs button { background: var(--panel-2); color: var(--text-dim); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 0.85rem; }
+  .roles-tabs button.active { color: var(--text); border-color: var(--accent); }
+  .roles-table-wrap { overflow-x: auto; }
+  .roles-table { border-collapse: collapse; font-size: 0.8rem; min-width: 100%; }
+  .roles-table th, .roles-table td { border: 1px solid var(--border); padding: 4px 6px; text-align: center; }
+  .roles-table th { background: var(--panel-2); font-weight: 600; min-width: 92px; }
+  .roles-table th:first-child, .roles-table td:first-child { text-align: left; position: sticky; left: 0; background: var(--panel); min-width: 170px; z-index: 1; }
+  .roles-table th:first-child { background: var(--panel-2); }
+  .roles-table .no-model { color: var(--text-dim); font-size: 0.7rem; display: block; }
+  .role-cell { width: 100%; min-height: 32px; border-radius: 6px; border: 1px solid var(--border); cursor: pointer; font-size: 0.76rem; background: var(--panel-2); color: var(--text-dim); }
+  .role-cell.key { background: var(--warn-border); color: #1b1300; font-weight: 700; border-color: var(--warn-border); }
+  .role-line { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--text-dim); }
+  .role-line select { max-width: 240px; }
   .optimizer-tier-card .tier-oneliner { color: var(--text-dim); font-size: 0.76rem; line-height: 1.4; }
   .tier-matrix-caveat { color: var(--warn-border); font-size: 0.74rem; font-weight: 600; margin-top: 4px; }
   .cs-time-unavailable { color: var(--warn-border); font-weight: 600; }
@@ -1064,6 +1095,7 @@
     <button type="button" data-view="library">Protocol Library</button>
     <button type="button" data-view="acr">ACR Reference</button>
     <button type="button" data-view="tr-ranges">TR Ranges</button>
+    <button type="button" data-view="roles">Exam Roles</button>
     <button type="button" data-view="mar">MAR Reference</button>
     <button type="button" data-view="outcomes">Outcome Log</button>
   </nav>
@@ -1096,18 +1128,18 @@
       <div class="quick-strip">
         <select id="quick-facility" aria-label="Facility"></select>
         <select id="quick-scanner" aria-label="Scanner"></select>
-        <select id="quick-priority" aria-label="Clinical priority" autocomplete="off">
-          <option value="">Priority: none</option>
+        <select id="quick-indication" aria-label="Exam indication" autocomplete="off"></select>
+        <select id="quick-priority" aria-label="Clinical priority override" autocomplete="off">
+          <option value="">Override: none</option>
           <option value="cord-nerve">Cord/nerve detail</option>
           <option value="marrow-alignment">Marrow/alignment</option>
           <option value="enhancement-pathology">Enhancement/subtle pathology</option>
           <option value="broad-survey">Broad survey/screening</option>
         </select>
-        <label class="quick-aggr"><input type="checkbox" id="quick-aggressive" autocomplete="off"> Aggressive</label>
       </div>
       <div class="quick-protocols" id="quick-protocols"></div>
       <div id="quick-planning"></div>
-      <div class="quick-infoline"><div id="quick-seq"></div><div class="quick-timewarn" id="quick-timewarn"></div></div>
+      <div class="quick-infoline"><div id="quick-seq"></div><div id="quick-role"></div><label class="quick-aggr"><input type="checkbox" id="quick-aggressive" autocomplete="off"><span>Aggressive</span></label><div class="quick-timewarn" id="quick-timewarn"></div></div>
       <div id="quick-results"></div>
       <div class="quick-fields" id="quick-fields"></div>
     </div>
@@ -1119,13 +1151,15 @@
   <div class="view active" id="view-calculator">
 
     <div class="settings-row">
-      <label for="cur-sequenceType">Sequence type (optional)</label>
+      <label for="exam-indication">Exam indication</label>
+      <select id="exam-indication"></select>
+      <label for="cur-sequenceType" style="margin-left: 8px;">Sequence type (optional)</label>
       <select id="cur-sequenceType">
         <option value="">— None —</option>
       </select>
-      <label for="clinical-priority" style="margin-left: 8px;">Clinical priority (optional)</label>
+      <label for="clinical-priority" style="margin-left: 8px;">Clinical priority override (optional)</label>
       <select id="clinical-priority">
-        <option value="">— None selected —</option>
+        <option value="">— None (use the indication) —</option>
         <option value="cord-nerve">Cord/nerve detail</option>
         <option value="marrow-alignment">Marrow/alignment</option>
         <option value="enhancement-pathology">Enhancement/subtle pathology</option>
@@ -1136,6 +1170,11 @@
     </div>
     <div class="settings-row" style="margin-top: -10px;">
       <span style="color: var(--text-dim)" id="clinical-priority-desc"></span>
+    </div>
+    <div class="settings-row role-line" id="calc-role-row" style="margin-top: -6px;">
+      <label for="calc-role-category">Sequence category</label>
+      <select id="calc-role-category"></select>
+      <span id="calc-role-summary"></span>
     </div>
 
     <div class="settings-row">
@@ -1558,7 +1597,7 @@
       <button type="button" class="btn-secondary" id="import-btn">Import backup</button>
       <input type="file" id="import-file-input" accept="application/json" style="display:none">
     </div>
-    <div class="lib-note">Everything (protocols, ACR minimums, TR ranges, NSA rule exceptions, the outcome log) is stored in this browser only — Export backup bundles them so you can move to another computer.</div>
+    <div class="lib-note">Everything (protocols, ACR minimums, TR ranges, the Key/Supporting exam table, NSA rule exceptions, the outcome log) is stored in this browser only — Export backup bundles them so you can move to another computer.</div>
 
     <div id="compliance-panel"></div>
 
@@ -1622,6 +1661,30 @@
       <div class="acr-form-footer">
         <button type="button" class="btn-primary" id="tr-range-save-btn">Save TR ranges</button>
         <span class="lib-note" style="margin:0;" id="tr-range-save-status"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="view" id="view-roles">
+    <div class="panel">
+      <h2>Exam indications — Key vs Supporting</h2>
+      <div class="lib-note">
+        For each reason an exam is done, mark which sequence categories are <strong>Key</strong> (they answer the
+        clinical question) and which are <strong>Supporting</strong>. Key sequences protect quality: tight resolution
+        caps (Cord/nerve for spine and thin T2, Enhancement otherwise), no Aggressive cuts, and a higher-quality
+        option offered even if it costs time. Supporting sequences get Aggressive-level cuts offered by default,
+        with the stronger warning. A protocol is matched to a category from its name (plane, post-contrast, fat-sat,
+        FLAIR, DWI, SWI/GRE, MRA, MRCP, dynamic, in/opposed-phase) and the sequence type; when the plane or contrast
+        isn't in the name it counts as Key if any plausible category is Key. DWI, GRE/SWI, MRA, MRCP and dynamic
+        contrast still show their label and a don't-reduce-quality warning, but the time/SNR model doesn't cover
+        them so no parameters are suggested. Click a cell to flip it; changes save immediately in this browser and
+        are included in Export backup.
+      </div>
+      <div class="roles-tabs" id="roles-region-tabs"></div>
+      <div class="roles-table-wrap"><table class="roles-table" id="roles-table"></table></div>
+      <div class="acr-form-footer">
+        <button type="button" class="btn-secondary" id="roles-reset-btn">Restore starting values</button>
+        <span class="lib-note" style="margin:0;" id="roles-status"></span>
       </div>
     </div>
   </div>
@@ -1914,12 +1977,15 @@
     </div>
     <div class="lib-note" style="margin-top:-8px;">
       First applies your personal NSA rule (T1/T2 default cap — exceptions editable on the Calculator tab) as its
-      own labeled step, then searches TR (within your accepted range), SENSE (up to a typical practical limit — not
-      a hardware cap; actual caps vary by coil/system), and matrix — NSA is now fixed at the rule's result rather
-      than searched freely — for three tiered options, every one bounded by a resolution ceiling: matrix/voxel size
-      can never move past a maximum increase set by the selected clinical priority (e.g. Cord/nerve detail allows
-      only a small allowance, Broad survey/screening more), even in "Fastest." Cord/nerve detail also always counts
-      as an NSA-rule exception. This only produces suggestions — nothing is applied until you pick one and load it
+      own labeled step, then searches SENSE (up to a typical practical limit — not a hardware cap; actual caps vary
+      by coil/system) and matrix — NSA is now fixed at the rule's result rather than searched freely — for three
+      tiered options, every one bounded by a resolution ceiling: matrix/voxel size can never move past a maximum
+      increase set by the clinical priority (e.g. Cord/nerve detail allows only a small allowance, Broad
+      survey/screening more), even in "Fastest." The priority comes from the Exam indication — a Key sequence
+      uses the Cord/nerve or Enhancement caps, has no Aggressive option, and gets a higher-quality option even if
+      it costs time; a Supporting one gets Aggressive by default — unless you set a priority override. TR stays at
+      your current value except in Quality-first, which may raise it. Cord/nerve detail also always counts as an
+      NSA-rule exception. This only produces suggestions — nothing is applied until you pick one and load it
       into Proposed for your own review. Any matrix/voxel change should be verified against your console before
       scanning.
     </div>
@@ -1935,9 +2001,14 @@
         </select>
       </div>
       <div class="field">
-        <label for="opt-priority">Clinical priority</label>
-        <select id="opt-priority" required>
-          <option value="">Select…</option>
+        <label for="opt-indication">Exam indication (optional)</label>
+        <select id="opt-indication"></select>
+      </div>
+      <div class="role-line" id="opt-role-line" style="margin: -4px 0 12px;"></div>
+      <div class="field">
+        <label for="opt-priority">Clinical priority override (optional)</label>
+        <select id="opt-priority">
+          <option value="">— None (use the indication) —</option>
           <option value="cord-nerve">Cord/nerve detail</option>
           <option value="marrow-alignment">Marrow/alignment</option>
           <option value="enhancement-pathology">Enhancement/subtle pathology</option>
@@ -2615,6 +2686,43 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     render();
   });
 
+  // Exam indication + sequence category (see "Exam indications and sequence
+  // roles" below). Not remembered between sessions — it's about this patient.
+  const examIndicationEl = document.getElementById('exam-indication');
+  const calcRoleCategoryEl = document.getElementById('calc-role-category');
+  const calcRoleSummaryEl = document.getElementById('calc-role-summary');
+  // The name of the protocol most recently loaded into Current — the
+  // category is read from it (plus the Exam/anatomy text), since the
+  // Calculator itself has no protocol name field.
+  let calcLoadedProtocolName = '';
+  function noteCalcLoadedProtocol(protocol) {
+    calcLoadedProtocolName = protocol ? protocol.name : '';
+    calcRoleCategoryEl.value = (protocol && protocol.roleCategory) || '';
+  }
+  function calcRoleInfo() {
+    return resolveSequenceRole({
+      indicationKey: examIndicationEl.value,
+      name: `${calcLoadedProtocolName} ${examLabelEl.value}`,
+      sequenceType: curSequenceTypeEl.value,
+      categoryKey: calcRoleCategoryEl.value,
+    });
+  }
+  function renderCalcRole() {
+    if (!calcRoleCategoryEl.options.length) return; // selects are filled at the end of setup
+    const info = calcRoleInfo();
+    calcRoleCategoryEl.options[0].textContent = `Auto — ${info.recognized && !info.chosen ? info.categoryText : 'not recognized from the name/type'}`;
+    const bits = [];
+    if (info.role) bits.push(roleBadgeHtml(info));
+    if (info.recognized && !info.modeled) bits.push(`<span style="color:var(--warn-border)">${escapeHtml(unmodeledText(info, false))}</span>`);
+    else if (info.role === 'key') bits.push(`Quality is protected: ${escapeHtml(priorityDisplayLabel(effectivePriority(priorityEl.value, info)))} caps, no Aggressive cuts.`);
+    else if (info.role === 'supporting') bits.push('Aggressive-level cuts are offered by default.');
+    else if (examIndicationEl.value && !info.recognized) bits.push('Pick a category (or add the plane/contrast to the Exam / anatomy text) to get Key/Supporting.');
+    if (info.breathHold) bits.push(escapeHtml(BREATH_HOLD_NOTE));
+    calcRoleSummaryEl.innerHTML = bits.join(' ');
+  }
+  examIndicationEl.addEventListener('change', () => render());
+  calcRoleCategoryEl.addEventListener('change', () => render());
+
   // ---------------------------------------------------------------------
   // Vendor terminology — display/labeling layer only. The underlying math
   // and stored data (nsa, sense, etc.) never change; only how the fields
@@ -3172,9 +3280,22 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   let calcOptimizerSelectedTier = null;
 
   function computeCalcOptimizer() {
-    const sequenceType = curSequenceTypeEl.value;
-    const priority = priorityEl.value;
+    const roleInfo = calcRoleInfo();
+    autoAggressive(calcAggressiveEl, roleInfo);
+    // The category's usual TR-range type stands in when no sequence type is picked.
+    const sequenceType = curSequenceTypeEl.value
+      || (roleInfo.baseType && findTrRange(roleInfo.baseType) && Number.isFinite(findTrRange(roleInfo.baseType).minTr) ? roleInfo.baseType : '');
+    const priority = effectivePriority(priorityEl.value, roleInfo);
     const start = readSet(curInputs, 'cur');
+
+    if (roleInfo.recognized && !roleInfo.modeled) {
+      calcOptimizerOutcome = null;
+      calcOptimizerSelectedTier = null;
+      calcOptimizerEmptyEl.textContent = unmodeledText(roleInfo) + (roleInfo.breathHold ? ' ' + BREATH_HOLD_NOTE : '');
+      calcOptimizerEmptyEl.style.display = 'block';
+      calcOptimizerBodyEl.style.display = 'none';
+      return;
+    }
 
     if (!sequenceType || !isValid(start)) {
       calcOptimizerOutcome = null;
@@ -3191,7 +3312,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const examLabel = examLabelEl.value;
     const heightCm = heightToCm(parseFloat(calcHeightEl.value), calcHeightUnitEl.value);
     const weightKg = weightToKg(parseFloat(calcWeightEl.value), calcWeightUnitEl.value);
-    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg, aggressive: calcAggressiveEl.checked });
+    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg, aggressive: calcAggressiveEl.checked, role: roleInfo.role });
 
     if (!outcome.ok) {
       calcOptimizerOutcome = null;
@@ -3209,7 +3330,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const fovPhase = parseFloat(document.getElementById('cur-fov-phase').value);
 
     const previousTier = calcOptimizerSelectedTier;
-    calcOptimizerOutcome = { ...outcome, start, sequenceType, priority, fovFreq, fovPhase };
+    calcOptimizerOutcome = { ...outcome, start, sequenceType, priority, roleInfo, priorityFromRole: !priorityEl.value && roleInfo.role === 'key', fovFreq, fovPhase };
     calcOptimizerSelectedTier = (previousTier && outcome.tiers[previousTier])
       ? previousTier
       : (outcome.tiers.balanced ? 'balanced' : (outcome.tiers.fastest ? 'fastest' : 'quality'));
@@ -3269,6 +3390,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   function render() {
     if (calcStateReady) saveCalculatorState();
     refreshNsaHints();
+    renderCalcRole();
     const current = readSet(curInputs, 'cur');
     const proposed = readSet(propInputs, 'prop');
     const k = parseFloat(gK.value);
@@ -3437,7 +3559,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       csSenseBannerEl.classList.remove('show');
     }
 
-    const flagText = priorityFlagText(priorityEl.value, result, current, proposed);
+    const flagText = priorityFlagText(effectivePriority(priorityEl.value, calcRoleInfo()), result, current, proposed);
     if (flagText) {
       priorityFlagEl.textContent = '⚠ ' + flagText;
       priorityFlagEl.classList.add('show');
@@ -3532,6 +3654,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       el.value = '';
     });
     document.getElementById('cur-console-time').value = '';
+    noteCalcLoadedProtocol(null);
     matrixStyleGroups.cur.reset();
     matrixStyleGroups.prop.reset();
     accelTypeGroups.cur.reset();
@@ -3561,6 +3684,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     document.getElementById('view-mar').classList.toggle('active', view === 'mar');
     document.getElementById('view-outcomes').classList.toggle('active', view === 'outcomes');
     document.getElementById('view-quick').classList.toggle('active', view === 'quick');
+    document.getElementById('view-roles').classList.toggle('active', view === 'roles');
+    if (view === 'roles') renderRolesView();
     document.body.classList.toggle('quick-active', view === 'quick');
     if (view === 'outcomes') renderOutcomeLog();
     if (view === 'quick') renderQuick();
@@ -3703,6 +3828,325 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   }
 
   let trRanges = loadTrRanges();
+
+  // ---------------------------------------------------------------------
+  // Exam indications and sequence roles. Pick WHY the exam is being done
+  // (e.g. Stroke/TIA) and each sequence is either KEY for that question or
+  // SUPPORTING. Key = protect/improve quality (tight resolution caps, no
+  // Aggressive cuts, a higher-quality option offered even at a time cost).
+  // Supporting = Aggressive-level cuts are offered by default, with the
+  // stronger warning. The Key/Supporting table is editable, stored in this
+  // browser, and part of Export backup.
+  //
+  // A protocol is matched to one of the ROLE_CATEGORIES below from its name
+  // (plus its sequence type, if known) — plane, contrast, fat-sat and the
+  // special sequences (FLAIR, DWI, SWI, MRA, MRCP, dynamic, in/opposed-phase).
+  // Anything not recognized can be picked by hand and is remembered on that
+  // protocol. When the plane/contrast can't be read from the name, the role is
+  // Key if ANY plausible category is Key (the protective reading).
+  // ---------------------------------------------------------------------
+  const EXAM_ROLES_STORAGE_KEY = 'mriq.examIndications.v1';
+  const ROLE_REGIONS = ['Head', 'Spine', 'Joints', 'Abdomen/Pelvis'];
+  const EXAM_INDICATIONS = [
+    { key: 'head-stroke', region: 'Head', label: 'Stroke/TIA' },
+    { key: 'head-headache', region: 'Head', label: 'Headache' },
+    { key: 'head-dizziness', region: 'Head', label: 'Dizziness/vertigo' },
+    { key: 'head-tumor', region: 'Head', label: 'Tumor/mass' },
+    { key: 'head-ms', region: 'Head', label: 'MS/demyelination' },
+    { key: 'head-seizure', region: 'Head', label: 'Seizure' },
+    { key: 'head-infection', region: 'Head', label: 'Infection' },
+    { key: 'head-trauma', region: 'Head', label: 'Trauma' },
+    { key: 'head-other', region: 'Head', label: 'Other' },
+    { key: 'spine-backpain', region: 'Spine', label: 'Back pain/stenosis' },
+    { key: 'spine-cord', region: 'Spine', label: 'Cord compression' },
+    { key: 'spine-infection', region: 'Spine', label: 'Infection' },
+    { key: 'spine-tumor', region: 'Spine', label: 'Tumor' },
+    { key: 'spine-trauma', region: 'Spine', label: 'Trauma' },
+    { key: 'spine-other', region: 'Spine', label: 'Other' },
+    { key: 'joint-derangement', region: 'Joints', label: 'Internal derangement' },
+    { key: 'joint-fracture', region: 'Joints', label: 'Occult fracture' },
+    { key: 'joint-infection', region: 'Joints', label: 'Infection' },
+    { key: 'joint-tumor', region: 'Joints', label: 'Tumor' },
+    { key: 'joint-other', region: 'Joints', label: 'Other' },
+    { key: 'abd-liver', region: 'Abdomen/Pelvis', label: 'Liver lesion' },
+    { key: 'abd-mrcp', region: 'Abdomen/Pelvis', label: 'MRCP' },
+    { key: 'abd-kidney', region: 'Abdomen/Pelvis', label: 'Kidney/pancreas mass' },
+    { key: 'abd-prostate', region: 'Abdomen/Pelvis', label: 'Prostate' },
+    { key: 'abd-female', region: 'Abdomen/Pelvis', label: 'Female pelvis' },
+    { key: 'abd-other', region: 'Abdomen/Pelvis', label: 'Other' },
+  ];
+  const EXAM_INDICATION_BY_KEY = Object.fromEntries(EXAM_INDICATIONS.map(i => [i.key, i]));
+  // Names shared across regions get the region appended wherever they're shown.
+  const AMBIGUOUS_INDICATION_LABELS = new Set(
+    EXAM_INDICATIONS.map(i => i.label).filter((l, idx, all) => all.indexOf(l) !== idx));
+  function indicationDisplay(ind) {
+    return AMBIGUOUS_INDICATION_LABELS.has(ind.label) ? `${ind.label} (${ind.region})` : ind.label;
+  }
+
+  // `modeled: false` = the time/SNR model doesn't cover it (no suggestions
+  // are generated, but the Key/Supporting label and warning still show).
+  // `base` = the TR-range sequence type the optimizer falls back to when the
+  // name doesn't say one.
+  const ROLE_CATEGORIES = [
+    { key: 't1-sag', label: 'T1 · sagittal', group: 'T1', base: 'T1', modeled: true },
+    { key: 't1-ax', label: 'T1 · axial', group: 'T1', base: 'T1', modeled: true },
+    { key: 't1-cor', label: 'T1 · coronal', group: 'T1', base: 'T1', modeled: true },
+    { key: 't2-sag', label: 'T2 · sagittal', group: 'T2', base: 'T2', modeled: true },
+    { key: 't2-ax', label: 'T2 · axial', group: 'T2', base: 'T2', modeled: true },
+    { key: 't2-cor', label: 'T2 · coronal', group: 'T2', base: 'T2', modeled: true },
+    { key: 'thin-t2', label: 'Thin T2 (IAC / posterior fossa)', group: 'Thin T2', base: 'T2', modeled: true },
+    { key: 'pd', label: 'PD (no fat-sat)', group: 'PD', base: 'PD', modeled: true },
+    { key: 'fs-pd-t2', label: 'Fat-sat PD / T2', group: 'Fat-sat PD/T2', base: '', modeled: true },
+    { key: 'stir', label: 'STIR', group: 'STIR', base: 'STIR', modeled: true },
+    { key: 'flair', label: 'FLAIR', group: 'FLAIR', base: 'T2', modeled: true },
+    { key: 'post-t1', label: 'Post-contrast T1', group: 'Post-contrast T1', base: 'T1', modeled: true },
+    { key: 'post-fs-t1', label: 'Post-contrast fat-sat T1', group: 'Post-contrast fat-sat T1', base: 'T1', modeled: true },
+    { key: 'inopp-t1', label: 'In/opposed-phase T1', group: 'In/opposed-phase T1', base: 'T1', modeled: true },
+    { key: 'dwi', label: 'DWI', group: 'DWI', base: '', modeled: false, short: 'DWI' },
+    { key: 'gre-swi', label: 'GRE / SWI', group: 'GRE/SWI', base: '', modeled: false, short: 'GRE/SWI (3D/susceptibility)' },
+    { key: 'mra', label: 'MRA', group: 'MRA', base: '', modeled: false, short: 'MRA' },
+    { key: 'mrcp', label: 'MRCP', group: 'MRCP', base: '', modeled: false, short: 'MRCP' },
+    { key: 'dynamic', label: 'Dynamic contrast / post-contrast phases', group: 'Dynamic contrast', base: '', modeled: false, short: 'dynamic contrast' },
+  ];
+  const ROLE_CATEGORY_BY_KEY = Object.fromEntries(ROLE_CATEGORIES.map(c => [c.key, c]));
+
+  const T1_ALL = ['t1-sag', 't1-ax', 't1-cor'];
+  const T2_ALL = ['t2-sag', 't2-ax', 't2-cor'];
+  const DEFAULT_KEY_ROWS = {
+    'head-stroke': ['dwi', 'flair', 'gre-swi', 'mra'],
+    'head-tumor': ['post-t1', 'flair', ...T2_ALL],
+    'head-dizziness': ['thin-t2', 'dwi', 'post-t1'],
+    'head-headache': ['flair', 'post-t1'],
+    'spine-backpain': ['t2-sag', 't2-ax', 'stir'],
+    'spine-cord': ['t2-sag', 't2-ax', 'stir'],
+    'spine-infection': ['stir', 'post-t1', 'post-fs-t1', ...T1_ALL],
+    'spine-tumor': ['t1-sag', 'stir', 'post-t1', 'post-fs-t1'],
+    'spine-trauma': ['stir', 't2-sag'],
+    'joint-derangement': ['fs-pd-t2'],
+    'joint-fracture': ['stir', ...T1_ALL],
+    'joint-infection': ['stir', ...T1_ALL, 'post-fs-t1'],
+    'joint-tumor': [...T1_ALL, 'stir', 'fs-pd-t2', 'post-fs-t1'],
+    'abd-liver': [...T2_ALL, 'dwi', 'dynamic', 'post-t1', 'post-fs-t1', 'inopp-t1'],
+    'abd-mrcp': ['mrcp'],
+    'abd-kidney': ['inopp-t1', ...T2_ALL, 'dwi', 'dynamic', 'post-t1', 'post-fs-t1'],
+    'abd-prostate': ['t2-ax', 'dwi', 'dynamic'],
+    'abd-female': [...T2_ALL, 'dwi', 'post-t1', 'post-fs-t1', 'dynamic'],
+  };
+
+  function defaultKeyRows() {
+    return Object.fromEntries(EXAM_INDICATIONS.map(i => [i.key, (DEFAULT_KEY_ROWS[i.key] || []).slice()]));
+  }
+  // Keeps only known category keys. With `onlyProvided`, indications absent
+  // from `raw` are left out (used for import, which merges).
+  function sanitizeKeyRows(raw, onlyProvided) {
+    const out = {};
+    const defaults = defaultKeyRows();
+    EXAM_INDICATIONS.forEach(i => {
+      const v = raw && raw[i.key];
+      if (Array.isArray(v)) out[i.key] = Array.from(new Set(v.filter(k => ROLE_CATEGORY_BY_KEY[k])));
+      else if (!onlyProvided) out[i.key] = defaults[i.key];
+    });
+    return out;
+  }
+  function loadKeyRows() {
+    try {
+      const raw = localStorage.getItem(EXAM_ROLES_STORAGE_KEY);
+      return sanitizeKeyRows(raw ? JSON.parse(raw) : null, false);
+    } catch (e) {
+      return defaultKeyRows();
+    }
+  }
+  function persistKeyRows() {
+    try {
+      localStorage.setItem(EXAM_ROLES_STORAGE_KEY, JSON.stringify(examKeyRows));
+      setStorageStatus('');
+      return true;
+    } catch (e) {
+      setStorageStatus('Could not save the Key/Supporting table to browser storage (it may be full, disabled, or this is a private/incognito window). Use Export backup so you don’t lose it.');
+      return false;
+    }
+  }
+  let examKeyRows = loadKeyRows();
+  function isKeyRow(indicationKey, categoryKey) {
+    return (examKeyRows[indicationKey] || []).includes(categoryKey);
+  }
+
+  // Reads plane / contrast / fat-sat / special-sequence words out of a
+  // protocol name (and the sequence type, if there is one). Returns the
+  // candidate category keys — several when something (plane, contrast) isn't
+  // stated — plus whether the name says 3D.
+  function recognizeRoleCategories(rawText, sequenceType) {
+    const lowRaw = ' ' + String(rawText || '').toLowerCase() + ' ';
+    const cleaned = lowRaw.replace(/\b(?:pre|non|without|w\/o)[\s-]?(?:contrast|gad\w*|c)\b/g, ' ');
+    const post = /\bpost\b|\bpost[\s-]?(?:contrast|gd|gad)|\+\s?c\b|\bc\s?\+|\bgad|contrast|enhanc|\bpc\b|\bwith\s+c\b/.test(cleaned);
+    const w = ' ' + lowRaw.replace(/[^a-z0-9*]+/g, ' ') + ' ';
+    const has = re => re.test(w);
+    const threeD = has(/\b3d\b|\bcube\b|\bspace\b|\bvista\b|\bbravo\b|\bmprage\b|\bmp2rage\b|\bspgr\b|\bisovox\w*/);
+    const done = keys => ({ keys, threeD });
+
+    if (has(/\bmrcp\b|\bcholangio\w*/)) return done(['mrcp']);
+    if (has(/\bdwi\b|\bdiffusion\b|\badc\b|\bdti\b/)) return done(['dwi']);
+    if (has(/\bmra\b|\btof\b|\bangio\w*|\bmrv\b|\bvenogram\b/)) return done(['mra']);
+    if (has(/\bswi\b|\bswan\b|\bgre\b|\bt2\*|\bt2star\b|\bsusceptib\w*|\bhemo\w*/)) return done(['gre-swi']);
+    if (has(/\bin phase\b|\bin out\b|\bopp\w*|\bout of phase\b|\bout phase\b|\bchemical shift\b|\binopp\b|\bdual echo\b/)) return done(['inopp-t1']);
+    if (has(/\bdynamic\w*|\bdce\b|\bthrive\b|\blava\b|\bvibe\b|\btricks\b|\bmultiphase\b|\barterial\b|\bportal\b|\bphases?\b/)) return done(['dynamic']);
+    if (has(/\bflair\b/)) return done(['flair']);
+
+    const typeUp = String(sequenceType || '').trim().toUpperCase();
+    let base = ['T1', 'T2', 'PD', 'STIR', 'DWI'].includes(typeUp) ? typeUp : '';
+    if (!base) {
+      if (has(/\bstir\b/)) base = 'STIR';
+      else if (has(/\bt1\w*\b/)) base = 'T1';
+      else if (has(/\bt2\w*\b/)) base = 'T2';
+      else if (has(/\bpd\w*\b|\bproton\b/)) base = 'PD';
+    }
+    if (base === 'DWI') return done(['dwi']);
+    if (base === 'STIR' || has(/\bstir\b/)) return done(['stir']);
+
+    const fs = has(/\bfs\b|\bfat ?sat\w*|\bspair\b|\bspir\b|\bfsat\b|\bchess\b|\bfat suppress\w*/);
+    const planes = [];
+    if (has(/\bsag\b|\bsagittal\b/)) planes.push('sag');
+    if (has(/\bax\b|\baxial\b|\btra\b|\btransverse\b/)) planes.push('ax');
+    if (has(/\bcor\b|\bcoronal\b/)) planes.push('cor');
+    const planeKeys = (prefix) => (planes.length ? planes : ['sag', 'ax', 'cor']).map(pl => `${prefix}-${pl}`);
+
+    if (has(/\biac\b|\binternal auditory|\bciss\b|\bfiesta\b|\bposterior fossa\b|\bpf\b|\bthin\b|\bdrive\b/) && base !== 'T1') {
+      return done(['thin-t2', ...planeKeys('t2')]);
+    }
+    if (base === 'T1') {
+      if (post) return done(fs ? ['post-fs-t1', 'post-t1'] : ['post-t1']);
+      return done(planeKeys('t1'));
+    }
+    if (base === 'T2') return done(fs ? ['fs-pd-t2', ...planeKeys('t2')] : planeKeys('t2'));
+    if (base === 'PD') return done(fs ? ['fs-pd-t2'] : ['pd']);
+    return done([]);
+  }
+
+  // Everything the optimizer/UI needs to know about one protocol under one
+  // indication. `categoryKey` is a category picked by hand (wins over the name).
+  function resolveSequenceRole({ indicationKey, name, sequenceType, categoryKey }) {
+    const ind = EXAM_INDICATION_BY_KEY[indicationKey] || null;
+    const rec = recognizeRoleCategories(name, sequenceType);
+    const chosen = categoryKey && ROLE_CATEGORY_BY_KEY[categoryKey] ? categoryKey : '';
+    const keys = chosen ? [chosen] : rec.keys;
+    const cats = keys.map(k => ROLE_CATEGORY_BY_KEY[k]);
+    const recognized = cats.length > 0;
+    const modeled = recognized && cats.every(c => c.modeled) && !rec.threeD;
+    let unmodeledReason = null;
+    if (recognized && !modeled) {
+      const bad = cats.find(c => !c.modeled);
+      unmodeledReason = bad ? bad.short : '3D acquisitions';
+    }
+    let role = null;
+    if (ind && recognized) role = keys.some(k => isKeyRow(ind.key, k)) ? 'key' : 'supporting';
+    const bases = Array.from(new Set(cats.map(c => c.base)));
+    const baseType = bases.length === 1 ? bases[0] : '';
+    const keyPriority = role === 'key'
+      ? ((ind.region === 'Spine' || keys.includes('thin-t2')) ? 'cord-nerve' : 'enhancement-pathology')
+      : '';
+    return {
+      indication: ind,
+      indicationLabel: ind ? indicationDisplay(ind) : '',
+      role,
+      label: role ? `${role === 'key' ? 'Key' : 'Supporting'} for ${indicationDisplay(ind)}` : '',
+      keys, cats, recognized,
+      chosen: Boolean(chosen),
+      categoryText: !recognized ? '' : (cats.length === 1 ? cats[0].label : `${cats[0].group} (plane/contrast not in the name)`),
+      modeled, unmodeledReason, threeD: rec.threeD,
+      baseType, keyPriority,
+      breathHold: Boolean(ind && ind.region === 'Abdomen/Pelvis'),
+    };
+  }
+
+  const BREATH_HOLD_NOTE = 'Abdomen/Pelvis: scan time is limited by breath-hold — the percentages here don’t account for it, so confirm the breath-hold length at the console before trading anything for time.';
+
+  function unmodeledText(roleInfo, withLabel = true) {
+    const what = roleInfo.unmodeledReason;
+    const lead = roleInfo.role === 'key'
+      ? `${withLabel ? roleInfo.label + ' — d' : 'D'}on’t reduce quality on this sequence. `
+      : (roleInfo.role === 'supporting' && withLabel ? `${roleInfo.label}. ` : '');
+    return `${lead}The time/SNR model doesn’t cover ${what}, so no parameter suggestions are generated for it.`;
+  }
+
+  // Override > Key role's protective cap > default.
+  function effectivePriority(overrideValue, roleInfo) {
+    return overrideValue || (roleInfo && roleInfo.role === 'key' ? roleInfo.keyPriority : '');
+  }
+
+  // Key sequences never get Aggressive; Supporting ones get it ticked by
+  // default (still untickable). Re-applied only when the role changes, so a
+  // manual tick/untick survives re-renders.
+  function autoAggressive(el, roleInfo) {
+    const mode = roleInfo && roleInfo.modeled !== false && roleInfo.role ? roleInfo.role : '';
+    if (el.dataset.autoRole !== mode) {
+      const was = el.dataset.autoRole;
+      el.dataset.autoRole = mode;
+      if (mode === 'key') el.checked = false;
+      else if (mode === 'supporting') el.checked = true;
+      else if (was === 'supporting') el.checked = false; // the role's default no longer applies
+    }
+    el.disabled = mode === 'key';
+    const label = el.closest('label');
+    if (label) label.classList.toggle('disabled', mode === 'key');
+    el.title = mode === 'key' ? 'Off for Key sequences — quality is protected.' : '';
+  }
+
+  // Plain statement of whether a suggestion trades quality for time.
+  function qualityTradeNote(start, candidate, result) {
+    const snr = result.snr.comparable ? result.snr.percentChange : null;
+    let voxPct;
+    if (candidate.accelType === 'cs-sense' && hasCsVoxel(start) && hasCsVoxel(candidate)) {
+      voxPct = (Math.max(candidate.csVoxelFreq / start.csVoxelFreq, candidate.csVoxelPhase / start.csVoxelPhase) - 1) * 100;
+    } else {
+      voxPct = (Math.max(start.freqMatrix / candidate.freqMatrix, start.phaseMatrix / candidate.phaseMatrix) - 1) * 100;
+    }
+    const faster = result.time.modelRatio < 0.99;
+    const slower = result.time.modelRatio > 1.01;
+    // More time for clearly better SNR is a quality purchase, even if the
+    // voxel-size allowance moved a hair.
+    if (snr !== null && snr >= 2 && slower) {
+      return { kind: 'spend', text: `Spending time for quality — SNR ${formatPercent(snr)}${voxPct >= 2 ? ` (voxel size +${Math.round(voxPct)}%)` : ''}.` };
+    }
+    const lost = [];
+    if (snr !== null && snr <= -2) lost.push(`SNR ${formatPercent(snr)}`);
+    if (voxPct >= 2) lost.push(`voxel size +${Math.round(voxPct)}%`);
+    if (lost.length) {
+      return { kind: 'trade', text: faster ? `Trading quality for time — ${lost.join(', ')}.` : `Quality reduced — ${lost.join(', ')}.` };
+    }
+    const gained = [];
+    if (snr !== null && snr >= 2) gained.push(`SNR ${formatPercent(snr)}`);
+    if (voxPct <= -2) gained.push('smaller voxels');
+    if (gained.length && slower) return { kind: 'spend', text: `Spending time for quality — ${gained.join(', ')}.` };
+    return null;
+  }
+
+  function roleBadgeHtml(roleInfo) {
+    if (!roleInfo || !roleInfo.role) return '';
+    return `<span class="role-badge role-${roleInfo.role}">${escapeHtml(roleInfo.label)}</span>`;
+  }
+
+  // What the role means for the options being shown (detail panels).
+  function roleBannerHtml(roleInfo, priority, fromRole) {
+    if (!roleInfo || !roleInfo.role) return roleInfo && roleInfo.breathHold ? `<div class="info-note show">${escapeHtml(BREATH_HOLD_NOTE)}</div>` : '';
+    const capLabel = priorityDisplayLabel(priority);
+    const overridden = roleInfo.role === 'key' && priority && !fromRole;
+    const text = overridden
+      ? `${roleInfo.label}: your ${capLabel} priority override replaces the Key role’s resolution caps, so quality is NOT held to the Key limits here. Aggressive stays off, and Quality-first may still spend up to +${Math.round((KEY_QUALITY_MAX_TIME_RATIO - 1) * 100)}% time.`
+      : roleInfo.role === 'key'
+      ? `${roleInfo.label}: quality is protected — resolution limits use the ${capLabel} caps${fromRole ? ' (set by the Key role)' : ''}, Aggressive cuts are off, and Quality-first may spend up to +${Math.round((KEY_QUALITY_MAX_TIME_RATIO - 1) * 100)}% time (instead of the usual +${Math.round((QUALITY_MAX_TIME_RATIO - 1) * 100)}%) to raise quality.`
+      : `${roleInfo.label}: quality can reasonably be traded for time here — Aggressive-level cuts are offered by default, with the stronger warning.`;
+    return `<div class="role-banner role-${roleInfo.role}">${escapeHtml(text)}</div>${roleInfo.breathHold ? `<div class="info-note show">${escapeHtml(BREATH_HOLD_NOTE)}</div>` : ''}`;
+  }
+
+  function indicationOptionsHtml(blankLabel) {
+    return `<option value="">${escapeHtml(blankLabel)}</option>` + ROLE_REGIONS.map(region =>
+      `<optgroup label="${escapeHtml(region)}">${EXAM_INDICATIONS.filter(i => i.region === region)
+        .map(i => `<option value="${i.key}">${escapeHtml(i.label)}</option>`).join('')}</optgroup>`).join('');
+  }
+  function roleCategoryOptionsHtml(blankLabel) {
+    return `<option value="">${escapeHtml(blankLabel)}</option>` + ROLE_CATEGORIES
+      .map(c => `<option value="${c.key}">${escapeHtml(c.label)}${c.modeled ? '' : ' (no suggestions)'}</option>`).join('');
+  }
 
   // ---------------------------------------------------------------------
   // NSA-rule exceptions — small-structure/high-precision exam keywords
@@ -4211,6 +4655,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         applyProtocolGlobals(protocol);
         applyProtocolToInputs(protocol, curInputs, 'cur');
         applyProtocolExtras(protocol, 'cur');
+        noteCalcLoadedProtocol(protocol);
         document.getElementById('cur-planning-note').innerHTML = planningNoteHtml(protocol);
         render();
         switchView('calculator');
@@ -4414,9 +4859,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // Set by the Quick tab when a sequence type is picked for a protocol; the
   // form has no field for it, so carry it through edit/duplicate unchanged.
   let modalSequenceType = '';
+  let modalRoleCategory = '';
 
   function openModal(mode, prefill) {
     modalSequenceType = (prefill && prefill.sequenceType) || '';
+    modalRoleCategory = (prefill && prefill.roleCategory) || '';
     editingId = mode === 'edit' ? prefill.id : null;
     modalTitle.textContent = mode === 'edit' ? 'Edit Protocol' : 'Add Protocol';
     modalSaveBtn.textContent = mode === 'edit' ? 'Save changes' : 'Save protocol';
@@ -4532,6 +4979,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       notes: pf.notes.value.trim(),
       planningNotes: pf.planningNotes.value.trim(),
       sequenceType: modalSequenceType,
+      roleCategory: modalRoleCategory,
       updatedAt: new Date().toISOString(),
     };
 
@@ -4602,6 +5050,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       trRanges,
       outcomeLog,
       nsaExceptions,
+      examIndications: examKeyRows,
     };
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -4632,6 +5081,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         let incomingTr = [];
         let incomingOutcomes = [];
         let incomingExceptions = [];
+        let incomingRoles = null;
         if (Array.isArray(parsed)) {
           incomingProtocols = parsed;
         } else if (parsed && typeof parsed === 'object') {
@@ -4640,6 +5090,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           if (Array.isArray(parsed.trRanges)) incomingTr = parsed.trRanges;
           if (Array.isArray(parsed.outcomeLog)) incomingOutcomes = parsed.outcomeLog;
           if (Array.isArray(parsed.nsaExceptions)) incomingExceptions = parsed.nsaExceptions;
+          if (parsed.examIndications && typeof parsed.examIndications === 'object' && !Array.isArray(parsed.examIndications)) {
+            incomingRoles = sanitizeKeyRows(parsed.examIndications, true);
+          }
         }
 
         const validProtocols = incomingProtocols.filter(p => p && typeof p === 'object' && p.name && p.region);
@@ -4663,7 +5116,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           if (!known) newExceptions.push(x); // first spelling wins
         });
 
-        if (validProtocols.length === 0 && validAcr.length === 0 && validTr.length === 0 && validOutcomes.length === 0 && newExceptions.length === 0) {
+        const roleKeysIncoming = incomingRoles ? Object.keys(incomingRoles) : [];
+        if (validProtocols.length === 0 && validAcr.length === 0 && validTr.length === 0 && validOutcomes.length === 0 && newExceptions.length === 0 && roleKeysIncoming.length === 0) {
           if (incomingOutcomes.length > 0 || cleanedExceptions.length > 0) {
             alert('Nothing new to import — those logged results / NSA exceptions are already in this browser.');
             return;
@@ -4678,10 +5132,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         if (validTr.length) parts.push(`${validTr.length} TR range entr${validTr.length === 1 ? 'y' : 'ies'}`);
         if (validOutcomes.length) parts.push(`${validOutcomes.length} logged result(s)`);
         if (newExceptions.length) parts.push(`${newExceptions.length} NSA exception${newExceptions.length === 1 ? '' : 's'}`);
-        const hasReferenceData = validAcr.length > 0 || validTr.length > 0;
+        if (roleKeysIncoming.length) parts.push(`${roleKeysIncoming.length} exam-indication Key/Supporting set${roleKeysIncoming.length === 1 ? '' : 's'}`);
+        const hasReferenceData = validAcr.length > 0 || validTr.length > 0 || roleKeysIncoming.length > 0;
         const confirmMsg = `Import ${parts.join(', ')}?`
           + ' Protocols are added alongside your current library.'
-          + (hasReferenceData ? ' ACR minimums and TR ranges will replace any existing entry for the same region/sequence type.' : '');
+          + (hasReferenceData ? ' ACR minimums, TR ranges and Key/Supporting rows will replace any existing entry for the same region/sequence type/indication.' : '');
         if (!confirm(confirmMsg)) return;
 
         if (validProtocols.length) {
@@ -4703,6 +5158,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
             if (idx >= 0) acrReferences[idx] = record; else acrReferences.push(record);
           });
           persistAcrReferences();
+        }
+
+        if (roleKeysIncoming.length) {
+          Object.assign(examKeyRows, incomingRoles);
+          persistKeyRows();
+          renderRolesView();
         }
 
         if (newExceptions.length) {
@@ -5010,6 +5471,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
   const BALANCED_MIN_SNR_RATIO = 0.90; // "negligible" SNR loss: up to ~10%
   const QUALITY_MAX_TIME_RATIO = 1.15; // "modest" time increase: up to ~15%
+  // Key sequences: Quality-first may spend much more time to raise quality.
+  const KEY_QUALITY_MAX_TIME_RATIO = 2.0;
 
   // Resolution ceiling — the maximum voxel-size increase (per axis,
   // relative to the Current protocol) the optimizer will ever suggest,
@@ -5348,7 +5811,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   }
 
   function optimizeProtocolTiers(start, opts) {
-    const { sequenceType, priority, gFactorK, examLabel, exceptions, heightCm, weightKg, aggressive: aggressiveMode } = opts;
+    const { sequenceType, priority, gFactorK, examLabel, exceptions, heightCm, weightKg, role } = opts;
+    // Key sequences never get Aggressive cuts, whatever the caller asked for.
+    const aggressiveMode = role === 'key' ? false : opts.aggressive;
+    const qualityMaxTimeRatio = role === 'key' ? KEY_QUALITY_MAX_TIME_RATIO : QUALITY_MAX_TIME_RATIO;
     const trRange = findTrRange(sequenceType);
     if (!trRange || !Number.isFinite(trRange.minTr) || !Number.isFinite(trRange.maxTr)) {
       return { ok: false, reason: `No TR range defined for "${sequenceType}" yet. Add it in the TR Ranges tab first.` };
@@ -5448,7 +5914,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // other sequence types (PD/STIR/DWI/etc.), same behavior as before
     // this rule existed.
     const nsaDownCandidates = nsaStep.ruleApplies ? [searchBase.nsa] : nsaSearchDown(start.nsa);
-    const nsaUpCandidates = nsaStep.ruleApplies ? [searchBase.nsa] : nsaSearchUp(start.nsa);
+    const nsaUpBase = nsaStep.ruleApplies ? [searchBase.nsa] : nsaSearchUp(start.nsa);
+    // Key sequences may also offer MORE averaging than your personal NSA cap
+    // in Quality-first — that cap exists to save time, which Key doesn't prioritize.
+    const nsaUpCandidates = role === 'key'
+      ? Array.from(new Set([...nsaUpBase, ...nsaSearchUp(searchBase.nsa)])).sort((a, b) => a - b)
+      : nsaUpBase;
 
     // Fastest & Balanced share the same speed-favoring DIRECTION: SENSE
     // up toward the ceiling, NSA down toward the floor (or fixed - see
@@ -5534,7 +6005,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       const highTr = Math.max(start.tr, trRange.maxTr);
       if (highTr > start.tr) {
         const trial = buildCandidate(sense, nsa, scale, highTr);
-        if (passesPriorityGuard(trial.result) && trial.result.time.modelRatio <= QUALITY_MAX_TIME_RATIO) {
+        if (passesPriorityGuard(trial.result) && trial.result.time.modelRatio <= qualityMaxTimeRatio) {
           return highTr;
         }
       }
@@ -5548,7 +6019,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           const tr = pickQualityTr(sense, nsa, scale);
           const { candidate, result } = buildCandidate(sense, nsa, scale, tr);
           if (!passesPriorityGuard(result)) continue;
-          if (result.time.modelRatio > QUALITY_MAX_TIME_RATIO) continue;
+          if (result.time.modelRatio > qualityMaxTimeRatio) continue;
 
           const better = !quality
             || result.snr.ratio > quality.result.snr.ratio + 1e-9
@@ -5624,7 +6095,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       return { ok: false, reason: `No option found within these constraints for "${sequenceType}" — double-check the TR range is set correctly and that the priority isn't over-restrictive.` };
     }
 
-    return { ok: true, trRange, nsaStep, aggressiveRequested: Boolean(aggressiveMode), tiers: { fastest, balanced, quality, aggressive } };
+    return { ok: true, trRange, nsaStep, aggressiveRequested: Boolean(aggressiveMode), role: role || '', tiers: { fastest, balanced, quality, aggressive } };
   }
 
   function tierChangeOneLiner(start, candidate) {
@@ -5799,7 +6270,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   }
 
   function tierReasonText(tierKey, start, candidate, result, opts, trRange, matrixLocked) {
-    const priorityLabel = (CLINICAL_PRIORITIES[opts.priority] && CLINICAL_PRIORITIES[opts.priority].label) || opts.priority || 'the default (no priority selected)';
+    const priorityLabel = ((CLINICAL_PRIORITIES[opts.priority] && CLINICAL_PRIORITIES[opts.priority].label) || opts.priority || 'the default (no priority selected)')
+      + (opts.priorityFromRole ? ' (set by the Key role)' : '');
     let trText;
     if (tierKey === 'quality') {
       trText = candidate.tr > start.tr
@@ -5822,7 +6294,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     } else if (tierKey === 'balanced') {
       reasons.push(`relative SNR held at ${result.snr.ratio.toFixed(2)}× (≥ ${BALANCED_MIN_SNR_RATIO} target for this tier)`);
     } else if (tierKey === 'quality') {
-      reasons.push(`relative SNR at ${result.snr.ratio.toFixed(2)}×, time increase capped at +${Math.round((QUALITY_MAX_TIME_RATIO - 1) * 100)}%`);
+      reasons.push(`relative SNR at ${result.snr.ratio.toFixed(2)}×, time increase capped at +${Math.round(((opts.role === 'key' ? KEY_QUALITY_MAX_TIME_RATIO : QUALITY_MAX_TIME_RATIO) - 1) * 100)}%${opts.role === 'key' ? ' (raised because this is a Key sequence)' : ''}`);
     } else if (tierKey === 'aggressive') {
       reasons.push(`minimum time with the normal caps relaxed (SENSE up to ${AGGRESSIVE_SENSE_CEILING}, voxel-size ceiling ×${AGGRESSIVE_VOXEL_CAP_MULTIPLIER}, NSA allowed below your personal rule if combined SNR stays ≥ ${AGGRESSIVE_NSA_MIN_SNR_RATIO}); relative SNR ${result.snr.ratio.toFixed(2)}×`);
     }
@@ -5881,6 +6353,31 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const optimizerPlanningNoteEl = document.getElementById('optimizer-planning-note');
   const optSequenceTypeEl = document.getElementById('opt-sequence-type');
   const optPriorityEl = document.getElementById('opt-priority');
+  const optIndicationEl = document.getElementById('opt-indication');
+  const optRoleLineEl = document.getElementById('opt-role-line');
+  function optRoleInfo() {
+    return resolveSequenceRole({
+      indicationKey: optIndicationEl.value,
+      name: optimizerProtocol ? optimizerProtocol.name : '',
+      sequenceType: optSequenceTypeEl.value,
+      categoryKey: optimizerProtocol ? optimizerProtocol.roleCategory : '',
+    });
+  }
+  function updateOptRole() {
+    if (!optimizerProtocol) return;
+    const info = optRoleInfo();
+    autoAggressive(optAggressiveEl, info);
+    const bits = [];
+    if (info.role) bits.push(roleBadgeHtml(info));
+    if (info.recognized) bits.push(escapeHtml(info.categoryText));
+    if (info.recognized && !info.modeled) bits.push(`<span style="color:var(--warn-border)">${escapeHtml(unmodeledText(info, false))}</span>`);
+    else if (info.role === 'key') bits.push('Quality is protected: tighter resolution caps, no Aggressive, a higher-quality option offered.');
+    else if (info.role === 'supporting') bits.push('Aggressive-level cuts are offered by default.');
+    if (info.breathHold) bits.push(escapeHtml(BREATH_HOLD_NOTE));
+    optRoleLineEl.innerHTML = bits.join(' · ');
+  }
+  optIndicationEl.addEventListener('change', updateOptRole);
+  optSequenceTypeEl.addEventListener('change', updateOptRole);
   const optFovFreqEl = document.getElementById('opt-fov-freq');
   const optFovPhaseEl = document.getElementById('opt-fov-phase');
   const optSlicesEl = document.getElementById('opt-slices');
@@ -5926,6 +6423,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       .concat(trRanges.map(r => `<option value="${escapeHtml(r.sequenceType)}">${escapeHtml(r.sequenceType)}</option>`))
       .join('');
     optPriorityEl.value = '';
+    optIndicationEl.innerHTML = indicationOptionsHtml('— Not selected —');
+    optIndicationEl.value = '';
+    delete optAggressiveEl.dataset.autoRole;
     // Pre-fill from the protocol's stored FOV so there's nothing to
     // re-enter — still editable here for a one-off exception.
     optFovFreqEl.value = protocol.fovFreq ?? '';
@@ -5940,6 +6440,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     optWeightUnitEl.value = 'kg';
     updateOptHabitusDerived();
     oversamplingGroups.opt.set(protocol.oversamplingPercent || 0);
+    updateOptRole();
     optimizerErrorEl.style.display = 'none';
     optimizerModalOverlay.classList.add('show');
   }
@@ -6000,6 +6501,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const matrixCaveat = matrixChangeCaveat(outcome.start, candidate);
     const trCaveat = trDecreaseCaveat(outcome.start, candidate);
     const trRaise = trRaiseCaveat(outcome.start, candidate);
+    const tradeNote = qualityTradeNote(outcome.start, candidate, result);
     // TR doesn't feed relativeSnr() at all, so a TR-only confidence issue
     // (e.g. a range violation) shouldn't taint the SNR badge — only the
     // time estimate actually depends on TR.
@@ -6014,12 +6516,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     return `
       <label class="optimizer-tier-card" data-tier="${key}">
         <input type="radio" name="${radioName}" value="${key}" ${checked}>
-        <h4>${escapeHtml(meta.label)}</h4>
+        <h4>${escapeHtml(meta.label)}${outcome.roleInfo && outcome.roleInfo.role ? ` ${roleBadgeHtml(outcome.roleInfo)}` : ''}</h4>
         <div class="tier-metrics">
           ${timeMetricHtml}
           <span class="${result.snr.percentChange >= 0 ? 'good' : 'bad'}">${formatPercent(result.snr.percentChange)} SNR</span>${snrConfTag}
         </div>
         <div class="tier-oneliner">${escapeHtml(tierChangeOneLiner(outcome.start, tierData.candidate))}</div>
+        ${tradeNote ? `<div class="quality-trade ${tradeNote.kind}">${escapeHtml(tradeNote.text)}${tradeNote.kind === 'trade' && outcome.roleInfo && outcome.roleInfo.role === 'key' ? ' This is a Key sequence.' : ''}</div>` : ''}
         ${matrixCaveat ? '<div class="tier-matrix-caveat">⚠ Verify matrix/voxel at console</div>' : ''}
         ${trCaveat ? '<div class="tier-matrix-caveat">⚠ Verify TR/slice-fit at console</div>' : ''}
         ${trRaise ? '<div class="tier-matrix-caveat">⚠ TR raised — affects contrast and time unpredictably</div>' : ''}
@@ -6069,6 +6572,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const trCaveat = trDecreaseCaveat(start, candidate);
     const trRaise = trRaiseCaveat(start, candidate);
     const timeBasis = timeBasisNote(result.time);
+    const tradeNote = qualityTradeNote(start, candidate, result);
     const csSense = start.accelType === 'cs-sense';
 
     const confRows = applyAggressiveConfidenceOverride(applyHabitusConfidenceOverride(suggestionConfidenceRows(start, candidate, trRange), tierData.habitusInfo), tierData.aggressiveInfo);
@@ -6100,6 +6604,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       : '';
 
     return `
+      ${roleBannerHtml(outcome.roleInfo, priority, outcome.priorityFromRole)}
+      ${tradeNote ? `<div class="quality-trade-banner ${tradeNote.kind}">${escapeHtml(tradeNote.text)}${tradeNote.kind === 'trade' && outcome.roleInfo && outcome.roleInfo.role === 'key' ? ' This is a Key sequence — consider Quality-first instead.' : ''}</div>` : ''}
       ${tierData.aggressiveInfo ? aggressiveBannerHtml(tierData.aggressiveInfo, candidate, result, priority) : ''}
       <div class="optimizer-compare">
         <div class="oc-head">Parameter</div><div class="oc-head">Current</div><div class="oc-head">Suggested</div>
@@ -6131,7 +6637,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           <div class="result-sub">Relative to saved protocol (${result.snr.ratio.toFixed(2)}×)</div>
         </div>
       </div>
-      <div class="info-note show">${escapeHtml(tierReasonText(selectedTier, start, candidate, result, { sequenceType, priority }, trRange, matrixLocked))}</div>
+      <div class="info-note show">${escapeHtml(tierReasonText(selectedTier, start, candidate, result, { sequenceType, priority, role: outcome.roleInfo ? outcome.roleInfo.role : '', priorityFromRole: Boolean(outcome.priorityFromRole) }, trRange, matrixLocked))}</div>
       ${tierData.habitusInfo ? `<div class="habitus-caveat-banner">⚠⚠ VERIFY ANATOMY ACTUALLY FITS WITHIN THE REDUCED FOV BEFORE SCANNING. Oversampling was cut from ${tierData.habitusInfo.basePct}% to ${candidate.oversamplingPercent}% based on an estimated body habitus (BMI ~${Math.round(tierData.habitusInfo.bmi)}, ${escapeHtml(tierData.habitusInfo.category)}) — a rough proxy from height/weight, not a direct measurement of this patient's actual girth in the phase direction. This is a coverage/safety parameter, not just a speed knob — treat this caution as stronger than the standard "verify at console" tag elsewhere in this app.</div>` : ''}
       ${matrixCaveat ? `<div class="warning-banner show">⚠ ${escapeHtml(matrixCaveat)}</div>` : ''}
       ${trCaveat ? `<div class="warning-banner show">⚠ ${escapeHtml(trCaveat)}</div>` : ''}
@@ -6165,11 +6671,18 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   });
 
   document.getElementById('optimizer-run-btn').addEventListener('click', () => {
-    const sequenceType = optSequenceTypeEl.value;
-    const priority = optPriorityEl.value;
+    const roleInfo = optRoleInfo();
+    if (roleInfo.recognized && !roleInfo.modeled) {
+      optimizerErrorEl.textContent = unmodeledText(roleInfo);
+      optimizerErrorEl.style.display = 'block';
+      return;
+    }
+    const sequenceType = optSequenceTypeEl.value
+      || (roleInfo.baseType && findTrRange(roleInfo.baseType) && Number.isFinite(findTrRange(roleInfo.baseType).minTr) ? roleInfo.baseType : '');
+    const priority = effectivePriority(optPriorityEl.value, roleInfo);
 
-    if (!sequenceType || !priority) {
-      optimizerErrorEl.textContent = 'Choose a sequence type and a clinical priority before searching.';
+    if (!sequenceType) {
+      optimizerErrorEl.textContent = 'Choose a sequence type before searching.';
       optimizerErrorEl.style.display = 'block';
       return;
     }
@@ -6197,7 +6710,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const examLabel = [optimizerProtocol.name, optimizerProtocol.region, optimizerProtocol.subRegion].filter(Boolean).join(' ');
     const heightCm = heightToCm(parseFloat(optHeightEl.value), optHeightUnitEl.value);
     const weightKg = weightToKg(parseFloat(optWeightEl.value), optWeightUnitEl.value);
-    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg, aggressive: optAggressiveEl.checked });
+    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg, aggressive: optAggressiveEl.checked, role: roleInfo.role });
 
     if (!outcome.ok) {
       optimizerErrorEl.textContent = outcome.reason;
@@ -6208,7 +6721,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     optimizerErrorEl.style.display = 'none';
     const fovFreq = parseFloat(optFovFreqEl.value);
     const fovPhase = parseFloat(optFovPhaseEl.value);
-    optimizerOutcome = { ...outcome, start, sequenceType, priority, fovFreq, fovPhase };
+    optimizerOutcome = { ...outcome, start, sequenceType, priority, roleInfo, priorityFromRole: !optPriorityEl.value && roleInfo.role === 'key', fovFreq, fovPhase };
     optimizerSelectedTier = outcome.tiers.balanced ? 'balanced' : (outcome.tiers.fastest ? 'fastest' : 'quality');
     renderOptimizerTiers();
   });
@@ -6234,6 +6747,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     applyProtocolExtras(optimizerProtocol, 'prop', modalExtras);
     curInputs.te.value = optimizerProtocol.te ?? '';
     propInputs.te.value = optimizerProtocol.te ?? '';
+    noteCalcLoadedProtocol(optimizerProtocol);
+    examIndicationEl.value = optIndicationEl.value;
     document.getElementById('cur-planning-note').innerHTML = planningNoteHtml(optimizerProtocol);
     document.getElementById('prop-planning-note').innerHTML = planningNoteHtml(optimizerProtocol);
     setProposedAggressiveNote(optimizerSelectedTier === 'aggressive');
@@ -6620,6 +7135,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     return {
       sequenceType: outcome.sequenceType || '',
       priority: outcome.priority || '',
+      indication: (outcome.roleInfo && outcome.roleInfo.indicationLabel) || '',
+      role: (outcome.roleInfo && outcome.roleInfo.role) || '',
       tier: tierKey,
       protocolName: (ctx && ctx.protocolName) || '',
       exam: (ctx && ctx.exam) || '',
@@ -6986,6 +7503,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     facility: document.getElementById('quick-facility'),
     scanner: document.getElementById('quick-scanner'),
     priority: document.getElementById('quick-priority'),
+    indication: document.getElementById('quick-indication'),
+    role: document.getElementById('quick-role'),
     aggressive: document.getElementById('quick-aggressive'),
     protocols: document.getElementById('quick-protocols'),
     seq: document.getElementById('quick-seq'),
@@ -6998,7 +7517,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   };
   // Priority and Aggressive are deliberately NOT persisted anywhere — a page
   // reload always starts with no priority and Aggressive off.
-  const quick = { facility: '', scanner: '', protocolId: null, work: null, editingSeq: false, outcome: null };
+  // The exam indication is picked once and applies to every protocol tapped;
+  // like priority it's about THIS patient, so it's never remembered.
+  const quick = { facility: '', scanner: '', protocolId: null, work: null, editingSeq: false, editingRole: false, outcome: null };
 
   (function loadQuickSelection() {
     try {
@@ -7065,29 +7586,72 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const p = quickProtocol();
     quickEls.planning.innerHTML = p ? planningNoteHtml(p) : '';
     renderQuickSeq();
+    renderQuickRole();
     renderQuickFields();
     runQuick();
+  }
+
+  function quickRoleInfo(p, info) {
+    return resolveSequenceRole({
+      indicationKey: quickEls.indication.value,
+      name: p.name,
+      sequenceType: info.type,
+      categoryKey: p.roleCategory,
+    });
+  }
+
+  // The sequence type the optimizer will use: the one inferred/picked, else
+  // the category's usual one when a TR range exists for it.
+  function quickEffectiveType(info, roleInfo) {
+    if (info.type) return { type: info.type, source: info.source };
+    if (roleInfo.baseType && info.options.includes(roleInfo.baseType)) return { type: roleInfo.baseType, source: 'category' };
+    return { type: '', source: 'none' };
+  }
+
+  function renderQuickRole() {
+    const p = quickProtocol();
+    if (!p) { quickEls.role.innerHTML = ''; return; }
+    const info = quickSequenceInfo(p);
+    const roleInfo = quickRoleInfo(p, info);
+    const wantsChip = quickEls.indication.value || (roleInfo.recognized && !roleInfo.modeled);
+    if (!wantsChip) { quickEls.role.innerHTML = ''; return; }
+    if (quick.editingRole || !roleInfo.recognized) {
+      quickEls.role.innerHTML = `<div class="quick-seqrow"><span>${roleInfo.recognized ? 'Category:' : 'Can’t tell the category from the name — pick one (remembered for this protocol):'}</span>
+        <select id="quick-role-select" aria-label="Sequence category">${roleCategoryOptionsHtml('Auto (from the name)')}</select></div>`;
+      const sel = document.getElementById('quick-role-select');
+      sel.value = p.roleCategory || '';
+      return;
+    }
+    const text = roleInfo.role
+      ? `${roleInfo.label} · ${roleInfo.cats.length === 1 ? roleInfo.cats[0].label : roleInfo.cats[0].group}`
+      : `${roleInfo.categoryText}`;
+    quickEls.role.innerHTML = `<button type="button" class="quick-rolechip${roleInfo.role ? ' role-' + roleInfo.role : ''}" data-action="edit-role" aria-label="Role and sequence category — tap to change">${escapeHtml(text)}${roleInfo.modeled ? '' : ' · no suggestions'} ✎</button>`;
   }
 
   function renderQuickSeq() {
     const p = quickProtocol();
     if (!p) { quickEls.seq.innerHTML = ''; return; }
     const info = quickSequenceInfo(p);
+    const roleInfo0 = quickRoleInfo(p, info);
+    // A category the model doesn't cover needs no sequence type at all.
+    if (roleInfo0.recognized && !roleInfo0.modeled) { quickEls.seq.innerHTML = ''; return; }
+    const eff = quickEffectiveType(info, roleInfo0);
     if (!info.options.length) {
       quickEls.seq.innerHTML = '<div class="quick-empty">No sequence types with a TR range yet — add some in the TR Ranges tab.</div>';
       return;
     }
-    if (!info.type || quick.editingSeq) {
+    if (!eff.type || quick.editingSeq) {
       quickEls.seq.innerHTML = `<div class="quick-seqrow"><span>${info.type ? 'Sequence type:' : 'Can’t tell the sequence type from the name — pick one (remembered for this protocol):'}</span>
         <select id="quick-seq-select" aria-label="Sequence type"><option value="">Pick…</option>${info.options.map(o => `<option value="${escapeHtml(o)}"${o === info.type ? ' selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select></div>`;
     } else {
-      quickEls.seq.innerHTML = `<div class="quick-seqrow"><button type="button" class="quick-seqchip" data-action="edit-seq" aria-label="Sequence type — tap to change">${escapeHtml(info.type)} · ${info.source === 'saved' ? 'saved' : 'from name'} ✎</button></div>`;
+      quickEls.seq.innerHTML = `<div class="quick-seqrow"><button type="button" class="quick-seqchip" data-action="edit-seq" title="Sequence type (${eff.source === 'saved' ? 'saved on this protocol' : (eff.source === 'category' ? 'from the category' : 'from the name')}) — tap to change" aria-label="Sequence type — tap to change">${escapeHtml(eff.type)} ✎</button></div>`;
     }
   }
 
   function quickLoad(p) {
     quick.protocolId = p.id;
     quick.editingSeq = false;
+    quick.editingRole = false;
     quick.work = {
       tr: p.tr, nsa: p.nsa,
       sense: p.accelType === 'none' ? 1 : p.sense,
@@ -7240,13 +7804,16 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (matrixChangeCaveat(outcome.start, candidate)) verify.push('matrix');
     if (trDecreaseCaveat(outcome.start, candidate)) verify.push('TR');
     const trRaised = trRaiseCaveat(outcome.start, candidate);
+    const tradeNote = qualityTradeNote(outcome.start, candidate, result);
     const flags = [];
     if (verify.length) flags.push(`⚠ verify ${verify.join(', ')}`);
     if (trRaised) flags.push('⚠ TR raised — contrast/time unpredictable');
     if (tierData.limitedSavings) flags.push('limited savings');
+    const roleInfo = outcome.roleInfo;
+    const tradeHtml = tradeNote ? ` <span class="quality-trade ${tradeNote.kind}">${escapeHtml(tradeNote.text)}</span>` : '';
     return `<button type="button" class="quick-row${key === 'aggressive' ? ' aggressive' : ''}" data-tier="${key}">
       <div class="quick-row-top"><span class="quick-tier">${escapeHtml(meta)}</span><span class="quick-metrics">${timeHtml} · ${snrHtml}</span></div>
-      <div class="quick-changes">${escapeHtml(tierChangeOneLiner(outcome.start, candidate))}${flags.length ? ` <span class="quick-flag">${escapeHtml(flags.join(' · '))}</span>` : ''}</div>
+      <div class="quick-changes">${roleInfo && roleInfo.role ? `${roleBadgeHtml(roleInfo)} ` : ''}${escapeHtml(tierChangeOneLiner(outcome.start, candidate))}${flags.length ? ` <span class="quick-flag">${escapeHtml(flags.join(' · '))}</span>` : ''}${tradeHtml}</div>
       ${tierData.aggressiveInfo ? '<div class="aggressive-strip">⚠⚠ Aggressive — outside safety margins, verify</div>' : ''}
     </button>`;
   }
@@ -7257,19 +7824,29 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     quickEls.timewarn.textContent = '';
     if (!p) { quickEls.results.innerHTML = '<div class="quick-empty">Tap a protocol to load it and see the options.</div>'; return; }
     const info = quickSequenceInfo(p);
-    if (!info.type) { quickEls.results.innerHTML = '<div class="quick-empty">Pick a sequence type above to see the options.</div>'; return; }
+    const roleInfo = quickRoleInfo(p, info);
+    autoAggressive(quickEls.aggressive, roleInfo);
+    const bhHtml = roleInfo.breathHold ? `<div class="quick-bh">⏱ ${escapeHtml(BREATH_HOLD_NOTE)}</div>` : '';
+    if (roleInfo.recognized && !roleInfo.modeled) {
+      quickEls.results.innerHTML = `<div class="quick-unmodeled${roleInfo.role ? ' role-' + roleInfo.role : ''}">${escapeHtml(unmodeledText(roleInfo))}</div>${bhHtml}`;
+      return;
+    }
+    const eff = quickEffectiveType(info, roleInfo);
+    if (!eff.type) { quickEls.results.innerHTML = '<div class="quick-empty">Pick a sequence type above to see the options.</div>'; return; }
     const start = quickStart(p);
     if (!isValid(start)) { quickEls.results.innerHTML = '<div class="quick-empty">Enter valid positive values in the fields below.</div>'; return; }
+    const priority = effectivePriority(quickEls.priority.value, roleInfo);
     const outcome = optimizeProtocolTiers(start, {
-      sequenceType: info.type,
-      priority: quickEls.priority.value,
+      sequenceType: eff.type,
+      priority,
       gFactorK: parseFloat(gK.value) || DEFAULT_G_FACTOR_K,
       examLabel: [p.name, p.region, p.subRegion].filter(Boolean).join(' '),
       exceptions: nsaExceptions,
       aggressive: quickEls.aggressive.checked,
+      role: roleInfo.role,
     });
     if (!outcome.ok) { quickEls.results.innerHTML = `<div class="quick-empty">${escapeHtml(outcome.reason)}</div>`; return; }
-    quick.outcome = { ...outcome, start, sequenceType: info.type, priority: quickEls.priority.value, fovFreq: p.fovFreq, fovPhase: p.fovPhase };
+    quick.outcome = { ...outcome, start, sequenceType: eff.type, priority, roleInfo, priorityFromRole: !quickEls.priority.value && roleInfo.role === 'key', fovFreq: p.fovFreq, fovPhase: p.fovPhase };
     // One line for the whole screen instead of a warning on every row: time
     // numbers are only shown without ETL/slice count when both are blank.
     const anyTime = tierKeysFor(quick.outcome).some(k => quick.outcome.tiers[k] && quick.outcome.tiers[k].result.time.comparable);
@@ -7284,14 +7861,29 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         ? `Times scaled from console ${formatConsoleTime(start.consoleTimeSec)}`
         : (taDropped ? `Saved console time not used — ${taDropped}` : ''));
     quickEls.timewarn.classList.toggle('info', !warn);
-    quickEls.results.innerHTML = tierKeysFor(quick.outcome).map(k => quickTierRowHtml(k, quick.outcome)).join('');
+    quickEls.results.innerHTML = tierKeysFor(quick.outcome).map(k => quickTierRowHtml(k, quick.outcome)).join('') + bhHtml;
   }
 
   // --- wiring --------------------------------------------------------------------
   quickEls.facility.addEventListener('change', () => { quick.facility = quickEls.facility.value; quick.scanner = ''; quick.protocolId = null; quick.work = null; renderQuick(); });
   quickEls.scanner.addEventListener('change', () => { quick.scanner = quickEls.scanner.value; quick.protocolId = null; quick.work = null; renderQuick(); });
   quickEls.priority.addEventListener('change', runQuick);
+  quickEls.indication.addEventListener('change', () => { quick.editingRole = false; renderQuickSeq(); renderQuickRole(); runQuick(); });
   quickEls.aggressive.addEventListener('change', runQuick);
+  quickEls.role.addEventListener('click', (e) => {
+    if (e.target.closest('[data-action="edit-role"]')) { quick.editingRole = true; renderQuickRole(); }
+  });
+  quickEls.role.addEventListener('change', (e) => {
+    if (e.target.id !== 'quick-role-select') return;
+    const p = quickProtocol();
+    if (!p) return;
+    if (e.target.value) p.roleCategory = e.target.value; else delete p.roleCategory; // remembered on this protocol
+    persistProtocols();
+    quick.editingRole = false;
+    renderQuickSeq();
+    renderQuickRole();
+    runQuick();
+  });
 
   quickEls.protocols.addEventListener('click', (e) => {
     const btn = e.target.closest('.quick-pbtn');
@@ -7326,6 +7918,52 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   quickEls.sheetOverlay.addEventListener('click', (e) => {
     if (e.target === quickEls.sheetOverlay || e.target.closest('#quick-sheet-close')) closeQuickSheet();
   });
+
+  // --- Exam Roles tab ---------------------------------------------------------
+  const rolesState = { region: ROLE_REGIONS[0] };
+  function renderRolesView() {
+    document.getElementById('roles-region-tabs').innerHTML = ROLE_REGIONS
+      .map(r => `<button type="button" data-region="${escapeHtml(r)}" class="${r === rolesState.region ? 'active' : ''}">${escapeHtml(r)}</button>`).join('');
+    const inds = EXAM_INDICATIONS.filter(i => i.region === rolesState.region);
+    document.getElementById('roles-table').innerHTML =
+      `<thead><tr><th>Sequence category</th>${inds.map(i => `<th>${escapeHtml(i.label)}</th>`).join('')}</tr></thead><tbody>`
+      + ROLE_CATEGORIES.map(c => `<tr><td>${escapeHtml(c.label)}${c.modeled ? '' : '<span class="no-model">no suggestions — model doesn’t cover it</span>'}</td>`
+        + inds.map(i => {
+          const key = isKeyRow(i.key, c.key);
+          return `<td><button type="button" class="role-cell${key ? ' key' : ''}" data-ind="${i.key}" data-cat="${c.key}" aria-pressed="${key}">${key ? 'Key' : 'Supporting'}</button></td>`;
+        }).join('') + '</tr>').join('') + '</tbody>';
+  }
+  document.getElementById('roles-region-tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-region]');
+    if (!b) return;
+    rolesState.region = b.dataset.region;
+    renderRolesView();
+  });
+  document.getElementById('roles-table').addEventListener('click', (e) => {
+    const b = e.target.closest('.role-cell');
+    if (!b) return;
+    const list = examKeyRows[b.dataset.ind] || (examKeyRows[b.dataset.ind] = []);
+    const at = list.indexOf(b.dataset.cat);
+    if (at >= 0) list.splice(at, 1); else list.push(b.dataset.cat);
+    const ok = persistKeyRows();
+    document.getElementById('roles-status').textContent = ok ? 'Saved ✓' : '';
+    renderRolesView();
+    render();
+    if (document.getElementById('view-quick').classList.contains('active')) runQuick();
+  });
+  document.getElementById('roles-reset-btn').addEventListener('click', () => {
+    if (!confirm('Restore every indication to the starting Key/Supporting values? Your edits to this table will be lost.')) return;
+    examKeyRows = defaultKeyRows();
+    persistKeyRows();
+    document.getElementById('roles-status').textContent = 'Restored ✓';
+    renderRolesView();
+    render();
+  });
+
+  // Fill the indication/category selects (after the data above exists).
+  examIndicationEl.innerHTML = indicationOptionsHtml('— Not selected —');
+  calcRoleCategoryEl.innerHTML = roleCategoryOptionsHtml('Auto');
+  quickEls.indication.innerHTML = indicationOptionsHtml('Indication: not set');
 
   renderRegionTabs();
   renderScannerFilterOptions();
