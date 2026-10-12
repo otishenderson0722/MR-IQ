@@ -845,6 +845,7 @@
   .optimizer-tier-card .tier-metrics .good { color: var(--good); font-weight: 600; }
   .optimizer-tier-card .tier-metrics .bad { color: var(--bad); font-weight: 600; }
   .optimizer-tier-card .tier-metrics .tier-clock { color: var(--text-dim); }
+  .fold-pct { font-size: 0.7rem; color: var(--text-dim); margin-top: 1px; }
   .role-badge { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: 10px; vertical-align: middle; border: 1px solid var(--border); white-space: nowrap; }
   .role-badge.role-key { color: #1b1300; background: var(--warn-border); border-color: var(--warn-border); }
   .role-badge.role-supporting { color: var(--text-dim); background: var(--panel-2); }
@@ -1829,12 +1830,25 @@
       <div class="nsa-hint" id="pf-nsa-hint"></div>
       <div class="field">
         <label for="pf-oversampling" id="pf-oversampling-label">Phase oversampling</label>
-        <div class="matrix-row">
+        <div id="pf-os-pct" class="matrix-row">
           <input type="number" id="pf-oversampling" value="0" min="0" step="1">
           <select id="pf-oversampling-unit" style="width:60px;">
             <option value="pct">%</option>
             <option value="mm">mm</option>
           </select>
+        </div>
+        <div id="pf-os-philips" style="display:none;">
+          <select id="pf-oversampling-axis" style="margin-bottom:6px; width:100%;">
+            <option value="hf">H/F</option>
+            <option value="lr">L/R</option>
+            <option value="ap">A/P</option>
+          </select>
+          <div class="matrix-row">
+            <span id="pf-oversampling-h-tag" style="color:var(--text-dim); font-size:0.85rem;">H (mm)</span>
+            <input type="number" id="pf-oversampling-h" min="0" step="1" placeholder="0">
+            <span id="pf-oversampling-f-tag" style="color:var(--text-dim); font-size:0.85rem;">F (mm)</span>
+            <input type="number" id="pf-oversampling-f" min="0" step="1" placeholder="0">
+          </div>
         </div>
       </div>
       <div class="lib-note" id="pf-oversampling-derived" style="margin-top:-6px;"></div>
@@ -2043,13 +2057,26 @@
         <div class="lib-note" id="opt-habitus-derived" style="margin-top:-6px;"></div>
       </div>
       <div class="field">
-        <label for="opt-oversampling">Phase oversampling</label>
-        <div class="matrix-row">
+        <label for="opt-oversampling" id="opt-oversampling-label">Phase oversampling</label>
+        <div id="opt-os-pct" class="matrix-row">
           <input type="number" id="opt-oversampling" value="0" min="0" step="1">
           <select id="opt-oversampling-unit" style="width:60px;">
             <option value="pct">%</option>
             <option value="mm">mm</option>
           </select>
+        </div>
+        <div id="opt-os-philips" style="display:none;">
+          <select id="opt-oversampling-axis" style="margin-bottom:6px; width:100%;">
+            <option value="hf">H/F</option>
+            <option value="lr">L/R</option>
+            <option value="ap">A/P</option>
+          </select>
+          <div class="matrix-row">
+            <span id="opt-oversampling-h-tag" style="color:var(--text-dim); font-size:0.85rem;">H (mm)</span>
+            <input type="number" id="opt-oversampling-h" min="0" step="1" placeholder="0">
+            <span id="opt-oversampling-f-tag" style="color:var(--text-dim); font-size:0.85rem;">F (mm)</span>
+            <input type="number" id="opt-oversampling-f" min="0" step="1" placeholder="0">
+          </div>
         </div>
       </div>
       <div class="lib-note" id="opt-oversampling-derived" style="margin-top:-6px;"></div>
@@ -2659,9 +2686,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const weightKg = weightToKg(parseFloat(calcWeightEl.value), calcWeightUnitEl.value);
     const bmi = estimateBmi(heightCm, weightKg);
     calcHabitusDerivedEl.textContent = bmi !== null
-      ? `BMI ~${Math.round(bmi)} (${bmiCategory(bmi)}) — oversampling floor ~${habitusOversamplingFloor(bmi)}%`
+      ? `BMI ~${Math.round(bmi)} (${bmiCategory(bmi)}) — ${foldOverFloorText(calcFoldOverCtx(), habitusOversamplingFloor(bmi))}`
       : '';
   }
+  ['cur-fov-phase', 'cur-oversampling-h', 'cur-oversampling-f', 'cur-oversampling-axis'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => updateCalcHabitusDerived());
+    document.getElementById(id).addEventListener('change', () => updateCalcHabitusDerived());
+  });
 
   setupUnitConvertingField(calcHeightEl, calcHeightUnitEl, heightToCm, cmToDisplay, () => { updateCalcHabitusDerived(); computeCalcOptimizer(); });
   setupUnitConvertingField(calcWeightEl, calcWeightUnitEl, weightToKg, kgToDisplay, () => { updateCalcHabitusDerived(); computeCalcOptimizer(); });
@@ -2897,7 +2928,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
     function updateDerived() {
       if (unitEl.value !== 'mm') {
-        derivedEl.textContent = '';
+        // With the H/F boxes on screen, say when the value in use has no mm behind it.
+        const pctNow = parseFloat(valueEl.value);
+        const osBox = document.getElementById(`${prefix}-os-philips`);
+        const philipsNow = osBox ? osBox.style.display !== 'none' : vendorSelectEl.value === 'Philips';
+        derivedEl.textContent = (philipsNow && hEl && fEl && Number.isFinite(pctNow) && pctNow > 0)
+          ? `Using ${Math.round(pctNow * 10) / 10}% — no H/F mm values entered yet (type them in to use the console's millimeters).`
+          : '';
         return;
       }
       const fovPhase = parseFloat(fovPhaseEl.value);
@@ -2941,6 +2978,40 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         if (axisEl) { axisEl.value = 'hf'; updateAxisTags(); }
         updateDerived();
       },
+      refresh: updateDerived,
+      // The H/F entry as typed (NaN for both when neither box has a value).
+      readMm() {
+        const typed = hEl && fEl && (hEl.value !== '' || fEl.value !== '');
+        const h = parseFloat(hEl && hEl.value);
+        const f = parseFloat(fEl && fEl.value);
+        return {
+          axis: axisEl && OVERSAMPLING_AXIS_LETTERS[axisEl.value] ? axisEl.value : 'hf',
+          h: typed ? (Number.isFinite(h) ? h : 0) : NaN,
+          f: typed ? (Number.isFinite(f) ? f : 0) : NaN,
+        };
+      },
+      setAxis(axis) {
+        if (axisEl) { axisEl.value = OVERSAMPLING_AXIS_LETTERS[axis] ? axis : 'hf'; updateAxisTags(); }
+      },
+      // Load saved H/F millimeters (the percentage then follows this panel's phase FOV).
+      setMm(axis, h, f) {
+        if (axisEl) { axisEl.value = OVERSAMPLING_AXIS_LETTERS[axis] ? axis : 'hf'; updateAxisTags(); }
+        if (hEl) hEl.value = h;
+        if (fEl) fEl.value = f;
+        unitEl.value = 'mm';
+        valueEl.value = (Number(h) || 0) + (Number(f) || 0);
+        updateDerived();
+      },
+      // Leaving the Philips layout: keep the percentage actually in force, drop the mm boxes.
+      toPercentMode() {
+        if (unitEl.value !== 'mm' && !(hEl && hEl.value) && !(fEl && fEl.value)) return; // already plain %
+        const pct = readPercent();
+        valueEl.value = Math.round(pct * 10) / 10;
+        unitEl.value = 'pct';
+        if (hEl) hEl.value = '';
+        if (fEl) fEl.value = '';
+        updateDerived();
+      },
       set(percent) {
         valueEl.value = Number.isFinite(percent) ? percent : 0;
         unitEl.value = 'pct';
@@ -2958,6 +3029,127 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const oversamplingGroups = {};
   oversamplingGroups.cur = setupOversamplingGroup('cur', render);
   oversamplingGroups.prop = setupOversamplingGroup('prop', render);
+
+  // ---------------------------------------------------------------------
+  // Fold-over suppression in millimeters (Philips). The optimizer works in
+  // percent of the phase FOV; a Philips console takes two mm boxes (H/F, L/R
+  // or A/P). Display only — none of the math below changes. total mm =
+  // percent/100 x phase FOV; the two sides keep the same ratio as the Current
+  // protocol's two values (equal stays equal); whole mm, sides summing to the
+  // total. ctx = { philips, fovPhase, axis, h, f } — h/f are NaN when the
+  // Current protocol has only a percentage saved.
+  // ---------------------------------------------------------------------
+  const roundTenth = v => Math.round(v * 10) / 10;
+
+  function foldOverContext({ vendor, fovPhase, axis, h, f }) {
+    return {
+      philips: vendor === 'Philips',
+      fovPhase: Number.isFinite(fovPhase) && fovPhase > 0 ? fovPhase : NaN,
+      axis: OVERSAMPLING_AXIS_LETTERS[axis] ? axis : 'hf',
+      h: Number.isFinite(h) ? h : NaN,
+      f: Number.isFinite(f) ? f : NaN,
+    };
+  }
+
+  function foldOverSides(pct, ctx) {
+    const total = Math.round((pct / 100) * ctx.fovPhase);
+    const haveSides = Number.isFinite(ctx.h) && Number.isFinite(ctx.f);
+    const sum = haveSides ? ctx.h + ctx.f : 0;
+    let h;
+    let note = '';
+    if (haveSides && sum > 0) {
+      h = Math.round(total * ctx.h / sum);
+    } else {
+      h = Math.round(total / 2);
+      if (total > 0) note = haveSides ? 'Current protocol has 0 on both sides — split equally.' : 'Current protocol has only a total saved, not the two sides — split equally.';
+    }
+    return { h, f: total - h, total, note };
+  }
+
+  // null unless this is a Philips protocol; otherwise everything needed to print it.
+  function foldOverView(ctx, startPct, sugPct) {
+    if (!ctx || !ctx.philips) return null;
+    const [a, b] = OVERSAMPLING_AXIS_LETTERS[ctx.axis] || OVERSAMPLING_AXIS_LETTERS.hf;
+    const refText = `${roundTenth(startPct || 0)}% → ${roundTenth(sugPct || 0)}% of the phase FOV`;
+    if (!(ctx.fovPhase > 0)) {
+      return { needFov: true, letters: [a, b], startText: '', sugText: '', note: '', refText, text: 'Enter phase FOV to see millimeters' };
+    }
+    const sug = foldOverSides(sugPct || 0, ctx);
+    let sh; let sf;
+    if (Number.isFinite(ctx.h) && Number.isFinite(ctx.f)) { sh = ctx.h; sf = ctx.f; }
+    else { const s0 = foldOverSides(startPct || 0, { ...ctx, h: NaN, f: NaN }); sh = s0.h; sf = s0.f; }
+    const startText = `${a} ${sh}, ${b} ${sf}`;
+    const sugText = `${a} ${sug.h}, ${b} ${sug.f}`;
+    return { needFov: false, letters: [a, b], startText, sugText, note: sug.note, refText, text: `${startText} → ${sugText} mm` };
+  }
+
+  // One-line change text, e.g. "Fold-over suppression: H 158, F 158 → H 182, F 182 mm".
+  function foldOverOneLiner(ctx, startPct, sugPct) {
+    const v = foldOverView(ctx, startPct, sugPct);
+    if (!v) return `Oversampling ${startPct || 0}%→${sugPct || 0}%`;
+    return `Fold-over suppression: ${v.text}`;
+  }
+
+  // Small reference-only percentage line (plus the split note) under a result.
+  function foldOverRefHtml(ctx, start, candidate) {
+    if ((candidate.oversamplingPercent || 0) === (start.oversamplingPercent || 0)) return '';
+    const v = foldOverView(ctx, start.oversamplingPercent, candidate.oversamplingPercent);
+    if (!v) return '';
+    return `<div class="fold-pct">Reference only: ${escapeHtml(v.refText)}${v.note ? ' · ' + escapeHtml(v.note) : ''}</div>`;
+  }
+
+  function foldOverCompareRow(ctx, start, candidate, confRow) {
+    const sp = start.oversamplingPercent || 0;
+    const cp = candidate.oversamplingPercent || 0;
+    const v = foldOverView(ctx, sp, cp);
+    if (!v) return optimizerCompareRow('Phase oversampling', `${sp}%`, `${cp}%`, confRow);
+    const pct = x => `<div class="fold-pct">${roundTenth(x)}% of phase FOV</div>`;
+    if (v.needFov) {
+      return optimizerCompareRow('Fold-over suppression', `Enter phase FOV to see millimeters${pct(sp)}`, `Enter phase FOV to see millimeters${pct(cp)}`, confRow);
+    }
+    return optimizerCompareRow('Fold-over suppression', `${v.startText} mm${pct(sp)}`, `${v.sugText} mm${pct(cp)}`, confRow);
+  }
+
+  // "...was cut from X to Y" wording for the height/weight reduction.
+  function foldOverCutText(ctx, basePct, newPct) {
+    const v = foldOverView(ctx, basePct, newPct);
+    if (!v) return `Oversampling was cut from ${basePct}% to ${newPct}%`;
+    if (v.needFov) return `Fold-over suppression was cut — enter phase FOV to see millimeters (reference only: ${v.refText})`;
+    // "From" is the value the reduction starts at (after any NSA offset), split the same way as Current.
+    const from = foldOverSides(basePct, ctx);
+    const to = foldOverSides(newPct, ctx);
+    const [a, b] = v.letters;
+    return `Fold-over suppression was cut: ${a} ${from.h}, ${b} ${from.f} → ${a} ${to.h}, ${b} ${to.f} mm (reference only: ${v.refText})`;
+  }
+
+  // The most the T1 NSA 2→1 offset can add, in the console's units.
+  function foldOverMaxAddPhrase(ctx) {
+    const max = Math.max(...NSA_RULE_OVERSAMPLING_ADDS);
+    if (!ctx || !ctx.philips) return `${max} oversampling points`;
+    if (!(ctx.fovPhase > 0)) return `${max} percentage points of fold-over suppression (enter phase FOV to see millimeters)`;
+    return `${Math.round((max / 100) * ctx.fovPhase)} mm of fold-over suppression in total (${max}% of the phase FOV)`;
+  }
+
+  // The height/weight floor as a console value.
+  function foldOverFloorText(ctx, floorPct) {
+    const v = foldOverView(ctx, floorPct, floorPct);
+    if (!v) return `oversampling floor ~${floorPct}%`;
+    if (v.needFov) return `fold-over suppression floor: enter phase FOV to see millimeters (reference only: ~${floorPct}%)`;
+    return `fold-over suppression floor ${v.sugText} mm (reference only: ~${floorPct}%)`;
+  }
+
+  // Put a suggested fold-over into a Calculator panel's H/F boxes (whole mm,
+  // same axis as Current) so it can be typed straight into the console.
+  function applySuggestedFoldOver(panel, ctx, startPct, sugPct) {
+    const g = oversamplingGroups[panel];
+    if (!ctx || !ctx.philips) return;
+    g.setAxis(ctx.axis);
+    const v = foldOverView(ctx, startPct, sugPct);
+    if (v && !v.needFov) {
+      const sides = foldOverSides(sugPct || 0, ctx);
+      g.setMm(ctx.axis, sides.h, sides.f);
+    }
+  }
 
   // ---------------------------------------------------------------------
   // Console tab order — reorders each panel's Summary/Geometry/Contrast
@@ -3284,6 +3476,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   let calcOptimizerOutcome = null;
   let calcOptimizerSelectedTier = null;
 
+  // Current panel's fold-over entry + phase FOV + vendor, for the mm display.
+  function calcFoldOverCtx() {
+    const mm = oversamplingGroups.cur.readMm();
+    return foldOverContext({ vendor: vendorSelectEl.value, fovPhase: parseFloat(document.getElementById('cur-fov-phase').value), axis: mm.axis, h: mm.h, f: mm.f });
+  }
+
   function computeCalcOptimizer() {
     const roleInfo = calcRoleInfo();
     autoAggressive(calcAggressiveEl, roleInfo);
@@ -3317,7 +3515,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const examLabel = examLabelEl.value;
     const heightCm = heightToCm(parseFloat(calcHeightEl.value), calcHeightUnitEl.value);
     const weightKg = weightToKg(parseFloat(calcWeightEl.value), calcWeightUnitEl.value);
-    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg, aggressive: calcAggressiveEl.checked, role: roleInfo.role });
+    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg, aggressive: calcAggressiveEl.checked, role: roleInfo.role, foldOver: calcFoldOverCtx() });
 
     if (!outcome.ok) {
       calcOptimizerOutcome = null;
@@ -3335,7 +3533,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const fovPhase = parseFloat(document.getElementById('cur-fov-phase').value);
 
     const previousTier = calcOptimizerSelectedTier;
-    calcOptimizerOutcome = { ...outcome, start, sequenceType, priority, roleInfo, priorityFromRole: !priorityEl.value && roleInfo.role === 'key', fovFreq, fovPhase };
+    calcOptimizerOutcome = { ...outcome, foldOver: calcFoldOverCtx(), start, sequenceType, priority, roleInfo, priorityFromRole: !priorityEl.value && roleInfo.role === 'key', fovFreq, fovPhase };
     calcOptimizerSelectedTier = (previousTier && outcome.tiers[previousTier])
       ? previousTier
       : (outcome.tiers.balanced ? 'balanced' : (outcome.tiers.fastest ? 'fastest' : 'quality'));
@@ -3382,6 +3580,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (!tierData) return;
     applyProtocolToInputs(tierData.candidate, propInputs, 'prop');
     copyCurrentExtrasToProposed();
+    applySuggestedFoldOver('prop', calcOptimizerOutcome.foldOver, calcOptimizerOutcome.start.oversamplingPercent, tierData.candidate.oversamplingPercent);
     propSequenceTypeEl.value = calcOptimizerOutcome.sequenceType;
     // The tier candidate is a derived parameter set, not a protocol record
     // — it carries no planning note of its own, so copy over whatever's
@@ -4768,7 +4967,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // Always shown in % (the canonical stored unit) regardless of which
     // unit it was originally entered in — same "always resets to the raw
     // style" convention as the matrix style group above.
-    oversamplingGroups[panel].set(p.oversamplingPercent || 0);
+    if (Number.isFinite(p.foldOverH) && Number.isFinite(p.foldOverF)) {
+      oversamplingGroups[panel].setMm(p.foldOverAxis, p.foldOverH, p.foldOverF);
+    } else {
+      oversamplingGroups[panel].set(p.oversamplingPercent || 0);
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -4856,6 +5059,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     accelTypeGroups.pf.refreshLabel();
 
     pf.sliceOrientationField.style.display = vendor === 'Philips' ? 'flex' : 'none';
+    // Philips takes fold-over suppression as two mm boxes; everyone else keeps the % field.
+    const philips = vendor === 'Philips';
+    document.getElementById('pf-os-philips').style.display = philips ? 'block' : 'none';
+    document.getElementById('pf-os-pct').style.display = philips ? 'none' : 'flex';
+    document.getElementById('pf-oversampling-label').textContent = terms.oversampling;
+    if (!philips && oversamplingGroups.pf) oversamplingGroups.pf.toPercentMode();
+    if (oversamplingGroups.pf) oversamplingGroups.pf.refresh();
     const axisPair = axisPairLabel(vendor, pf.sliceOrientation.value);
     pf.matrixLabel.textContent = `Matrix (${axisPair})`;
   }
@@ -4904,7 +5114,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // from the saved protocol so you don't have to re-enter it each time.
     pf.fovFreq.value = prefill?.fovFreq ?? '';
     pf.fovPhase.value = prefill?.fovPhase ?? '';
-    oversamplingGroups.pf.set(prefill?.oversamplingPercent || 0);
+    if (prefill && prefill.vendor === 'Philips' && Number.isFinite(prefill.foldOverH) && Number.isFinite(prefill.foldOverF)) {
+      oversamplingGroups.pf.setMm(prefill.foldOverAxis, prefill.foldOverH, prefill.foldOverF);
+    } else {
+      oversamplingGroups.pf.set(prefill?.oversamplingPercent || 0);
+    }
     pf.sliceThickness.value = prefill?.sliceThicknessMm ?? '';
     pf.slices.value = prefill?.slices ?? '';
     pf.consoleTime.value = Number.isFinite(prefill?.consoleTimeSec) && prefill.consoleTimeSec > 0 ? formatConsoleTime(prefill.consoleTimeSec) : '';
@@ -4949,6 +5163,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       alert('Enter the ACQ voxel size (freq × phase) for CS-SENSE.');
       return;
     }
+    const mmTyped = oversamplingGroups.pf.readMm();
+    const foldMm = pf.vendor.value === 'Philips' && Number.isFinite(mmTyped.h) && Number.isFinite(mmTyped.f) ? mmTyped : null;
     const consoleTimeText = pf.consoleTime.value.trim();
     const consoleTimeSec = consoleTimeText ? parseConsoleTime(consoleTimeText) : null;
     if (consoleTimeText && !Number.isFinite(consoleTimeSec)) {
@@ -4978,6 +5194,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       fovFreq: pf.fovFreq.value ? parseFloat(pf.fovFreq.value) : null,
       fovPhase: pf.fovPhase.value ? parseFloat(pf.fovPhase.value) : null,
       oversamplingPercent: oversamplingGroups.pf.readPercent(),
+      // Philips fold-over suppression as typed on the console (mm per side + axis);
+      // the percentage above is what the math uses. Only kept for Philips.
+      foldOverAxis: foldMm ? foldMm.axis : null,
+      foldOverH: foldMm ? foldMm.h : null,
+      foldOverF: foldMm ? foldMm.f : null,
       sliceThicknessMm: parseFloat(pf.sliceThickness.value),
       slices: parseFloat(pf.slices.value),
       consoleTimeSec,
@@ -5007,7 +5228,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const num = id => { const v = parseFloat(document.getElementById(id).value); return Number.isFinite(v) ? v : null; };
     const vendor = vendorSelectEl.value;
     const ta = panel === 'cur' ? parseConsoleTime(document.getElementById('cur-console-time').value) : NaN;
+    const mm = oversamplingGroups[panel].readMm();
+    const hasMm = Number.isFinite(mm.h) && Number.isFinite(mm.f);
     return {
+      foldOverAxis: hasMm ? mm.axis : null,
+      foldOverH: hasMm ? mm.h : null,
+      foldOverF: hasMm ? mm.f : null,
       consoleTimeSec: Number.isFinite(ta) ? ta : null,
       te: num(`${panel}-te`),
       fovFreq: num(`${panel}-fov-freq`),
@@ -5746,7 +5972,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   }
 
   function applyPersonalNsaRule(start, opts) {
-    const { sequenceType, priority, examLabel, exceptions, gFactorK } = opts;
+    const { sequenceType, priority, examLabel, exceptions, gFactorK, foldOver } = opts;
     const seqKey = (sequenceType || '').trim().toUpperCase();
     const isT1 = seqKey.startsWith('T1');
     const isT2 = seqKey.startsWith('T2');
@@ -5787,7 +6013,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         const senseChanged = offset.candidate.sense !== start.sense;
         const osAdded = (offset.candidate.oversamplingPercent || 0) - (start.oversamplingPercent || 0);
         const how = [
-          osAdded > 0 ? `oversampling +${osAdded} pts` : null,
+          osAdded > 0
+            ? (foldOverView(foldOver, start.oversamplingPercent, offset.candidate.oversamplingPercent)
+              ? `fold-over suppression ${foldOverView(foldOver, start.oversamplingPercent, offset.candidate.oversamplingPercent).text} (+${osAdded} pts)`
+              : `oversampling +${osAdded} pts`)
+            : null,
           senseChanged ? `SENSE ${start.sense}→${offset.candidate.sense}` : null,
         ].filter(Boolean).join(', ') || 'no further changes needed';
         return {
@@ -5833,7 +6063,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // variable — every tier keeps the starting CS factor unchanged.
     const csSense = start.accelType === 'cs-sense';
 
-    const nsaStep = applyPersonalNsaRule(start, { sequenceType, priority, examLabel, exceptions, gFactorK });
+    const nsaStep = applyPersonalNsaRule(start, { sequenceType, priority, examLabel, exceptions, gFactorK, foldOver: opts.foldOver });
     // Everything from here on searches FROM the NSA rule's result, not
     // from the raw starting protocol - NSA (and, if the 2->1 offset fired,
     // SENSE/oversampling) are pre-set by the rule above.
@@ -6104,7 +6334,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     return { ok: true, trRange, nsaStep, aggressiveRequested: Boolean(aggressiveMode), role: role || '', tiers: { fastest, balanced, quality, aggressive } };
   }
 
-  function tierChangeOneLiner(start, candidate) {
+  function tierChangeOneLiner(start, candidate, foldCtx) {
     const changes = [];
     if (candidate.tr !== start.tr) changes.push(`TR ${start.tr}→${candidate.tr}`);
     if (candidate.nsa !== start.nsa) changes.push(`NSA ${start.nsa}→${candidate.nsa}`);
@@ -6113,7 +6343,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       changes.push(`Matrix ${start.freqMatrix}×${start.phaseMatrix}→${candidate.freqMatrix}×${candidate.phaseMatrix}`);
     }
     if ((candidate.oversamplingPercent || 0) !== (start.oversamplingPercent || 0)) {
-      changes.push(`Oversampling ${start.oversamplingPercent || 0}%→${candidate.oversamplingPercent || 0}%`);
+      changes.push(foldOverOneLiner(foldCtx, start.oversamplingPercent, candidate.oversamplingPercent));
     }
     return changes.length ? changes.join(', ') : 'No parameters changed from your saved protocol.';
   }
@@ -6361,6 +6591,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const optPriorityEl = document.getElementById('opt-priority');
   const optIndicationEl = document.getElementById('opt-indication');
   const optRoleLineEl = document.getElementById('opt-role-line');
+  // The modal's own fold-over entry + phase FOV + the protocol's vendor, for the mm display.
+  function optFoldOverCtx() {
+    const mm = oversamplingGroups.opt.readMm();
+    return foldOverContext({ vendor: optimizerProtocol ? optimizerProtocol.vendor : '', fovPhase: parseFloat(optFovPhaseEl.value), axis: mm.axis, h: mm.h, f: mm.f });
+  }
   function optRoleInfo() {
     return resolveSequenceRole({
       indicationKey: optIndicationEl.value,
@@ -6398,7 +6633,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const weightKg = weightToKg(parseFloat(optWeightEl.value), optWeightUnitEl.value);
     const bmi = estimateBmi(heightCm, weightKg);
     optHabitusDerivedEl.textContent = bmi !== null
-      ? `BMI ~${Math.round(bmi)} (${bmiCategory(bmi)}) — oversampling floor ~${habitusOversamplingFloor(bmi)}%`
+      ? `BMI ~${Math.round(bmi)} (${bmiCategory(bmi)}) — ${optimizerProtocol ? foldOverFloorText(optFoldOverCtx(), habitusOversamplingFloor(bmi)) : 'oversampling floor ~' + habitusOversamplingFloor(bmi) + '%'}`
       : '';
   }
   setupUnitConvertingField(optHeightEl, optHeightUnitEl, heightToCm, cmToDisplay, updateOptHabitusDerived);
@@ -6445,7 +6680,17 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     optWeightEl.value = '';
     optWeightUnitEl.value = 'kg';
     updateOptHabitusDerived();
-    oversamplingGroups.opt.set(protocol.oversamplingPercent || 0);
+    {
+      const philips = protocol.vendor === 'Philips';
+      document.getElementById('opt-os-philips').style.display = philips ? 'block' : 'none';
+      document.getElementById('opt-os-pct').style.display = philips ? 'none' : 'flex';
+      document.getElementById('opt-oversampling-label').textContent = vendorTerms(protocol.vendor).oversampling;
+      if (philips && Number.isFinite(protocol.foldOverH) && Number.isFinite(protocol.foldOverF)) {
+        oversamplingGroups.opt.setMm(protocol.foldOverAxis, protocol.foldOverH, protocol.foldOverF);
+      } else {
+        oversamplingGroups.opt.set(protocol.oversamplingPercent || 0);
+      }
+    }
     updateOptRole();
     optimizerErrorEl.style.display = 'none';
     optimizerModalOverlay.classList.add('show');
@@ -6527,7 +6772,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           ${timeMetricHtml}
           <span class="${result.snr.percentChange >= 0 ? 'good' : 'bad'}">${formatPercent(result.snr.percentChange)} SNR</span>${snrConfTag}
         </div>
-        <div class="tier-oneliner">${escapeHtml(tierChangeOneLiner(outcome.start, tierData.candidate))}</div>
+        <div class="tier-oneliner">${escapeHtml(tierChangeOneLiner(outcome.start, tierData.candidate, outcome.foldOver))}</div>
+        ${foldOverRefHtml(outcome.foldOver, outcome.start, tierData.candidate)}
         ${tradeNote ? `<div class="quality-trade ${tradeNote.kind}">${escapeHtml(tradeNote.text)}${tradeNote.kind === 'trade' && outcome.roleInfo && outcome.roleInfo.role === 'key' ? ' This is a Key sequence.' : ''}</div>` : ''}
         ${matrixCaveat ? '<div class="tier-matrix-caveat">⚠ Verify matrix/voxel at console</div>' : ''}
         ${trCaveat ? '<div class="tier-matrix-caveat">⚠ Verify TR/slice-fit at console</div>' : ''}
@@ -6621,11 +6867,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         ${optimizerCompareRow(csSense ? 'CS-SENSE factor' : 'SENSE', start.sense, candidate.sense, confidenceRow(confRows, 'accel'))}
         ${optimizerCompareRow('Matrix', `${start.freqMatrix}×${start.phaseMatrix}`, `${candidate.freqMatrix}×${candidate.phaseMatrix}`, confidenceRow(confRows, 'matrix'))}
         ${voxelRow}
-        ${optimizerCompareRow('Phase oversampling', `${start.oversamplingPercent || 0}%`, `${candidate.oversamplingPercent || 0}%`, confidenceRow(confRows, 'oversampling'))}
+        ${foldOverCompareRow(outcome.foldOver, start, candidate, confidenceRow(confRows, 'oversampling'))}
       </div>
+      ${foldOverRefHtml(outcome.foldOver, start, candidate)}
       <div class="lib-note" style="margin-top:-6px;">${tierData.habitusInfo
-        ? `Oversampling is normally a fold-over/aliasing safeguard, not a speed knob — reduced here because height/weight were entered (see the caution below). Separately, the T1 NSA 2→1 offset can add up to ${Math.max(...NSA_RULE_OVERSAMPLING_ADDS)} oversampling points before that reduction is applied.`
-        : `Oversampling is a fold-over/aliasing safeguard, not a speed knob — tiers keep it unchanged from the starting protocol, except that the T1 NSA 2→1 offset can add up to ${Math.max(...NSA_RULE_OVERSAMPLING_ADDS)} oversampling points to hold SNR, and entering height/weight can reduce it.`}</div>
+        ? `Oversampling is normally a fold-over/aliasing safeguard, not a speed knob — reduced here because height/weight were entered (see the caution below). Separately, the T1 NSA 2→1 offset can add up to ${foldOverMaxAddPhrase(outcome.foldOver)} before that reduction is applied.`
+        : `Oversampling is a fold-over/aliasing safeguard, not a speed knob — tiers keep it unchanged from the starting protocol, except that the T1 NSA 2→1 offset can add up to ${foldOverMaxAddPhrase(outcome.foldOver)} to hold SNR, and entering height/weight can reduce it.`}</div>
       <div class="results" style="margin: 14px 0;">
         <div class="result-card">
           <h3>Relative scan time ${result.time.comparable && !result.time.consoleBased ? timeConfTag : ''}</h3>
@@ -6644,7 +6891,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         </div>
       </div>
       <div class="info-note show">${escapeHtml(tierReasonText(selectedTier, start, candidate, result, { sequenceType, priority, role: outcome.roleInfo ? outcome.roleInfo.role : '', priorityFromRole: Boolean(outcome.priorityFromRole) }, trRange, matrixLocked))}</div>
-      ${tierData.habitusInfo ? `<div class="habitus-caveat-banner">⚠⚠ VERIFY ANATOMY ACTUALLY FITS WITHIN THE REDUCED FOV BEFORE SCANNING. Oversampling was cut from ${tierData.habitusInfo.basePct}% to ${candidate.oversamplingPercent}% based on an estimated body habitus (BMI ~${Math.round(tierData.habitusInfo.bmi)}, ${escapeHtml(tierData.habitusInfo.category)}) — a rough proxy from height/weight, not a direct measurement of this patient's actual girth in the phase direction. This is a coverage/safety parameter, not just a speed knob — treat this caution as stronger than the standard "verify at console" tag elsewhere in this app.</div>` : ''}
+      ${tierData.habitusInfo ? `<div class="habitus-caveat-banner">⚠⚠ VERIFY ANATOMY ACTUALLY FITS WITHIN THE REDUCED FOV BEFORE SCANNING. ${escapeHtml(foldOverCutText(outcome.foldOver, tierData.habitusInfo.basePct, candidate.oversamplingPercent))} based on an estimated body habitus (BMI ~${Math.round(tierData.habitusInfo.bmi)}, ${escapeHtml(tierData.habitusInfo.category)}) — a rough proxy from height/weight, not a direct measurement of this patient's actual girth in the phase direction. This is a coverage/safety parameter, not just a speed knob — treat this caution as stronger than the standard "verify at console" tag elsewhere in this app.</div>` : ''}
       ${matrixCaveat ? `<div class="warning-banner show">⚠ ${escapeHtml(matrixCaveat)}</div>` : ''}
       ${trCaveat ? `<div class="warning-banner show">⚠ ${escapeHtml(trCaveat)}</div>` : ''}
       ${trRaise ? `<div class="warning-banner show">⚠ ${escapeHtml(trRaise)}</div>` : ''}
@@ -6716,7 +6963,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const examLabel = [optimizerProtocol.name, optimizerProtocol.region, optimizerProtocol.subRegion].filter(Boolean).join(' ');
     const heightCm = heightToCm(parseFloat(optHeightEl.value), optHeightUnitEl.value);
     const weightKg = weightToKg(parseFloat(optWeightEl.value), optWeightUnitEl.value);
-    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg, aggressive: optAggressiveEl.checked, role: roleInfo.role });
+    const outcome = optimizeProtocolTiers(start, { sequenceType, priority, gFactorK, examLabel, exceptions: nsaExceptions, heightCm, weightKg, aggressive: optAggressiveEl.checked, role: roleInfo.role, foldOver: optFoldOverCtx() });
 
     if (!outcome.ok) {
       optimizerErrorEl.textContent = outcome.reason;
@@ -6727,7 +6974,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     optimizerErrorEl.style.display = 'none';
     const fovFreq = parseFloat(optFovFreqEl.value);
     const fovPhase = parseFloat(optFovPhaseEl.value);
-    optimizerOutcome = { ...outcome, start, sequenceType, priority, roleInfo, priorityFromRole: !optPriorityEl.value && roleInfo.role === 'key', fovFreq, fovPhase };
+    optimizerOutcome = { ...outcome, foldOver: optFoldOverCtx(), start, sequenceType, priority, roleInfo, priorityFromRole: !optPriorityEl.value && roleInfo.role === 'key', fovFreq, fovPhase };
     optimizerSelectedTier = outcome.tiers.balanced ? 'balanced' : (outcome.tiers.fastest ? 'fastest' : 'quality');
     renderOptimizerTiers();
   });
@@ -6747,6 +6994,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     applyProtocolGlobals(optimizerProtocol);
     applyProtocolToInputs(optimizerOutcome.start, curInputs, 'cur');
     applyProtocolToInputs(tierData.candidate, propInputs, 'prop');
+    {
+      // Current keeps the H/F the modal was run with; Proposed gets the suggestion in mm.
+      const fc = optimizerOutcome.foldOver;
+      if (fc && fc.philips && Number.isFinite(fc.h) && Number.isFinite(fc.f)) oversamplingGroups.cur.setMm(fc.axis, fc.h, fc.f);
+      else if (fc && fc.philips) oversamplingGroups.cur.setAxis(fc.axis);
+      applySuggestedFoldOver('prop', fc, optimizerOutcome.start.oversamplingPercent, tierData.candidate.oversamplingPercent);
+    }
     // FOV comes from the modal's own (editable) fields; TE/thickness from the saved protocol.
     const modalExtras = { fovFreq: optimizerOutcome.fovFreq, fovPhase: optimizerOutcome.fovPhase, consoleTimeSec: optimizerOutcome.start.consoleTimeSec };
     applyProtocolExtras(optimizerProtocol, 'cur', modalExtras);
@@ -7141,6 +7395,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     return {
       sequenceType: outcome.sequenceType || '',
       priority: outcome.priority || '',
+      foldOver: outcome.foldOver || null,
       indication: (outcome.roleInfo && outcome.roleInfo.indicationLabel) || '',
       role: (outcome.roleInfo && outcome.roleInfo.role) || '',
       tier: tierKey,
@@ -7175,9 +7430,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     return (CLINICAL_PRIORITIES[priority] && CLINICAL_PRIORITIES[priority].label) || 'No priority';
   }
 
-  function paramsText(p) {
+  function paramsText(p, foldCtx, startPct, isSuggested) {
     const accel = p.accelType === 'none' ? 'No accel.' : `${p.accelType === 'cs-sense' ? 'CS-SENSE' : 'SENSE'} ${p.sense}`;
-    const parts = [`TR ${p.tr}`, `NSA ${p.nsa}`, accel, `Matrix ${p.freqMatrix}×${p.phaseMatrix}`, `Oversampling ${p.oversamplingPercent || 0}%`];
+    const fv = foldCtx ? foldOverView(foldCtx, startPct, p.oversamplingPercent) : null;
+    const osText = fv
+      ? (fv.needFov ? 'Fold-over suppression: enter phase FOV to see millimeters' : `Fold-over suppression ${isSuggested ? fv.sugText : fv.startText} mm`)
+      : `Oversampling ${p.oversamplingPercent || 0}%`;
+    const parts = [`TR ${p.tr}`, `NSA ${p.nsa}`, accel, `Matrix ${p.freqMatrix}×${p.phaseMatrix}`, osText];
     if (p.etl) parts.push(`TSE ${p.etl}`);
     if (p.slices) parts.push(`${p.slices} slices`);
     return parts.join(' · ');
@@ -7267,7 +7526,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     outcomeSummaryEl.innerHTML =
       `<strong>${escapeHtml(tierDisplayLabel(snapshot.tier))}</strong> · ${escapeHtml(snapshot.sequenceType)} · ${escapeHtml(priorityDisplayLabel(snapshot.priority))}`
       + `${snapshot.protocolName ? ' · ' + escapeHtml(snapshot.protocolName) : (snapshot.exam ? ' · ' + escapeHtml(snapshot.exam) : '')}<br>`
-      + `${escapeHtml(tierChangeOneLiner(snapshot.start, snapshot.suggested))}`
+      + `${escapeHtml(tierChangeOneLiner(snapshot.start, snapshot.suggested, snapshot.foldOver))}`
       + `${est.timeComparable && est.suggestedTimeMs ? `<br>Estimated scan time: ${escapeHtml(formatSeconds(est.suggestedTimeMs))}` : ''}`;
     outcomeOverlayEl.classList.add('show');
   }
@@ -7358,14 +7617,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           <button type="button" class="btn-danger" data-action="delete-outcome">Delete</button>
         </div>
         ${context ? `<div class="outcome-meta">${escapeHtml(context)}</div>` : ''}
-        <div class="outcome-params">Suggested: ${escapeHtml(paramsText(e.suggested))}</div>
+        <div class="outcome-params">Suggested: ${escapeHtml(paramsText(e.suggested, e.foldOver, e.start.oversamplingPercent, true))}</div>
         ${timeLine}
         ${e.text ? `<div class="outcome-text">${escapeHtml(e.text)}</div>` : ''}
         <details>
           <summary>Compare with the Current protocol</summary>
-          <div>Current: ${escapeHtml(paramsText(e.start))}</div>
-          <div>Suggested: ${escapeHtml(paramsText(e.suggested))}</div>
-          <div>Changes: ${escapeHtml(tierChangeOneLiner(e.start, e.suggested))}</div>
+          <div>Current: ${escapeHtml(paramsText(e.start, e.foldOver, e.start.oversamplingPercent, false))}</div>
+          <div>Suggested: ${escapeHtml(paramsText(e.suggested, e.foldOver, e.start.oversamplingPercent, true))}</div>
+          <div>Changes: ${escapeHtml(tierChangeOneLiner(e.start, e.suggested, e.foldOver))}</div>
           <div>Model estimate then: ${escapeHtml(timeEst)} · ${escapeHtml(snrEst)}</div>
         </details>
       </div>`;
@@ -7597,6 +7856,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     runQuick();
   }
 
+  function quickFoldCtx(p) {
+    return foldOverContext({ vendor: p.vendor, fovPhase: p.fovPhase, axis: p.foldOverAxis, h: p.foldOverH, f: p.foldOverF });
+  }
+
   function quickRoleInfo(p, info) {
     return resolveSequenceRole({
       indicationKey: quickEls.indication.value,
@@ -7824,7 +8087,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       : '';
     return `<button type="button" class="quick-row${key === 'aggressive' ? ' aggressive' : ''}" data-tier="${key}">
       <div class="quick-row-top"><span class="quick-tier">${escapeHtml(meta)}</span><span class="quick-metrics">${timeHtml} · ${snrHtml}</span></div>
-      <div class="quick-changes">${badgeHtml ? badgeHtml + ' ' : ''}${escapeHtml(tierChangeOneLiner(outcome.start, candidate))}${flags.length ? ` <span class="quick-flag">${escapeHtml(flags.join(' · '))}</span>` : ''}</div>
+      <div class="quick-changes">${badgeHtml ? badgeHtml + ' ' : ''}${escapeHtml(tierChangeOneLiner(outcome.start, candidate, outcome.foldOver))}${flags.length ? ` <span class="quick-flag">${escapeHtml(flags.join(' · '))}</span>` : ''}</div>
       ${tierData.aggressiveInfo ? '<div class="aggressive-strip">⚠⚠ Aggressive — outside safety margins, verify</div>' : ''}
     </button>`;
   }
@@ -7855,9 +8118,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       exceptions: nsaExceptions,
       aggressive: quickEls.aggressive.checked,
       role: roleInfo.role,
+      foldOver: quickFoldCtx(p),
     });
     if (!outcome.ok) { quickEls.results.innerHTML = `<div class="quick-empty">${escapeHtml(outcome.reason)}</div>`; return; }
-    quick.outcome = { ...outcome, start, sequenceType: eff.type, priority, roleInfo, priorityFromRole: !quickEls.priority.value && roleInfo.role === 'key', fovFreq: p.fovFreq, fovPhase: p.fovPhase };
+    quick.outcome = { ...outcome, foldOver: quickFoldCtx(p), start, sequenceType: eff.type, priority, roleInfo, priorityFromRole: !quickEls.priority.value && roleInfo.role === 'key', fovFreq: p.fovFreq, fovPhase: p.fovPhase };
     // One line for the whole screen instead of a warning on every row: time
     // numbers are only shown without ETL/slice count when both are blank.
     const anyTime = tierKeysFor(quick.outcome).some(k => quick.outcome.tiers[k] && quick.outcome.tiers[k].result.time.comparable);
@@ -7872,7 +8136,18 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         ? `Times scaled from console ${formatConsoleTime(start.consoleTimeSec)}`
         : (taDropped ? `Saved console time not used — ${taDropped}` : ''));
     quickEls.timewarn.classList.toggle('info', !warn);
-    quickEls.results.innerHTML = tierKeysFor(quick.outcome).map(k => quickTierRowHtml(k, quick.outcome)).join('') + bhHtml;
+    // Per-row percentage lines would push a four-row screen off a phone, so the
+    // reference percentages live in the tap-through sheet; the equal-split note
+    // (the same for every row) is shown once here.
+    const foldNotes = new Set();
+    tierKeysFor(quick.outcome).forEach(k => {
+      const t = quick.outcome.tiers[k];
+      if (!t || (t.candidate.oversamplingPercent || 0) === (start.oversamplingPercent || 0)) return;
+      const v = foldOverView(quick.outcome.foldOver, start.oversamplingPercent, t.candidate.oversamplingPercent);
+      if (v && v.note) foldNotes.add(v.note);
+    });
+    const foldNoteHtml = foldNotes.size ? `<div class="quick-bh">${escapeHtml(Array.from(foldNotes).join(' '))}</div>` : '';
+    quickEls.results.innerHTML = tierKeysFor(quick.outcome).map(k => quickTierRowHtml(k, quick.outcome)).join('') + foldNoteHtml + bhHtml;
   }
 
   // --- wiring --------------------------------------------------------------------
