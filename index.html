@@ -845,7 +845,36 @@
   .optimizer-tier-card .tier-metrics .good { color: var(--good); font-weight: 600; }
   .optimizer-tier-card .tier-metrics .bad { color: var(--bad); font-weight: 600; }
   .optimizer-tier-card .tier-metrics .tier-clock { color: var(--text-dim); }
+  /* Phone: the global vendor/orientation rows may wrap instead of stretching the whole page. */
+  @media (max-width: 700px) {
+    .settings-row { flex-wrap: wrap; }
+    .settings-row > span { flex: 1 1 100%; min-width: 0; }
+    header.header-row { flex-wrap: wrap; }
+    .header-actions { flex-wrap: wrap; }
+  }
   #mini-overlay { z-index: 90; }
+  .csv-modal { max-width: 760px; }
+  .csv-summary { font-weight: 700; margin: 10px 0 6px; font-size: 0.9rem; }
+  .csv-table-wrap { overflow-x: auto; max-height: 48vh; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; display: none; }
+  .csv-table-wrap.show { display: block; }
+  .csv-table { border-collapse: collapse; width: 100%; font-size: 0.78rem; }
+  .csv-table th, .csv-table td { border-bottom: 1px solid var(--border); padding: 5px 7px; text-align: left; vertical-align: top; }
+  .csv-table th { position: sticky; top: 0; background: var(--panel-2); z-index: 1; }
+  .csv-table td:first-child { color: var(--text-dim); width: 34px; }
+  .csv-table .dim { color: var(--text-dim); font-size: 0.72rem; }
+  .csv-pill { display: inline-block; font-weight: 700; padding: 1px 8px; border-radius: 10px; font-size: 0.74rem; }
+  .csv-pill.ok { background: rgba(60, 190, 110, 0.2); color: var(--good); border: 1px solid var(--good); }
+  .csv-pill.bad { background: rgba(230, 90, 80, 0.18); color: var(--bad); border: 1px solid var(--bad); }
+  .csv-warn { color: var(--warn-border); font-size: 0.74rem; margin-top: 2px; }
+  .csv-add { color: var(--accent); font-size: 0.74rem; margin-top: 2px; }
+  .csv-confirm { background: rgba(240, 200, 60, 0.18); border: 1px solid var(--warn-border); color: var(--text); border-radius: 6px; padding: 2px 6px; font-size: 0.76rem; margin-top: 3px; }
+  .csv-result { font-weight: 700; color: var(--good); margin: 10px 0 0; min-height: 1.1em; }
+  @media (max-width: 480px) {
+    #csv-overlay { padding: 8px; }
+    .csv-modal { padding: 12px; }
+    .csv-modal .modal-footer { flex-wrap: wrap; }
+    .csv-modal input[type=file] { width: 100%; font-size: 0.8rem; }
+  }
   .list-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; background: var(--panel-2); }
   .list-head, .list-scanner { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .list-head .dim, .list-scanner .dim { color: var(--text-dim); font-size: 0.8rem; }
@@ -1610,6 +1639,7 @@
     <div class="lib-actions" style="margin-bottom: 14px;">
       <button type="button" class="btn-secondary" id="export-btn">Export backup</button>
       <button type="button" class="btn-secondary" id="import-btn">Import backup</button>
+      <button type="button" class="btn-secondary" id="csv-open-btn">Import from spreadsheet</button>
       <input type="file" id="import-file-input" accept="application/json" style="display:none">
     </div>
     <div class="lib-note">Everything (protocols, the facility/scanner lists, ACR minimums, TR ranges, the Key/Supporting exam table, NSA rule exceptions, the outcome log) is stored in this browser only — Export backup bundles them so you can move to another computer.</div>
@@ -1700,6 +1730,24 @@
       <div class="acr-form-footer">
         <button type="button" class="btn-secondary" id="roles-reset-btn">Restore starting values</button>
         <span class="lib-note" style="margin:0;" id="roles-status"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="csv-overlay">
+    <div class="modal csv-modal">
+      <div class="modal-header"><h3>Import from spreadsheet</h3><button type="button" class="modal-close" id="csv-close" aria-label="Close">&times;</button></div>
+      <div class="lib-note" style="margin-top:-6px;">
+        Choose a .csv file (Excel or Numbers: File → Save As / Export → CSV). You'll see a preview first —
+        nothing is saved until you click Import. <a href="#" id="csv-template-link">Download template</a>
+      </div>
+      <input type="file" id="csv-file" accept=".csv,text/csv,text/plain,.txt">
+      <div class="csv-summary" id="csv-summary"></div>
+      <div class="csv-table-wrap"><table class="csv-table" id="csv-table"></table></div>
+      <div class="csv-result" id="csv-result"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="csv-cancel">Cancel</button>
+        <button type="button" class="btn-primary" id="csv-import" disabled>Import 0 protocols</button>
       </div>
     </div>
   </div>
@@ -8804,6 +8852,425 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   document.getElementById('lists-add-facility').addEventListener('click', async () => {
     const fac = await addFacilityDialog();
     if (fac) afterListChange(`Added facility “${fac.name}”.`);
+  });
+
+
+  // --- Import from spreadsheet (CSV) --------------------------------------------
+  // Reads a .csv, checks every row, shows a preview (OK / Problem per row) and
+  // only saves when Import is clicked. Display/data entry only — no math here.
+  const CSV_HEADERS = ['Name', 'Region', 'Facility', 'Scanner', 'Vendor', 'Slice orientation', 'Sequence type', 'TR (ms)', 'ETL / TSE factor', 'NSA', 'FOV freq (mm)', 'FOV phase (mm)', 'Voxel freq (mm)', 'Voxel phase (mm)', 'Matrix freq', 'Matrix phase', 'Oversampling axis', 'Oversampling side 1 (mm)', 'Oversampling side 2 (mm)', 'Acceleration type', 'SENSE factor', 'CS-SENSE factor', 'CS voxel freq (mm)', 'CS voxel phase (mm)', 'Slices', 'Slice thickness (mm)', 'TE (ms)', 'Console TA', 'Planning notes', 'Confirm before import'];
+  const CSV_NUMBER_HEADERS = ['TR (ms)', 'ETL / TSE factor', 'NSA', 'FOV freq (mm)', 'FOV phase (mm)', 'Voxel freq (mm)', 'Voxel phase (mm)', 'Matrix freq', 'Matrix phase', 'Oversampling side 1 (mm)', 'Oversampling side 2 (mm)', 'SENSE factor', 'CS-SENSE factor', 'CS voxel freq (mm)', 'CS voxel phase (mm)', 'Slices', 'Slice thickness (mm)', 'TE (ms)'];
+  const CSV_ZERO_OK = new Set(['Oversampling side 1 (mm)', 'Oversampling side 2 (mm)']);
+  const csvLoose = t => String(t == null ? '' : t).toLowerCase().replace(/[—–]/g, '-').replace(/\s+/g, '');
+  const CSV_HEADER_KEYS = Object.fromEntries(CSV_HEADERS.map(h => [csvLoose(h), h]));
+  const CSV_REGIONS = ['Brain', 'Spine', 'Abdomen', 'MSK/Extremity', 'Other'];
+  const CSV_ORIENTATIONS = ['axial', 'sagittal', 'coronal'];
+  const csvState = { items: [], applied: false };
+
+  function csvDetectDelimiter(text) {
+    const counts = { ',': 0, ';': 0, '\t': 0 };
+    let inQ = false;
+    for (const ch of text) {
+      if (ch === '"') inQ = !inQ;
+      else if (!inQ) {
+        if (ch === '\n' || ch === '\r') break;
+        if (counts[ch] !== undefined) counts[ch] += 1;
+      }
+    }
+    const best = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
+    return counts[best] > 0 ? best : ',';
+  }
+
+  // Quoted fields may hold commas, doubled quotes ("") and line breaks. Returns
+  // [{ num, cells }] where num is the spreadsheet row number; empty rows dropped.
+  function parseCsv(input) {
+    const text = String(input).replace(/^﻿/, '');
+    const delim = csvDetectDelimiter(text);
+    const records = [];
+    let row = []; let field = ''; let inQ = false;
+    for (let i = 0; i < text.length; i += 1) {
+      const ch = text[i];
+      if (inQ) {
+        if (ch === '"') { if (text[i + 1] === '"') { field += '"'; i += 1; } else inQ = false; }
+        else field += ch;
+      } else if (ch === '"' && field === '') {
+        inQ = true;
+      } else if (ch === delim) {
+        row.push(field); field = '';
+      } else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && text[i + 1] === '\n') i += 1;
+        row.push(field); field = ''; records.push(row); row = [];
+      } else {
+        field += ch;
+      }
+    }
+    if (field !== '' || row.length) { row.push(field); records.push(row); }
+    return records.map((cells, idx) => ({ num: idx + 1, cells })).filter(r => r.cells.some(c => String(c).trim() !== ''));
+  }
+
+  // "0.8" and "0,8" both work; anything else is an error. Blank is blank.
+  function csvNumber(raw) {
+    const t = String(raw == null ? '' : raw).trim();
+    if (t === '') return { blank: true };
+    if (!/^[+-]?(\d+([.,]\d*)?|[.,]\d+)$/.test(t)) return { error: true, raw: t };
+    return { value: Number(t.replace(',', '.')) };
+  }
+
+  function csvQuote(v) {
+    const t = String(v == null ? '' : v);
+    return /[",\r\n;]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  }
+  function csvTemplateText() {
+    const example = {
+      'Name': 'Ax T2 FLAIR', 'Region': 'Brain', 'Facility': 'Example Hospital', 'Scanner': 'Philips Ingenia 1.5T — Room 1',
+      'Vendor': 'Philips', 'Slice orientation': 'axial', 'Sequence type': 'T2', 'TR (ms)': '8000', 'ETL / TSE factor': '28', 'NSA': '1',
+      'FOV freq (mm)': '230', 'FOV phase (mm)': '190', 'Voxel freq (mm)': '', 'Voxel phase (mm)': '', 'Matrix freq': '256', 'Matrix phase': '192',
+      'Oversampling axis': 'H/F', 'Oversampling side 1 (mm)': '20', 'Oversampling side 2 (mm)': '20',
+      'Acceleration type': 'SENSE', 'SENSE factor': '2', 'CS-SENSE factor': '', 'CS voxel freq (mm)': '', 'CS voxel phase (mm)': '',
+      'Slices': '24', 'Slice thickness (mm)': '4', 'TE (ms)': '120', 'Console TA': '2:05',
+      'Planning notes': 'Angle axials to the corpus callosum, not AC-PC', 'Confirm before import': '',
+    };
+    return '﻿' + CSV_HEADERS.map(csvQuote).join(',') + '\r\n' + CSV_HEADERS.map(h => csvQuote(example[h])).join(',') + '\r\n';
+  }
+
+  function csvFindScanner(fac, text) {
+    const t = csvLoose(text);
+    if (!t) return null;
+    const byLabel = fac.scanners.find(sc => csvLoose(entryLabel(sc)) === t);
+    if (byLabel) return byLabel;
+    const byModel = fac.scanners.filter(sc => csvLoose(sc.model) === t);
+    return byModel.length === 1 ? byModel[0] : null;
+  }
+  function csvSplitScanner(text) {
+    const parts = String(text).trim().split(/\s+[—–-]\s+/);
+    return { model: parts[0].trim(), room: parts.slice(1).join(' — ').trim() };
+  }
+
+  // Checks every data row. Lists additions are only *planned* here (on a copy),
+  // never applied until Import.
+  function csvAnalyze(records) {
+    const head = records[0].cells.map(c => csvLoose(c));
+    const col = {};
+    head.forEach((h, i) => { const canon = CSV_HEADER_KEYS[h]; if (canon && col[canon] === undefined) col[canon] = i; });
+    if (col.Name === undefined) return { error: 'No “Name” column found in the first row. Download the template to see the expected headers.' };
+    const vl = facilityLists.map(f => ({ name: f.name, scanners: f.scanners.map(x => ({ ...x })) }));
+    const existingKeys = new Set(protocols.map(pr => `${csvLoose(pr.name)}|${csvLoose(pr.facility)}|${csvLoose(scannerLabel(pr))}`));
+    const seenInFile = new Map();
+    const items = records.slice(1).map(rec => {
+      const cell = h => (col[h] === undefined ? '' : String(rec.cells[col[h]] == null ? '' : rec.cells[col[h]]).trim());
+      const it = { num: rec.num, name: cell('Name'), where: '', status: 'ok', reason: '', warnings: [], adds: [], confirm: cell('Confirm before import'), record: null, applyAdds: null };
+      const problems = [];
+      const warn = t => it.warnings.push(t);
+
+      if (!it.name) problems.push('Name is blank');
+
+      const num = {};
+      CSV_NUMBER_HEADERS.forEach(h => {
+        const r = csvNumber(cell(h));
+        if (r.error) problems.push(`${h} has text “${r.raw}” — expected a number`);
+        else if (!r.blank && (CSV_ZERO_OK.has(h) ? r.value < 0 : r.value <= 0)) problems.push(`${h} must be ${CSV_ZERO_OK.has(h) ? '0 or more' : 'greater than 0'}`);
+        num[h] = r;
+      });
+      const nv = h => (num[h].blank || num[h].error ? null : num[h].value);
+
+      let region = cell('Region');
+      if (region) {
+        const hit = CSV_REGIONS.find(r => csvLoose(r) === csvLoose(region));
+        if (hit) region = hit; else problems.push(`Region “${region}” isn't one of ${CSV_REGIONS.join(', ')}`);
+      } else warn('No region — it will only show under “All” in the Library');
+
+      let vendorCol = cell('Vendor');
+      if (vendorCol) {
+        if (/^(generic|none)$/i.test(vendorCol)) vendorCol = '';
+        else {
+          const hit = SCANNER_VENDORS.find(v => csvLoose(v) === csvLoose(vendorCol));
+          if (hit) vendorCol = hit; else problems.push(`Vendor “${vendorCol}” isn't one of ${SCANNER_VENDORS.join(', ')} (or leave blank for Generic)`);
+        }
+      }
+
+      let orient = cell('Slice orientation').toLowerCase();
+      if (orient) {
+        const hit = CSV_ORIENTATIONS.find(o => o === orient || o.slice(0, 3) === orient.slice(0, 3));
+        if (hit) orient = hit; else problems.push(`Slice orientation “${cell('Slice orientation')}” isn't axial, sagittal or coronal`);
+      }
+
+      let accelCol = cell('Acceleration type');
+      if (accelCol) {
+        const k = csvLoose(accelCol).replace(/-/g, '');
+        if (k === 'none') accelCol = 'none';
+        else if (k === 'sense') accelCol = 'sense';
+        else if (k === 'cssense') accelCol = 'cs-sense';
+        else problems.push(`Acceleration type “${accelCol}” isn't None, SENSE or CS-SENSE`);
+      }
+
+      let axis = 'hf';
+      const axisText = cell('Oversampling axis');
+      if (axisText) {
+        const k = axisText.toUpperCase().replace(/[^A-Z]/g, '');
+        const hit = { HF: 'hf', FH: 'hf', LR: 'lr', RL: 'lr', AP: 'ap', PA: 'ap' }[k];
+        if (hit) axis = hit; else problems.push(`Oversampling axis “${axisText}” isn't H/F, L/R or A/P`);
+      }
+
+      let ta = null;
+      const taText = cell('Console TA');
+      if (taText) {
+        const sec = parseConsoleTime(taText);
+        if (Number.isFinite(sec)) ta = sec; else problems.push(`Console TA “${taText}” isn't m:ss (like 2:05) or a number of seconds`);
+      }
+
+      if (problems.length) { it.status = 'bad'; it.reason = problems.join('; '); return it; }
+
+      // ---- facility / scanner against the lists (on the copy) -----------------
+      const facText = cell('Facility');
+      const scText = cell('Scanner');
+      let facName = ''; let scModel = ''; let scRoom = ''; let scVendor = '';
+      const planned = { facility: null, scanner: null };
+      let facEntry = null;
+      if (facText) {
+        facEntry = vl.find(f => csvLoose(f.name) === csvLoose(facText)) || null;
+        if (facEntry) facName = facEntry.name; else { facName = facText; planned.facility = facText; }
+      } else {
+        warn('Facility is blank — Quick and the pickers won’t list this protocol under a facility');
+      }
+      if (scText) {
+        const found = facEntry ? csvFindScanner(facEntry, scText) : null;
+        if (found) { scModel = found.model; scRoom = found.room; scVendor = found.vendor; }
+        else {
+          const sp = csvSplitScanner(scText);
+          scModel = sp.model; scRoom = sp.room;
+          if (facText) planned.scanner = { model: scModel, room: scRoom, vendor: vendorCol };
+          else warn('No facility given, so the scanner can’t be added to the lists');
+        }
+      } else {
+        warn('Scanner is blank — fill it in or this protocol will have no scanner');
+      }
+      const label = scModel ? (scRoom ? `${scModel} — ${scRoom}` : scModel) : '';
+      it.where = [facName, label].filter(Boolean).join(' · ');
+
+      // ---- duplicates (never overwrites) -----------------------------------------
+      const key = `${csvLoose(it.name)}|${csvLoose(facName)}|${csvLoose(label)}`;
+      if (existingKeys.has(key)) { it.status = 'exists'; it.reason = 'Already exists'; return it; }
+      if (seenInFile.has(key)) { it.status = 'exists'; it.reason = `Already exists (same as row ${seenInFile.get(key)} in this file)`; return it; }
+      seenInFile.set(key, it.num);
+
+      // ---- register planned list additions on the copy ---------------------------
+      if (planned.facility) { vl.push({ name: planned.facility, scanners: [] }); it.adds.push(`will add new facility: ${planned.facility}`); }
+      if (planned.scanner) {
+        const f = vl.find(x => x.name === facName);
+        f.scanners.push({ model: scModel, room: scRoom, vendor: vendorCol });
+        it.adds.push(`will add new scanner: ${label}`);
+      }
+
+      // ---- vendor ---------------------------------------------------------------
+      const vendor = vendorCol || scVendor || '';
+      if (vendorCol && scVendor && vendorCol !== scVendor) warn(`Vendor ${vendorCol} differs from the scanner’s vendor (${scVendor}); using ${vendorCol}`);
+
+      // ---- geometry ------------------------------------------------------------------
+      const fovFreq = nv('FOV freq (mm)'); const fovPhase = nv('FOV phase (mm)');
+      let freqMatrix = nv('Matrix freq'); let phaseMatrix = nv('Matrix phase');
+      const vF = nv('Voxel freq (mm)'); const vP = nv('Voxel phase (mm)');
+      const fromVoxel = (fov, vox) => (fov && vox ? Math.round(fov / vox) : null);
+      const dF = fromVoxel(fovFreq, vF); const dP = fromVoxel(fovPhase, vP);
+      if (freqMatrix === null && dF !== null) freqMatrix = dF;
+      else if (freqMatrix !== null && dF !== null && Math.abs(dF - freqMatrix) > 1) warn(`Matrix freq ${freqMatrix} and FOV ÷ voxel (${dF}) don’t agree — using the matrix`);
+      if (phaseMatrix === null && dP !== null) phaseMatrix = dP;
+      else if (phaseMatrix !== null && dP !== null && Math.abs(dP - phaseMatrix) > 1) warn(`Matrix phase ${phaseMatrix} and FOV ÷ voxel (${dP}) don’t agree — using the matrix`);
+      if (freqMatrix === null || phaseMatrix === null) warn('No matrix (give Matrix, or FOV plus voxel size) — the Calculator and optimizer need one');
+
+      // ---- acceleration ------------------------------------------------------------
+      const sf = nv('SENSE factor'); const cf = nv('CS-SENSE factor');
+      const cvF = nv('CS voxel freq (mm)'); const cvP = nv('CS voxel phase (mm)');
+      const hasCsBits = cf !== null || cvF !== null || cvP !== null;
+      const accelType = accelCol || (hasCsBits ? 'cs-sense' : 'sense');
+      let sense = null; let csF = null; let csP = null;
+      if (accelType === 'none') {
+        sense = 1;
+        if (sf !== null || cf !== null) warn('Acceleration type is None but a factor is filled in — the factor was ignored');
+      } else if (accelType === 'sense') {
+        sense = sf !== null ? sf : cf;
+        if (sf === null && cf !== null) warn('Type is SENSE but only the CS-SENSE factor is filled in — used it as the SENSE factor');
+        else if (cf !== null) warn('Type is SENSE but a CS-SENSE factor is also filled in — it was ignored');
+        if (cvF !== null || cvP !== null) warn('Type is SENSE but a CS voxel size is filled in — it was ignored');
+      } else {
+        sense = cf !== null ? cf : sf;
+        if (cf === null && sf !== null) warn('Type is CS-SENSE but only the SENSE factor is filled in — used it as the CS-SENSE factor');
+        else if (sf !== null) warn('Type is CS-SENSE but a SENSE factor is also filled in — it was ignored');
+        csF = cvF; csP = cvP;
+        if (cvF === null || cvP === null) warn('CS-SENSE needs the CS voxel size — add it before using this protocol');
+      }
+
+      // ---- oversampling: same fields the Add/Edit form saves ----------------------
+      const s1 = nv('Oversampling side 1 (mm)') || 0;
+      const s2 = nv('Oversampling side 2 (mm)') || 0;
+      const typedSides = !num['Oversampling side 1 (mm)'].blank || !num['Oversampling side 2 (mm)'].blank;
+      if (s1 + s2 > 0 && !axisText) warn('No oversampling axis given — used H/F');
+      const mmLayout = vendor === 'Philips' || typedSides;
+      const overPct = fovPhase > 0 ? ((s1 + s2) / fovPhase) * 100 : 0;
+      if (s1 + s2 > 0 && !(fovPhase > 0)) warn('No phase FOV — the oversampling mm can’t be turned into a percentage, so the calculator treats it as 0% until FOV is entered');
+
+      if (ta !== null && ta > 3600) warn('Console TA is over an hour — if you typed m:ss in Excel it may have turned into hours:minutes');
+      const seqType = cell('Sequence type');
+      if (!seqType) warn('Sequence type is blank — the optimizer needs it (Quick can also pick it later)');
+
+      it.record = {
+        id: makeId(),
+        name: it.name,
+        region,
+        subRegion: '',
+        facility: facName,
+        scannerModel: scModel,
+        scannerRoom: scRoom,
+        vendor,
+        sliceOrientation: vendor === 'Philips' ? orient : '',
+        tr: nv('TR (ms)'),
+        etl: nv('ETL / TSE factor'),
+        te: nv('TE (ms)'),
+        nsa: nv('NSA'),
+        sense,
+        accelType,
+        csVoxelFreq: csF,
+        csVoxelPhase: csP,
+        freqMatrix,
+        phaseMatrix,
+        fovFreq,
+        fovPhase,
+        oversamplingPercent: overPct,
+        foldOverAxis: mmLayout ? axis : null,
+        foldOverH: mmLayout ? s1 : null,
+        foldOverF: mmLayout ? s2 : null,
+        sliceThicknessMm: nv('Slice thickness (mm)'),
+        slices: nv('Slices'),
+        consoleTimeSec: ta,
+        acrSequenceId: '',
+        notes: '',
+        planningNotes: cell('Planning notes'),
+        sequenceType: seqType,
+        roleCategory: '',
+        updatedAt: new Date().toISOString(),
+      };
+      it.planned = planned;
+      return it;
+    });
+    return { items };
+  }
+
+  const csvOverlayEl = document.getElementById('csv-overlay');
+  const csvSummaryEl = document.getElementById('csv-summary');
+  const csvTableEl = document.getElementById('csv-table');
+  const csvTableWrapEl = csvTableEl.parentElement;
+  const csvResultEl = document.getElementById('csv-result');
+  const csvImportBtn = document.getElementById('csv-import');
+  const csvCancelBtn = document.getElementById('csv-cancel');
+  const csvFileEl = document.getElementById('csv-file');
+
+  function csvResetDialog() {
+    csvState.items = []; csvState.applied = false;
+    csvSummaryEl.textContent = ''; csvTableEl.innerHTML = ''; csvTableWrapEl.classList.remove('show');
+    csvResultEl.textContent = '';
+    csvImportBtn.disabled = true; csvImportBtn.textContent = 'Import 0 protocols'; csvImportBtn.style.display = '';
+    csvCancelBtn.textContent = 'Cancel';
+    csvFileEl.value = '';
+  }
+
+  function csvRenderPreview(analysis) {
+    if (analysis.error) {
+      csvSummaryEl.textContent = analysis.error;
+      csvSummaryEl.style.color = 'var(--bad)';
+      csvTableWrapEl.classList.remove('show');
+      csvImportBtn.disabled = true;
+      csvImportBtn.textContent = 'Import 0 protocols';
+      return;
+    }
+    csvSummaryEl.style.color = '';
+    const items = analysis.items;
+    csvState.items = items;
+    const ok = items.filter(i => i.status === 'ok').length;
+    const bad = items.filter(i => i.status === 'bad').length;
+    const dup = items.filter(i => i.status === 'exists').length;
+    csvSummaryEl.textContent = items.length
+      ? `${ok} will import, ${bad} ${bad === 1 ? 'has a problem' : 'have problems'}${dup ? `, ${dup} already ${dup === 1 ? 'exists' : 'exist'}` : ''}`
+      : 'No protocol rows found under the header row.';
+    csvTableEl.innerHTML = `<thead><tr><th>Row</th><th>Protocol</th><th>Status</th></tr></thead><tbody>${items.map(i => {
+      const pill = i.status === 'ok'
+        ? '<span class="csv-pill ok">OK</span>'
+        : `<span class="csv-pill bad">${i.status === 'exists' ? escapeHtml(i.reason) : 'Problem: ' + escapeHtml(i.reason)}</span>`;
+      return `<tr><td>${i.num}</td><td><strong>${escapeHtml(i.name || '(no name)')}</strong>${i.where ? `<div class="dim">${escapeHtml(i.where)}</div>` : ''}</td>`
+        + `<td>${pill}${i.adds.map(a => `<div class="csv-add">${escapeHtml(a)}</div>`).join('')}`
+        + `${i.warnings.map(w => `<div class="csv-warn">⚠ ${escapeHtml(w)}</div>`).join('')}`
+        + `${i.confirm ? `<div class="csv-confirm">⚠ Confirm before import: ${escapeHtml(i.confirm)}</div>` : ''}</td></tr>`;
+    }).join('')}</tbody>`;
+    csvTableWrapEl.classList.toggle('show', items.length > 0);
+    csvImportBtn.disabled = ok === 0;
+    csvImportBtn.textContent = `Import ${ok} protocol${ok === 1 ? '' : 's'}`;
+  }
+
+  function csvApplyImport() {
+    if (csvState.applied) return;
+    const okItems = csvState.items.filter(i => i.status === 'ok');
+    okItems.forEach(i => {
+      // New facilities/scanners join the same lists Manage Lists uses.
+      if (i.record.facility) {
+        let fac = facilityLists.find(f => f.name === i.record.facility);
+        if (!fac) { fac = { id: makeId(), name: i.record.facility, scanners: [] }; facilityLists.push(fac); }
+        if (i.record.scannerModel && !fac.scanners.some(x => x.model === i.record.scannerModel && x.room === i.record.scannerRoom)) {
+          fac.scanners.push({ id: makeId(), model: i.record.scannerModel, room: i.record.scannerRoom, vendor: (i.planned && i.planned.scanner && i.planned.scanner.vendor) || '' });
+        }
+      }
+      protocols.push(i.record);
+    });
+    persistProtocols();
+    syncListsFromProtocols();
+    persistFacilityLists();
+    renderScannerFilterOptions();
+    renderFacilityFilterOptions();
+    renderProtocolGrid();
+    renderManageLists();
+    const skipped = csvState.items.length - okItems.length;
+    csvState.applied = true;
+    csvResultEl.textContent = `Imported ${okItems.length}. Skipped ${skipped}.`;
+    csvImportBtn.style.display = 'none';
+    csvCancelBtn.textContent = 'Close';
+  }
+
+  function csvLoadFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const records = parseCsv(String(reader.result || ''));
+        if (!records.length) { csvRenderPreview({ error: 'That file is empty.' }); return; }
+        csvRenderPreview(csvAnalyze(records));
+      } catch (err) {
+        csvRenderPreview({ error: 'Could not read that file as a CSV.' });
+      }
+    };
+    reader.onerror = () => csvRenderPreview({ error: 'Could not read that file.' });
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  document.getElementById('csv-open-btn').addEventListener('click', () => { csvResetDialog(); csvOverlayEl.classList.add('show'); });
+  const csvClose = () => { csvOverlayEl.classList.remove('show'); };
+  document.getElementById('csv-close').addEventListener('click', csvClose);
+  csvCancelBtn.addEventListener('click', csvClose);
+  csvOverlayEl.addEventListener('click', (e) => { if (e.target === csvOverlayEl) csvClose(); });
+  csvImportBtn.addEventListener('click', csvApplyImport);
+  csvFileEl.addEventListener('change', () => {
+    csvResultEl.textContent = '';
+    csvState.applied = false;
+    csvImportBtn.style.display = '';
+    csvCancelBtn.textContent = 'Cancel';
+    if (csvFileEl.files[0]) csvLoadFile(csvFileEl.files[0]);
+  });
+  document.getElementById('csv-template-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    const blob = new Blob([csvTemplateText()], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mriq-protocol-import-template.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   });
 
   // --- Exam Roles tab ---------------------------------------------------------
