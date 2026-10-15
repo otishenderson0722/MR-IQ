@@ -845,6 +845,14 @@
   .optimizer-tier-card .tier-metrics .good { color: var(--good); font-weight: 600; }
   .optimizer-tier-card .tier-metrics .bad { color: var(--bad); font-weight: 600; }
   .optimizer-tier-card .tier-metrics .tier-clock { color: var(--text-dim); }
+  #mini-overlay { z-index: 90; }
+  .list-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; background: var(--panel-2); }
+  .list-head, .list-scanner { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .list-head .dim, .list-scanner .dim { color: var(--text-dim); font-size: 0.8rem; }
+  .list-scanners { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 6px; }
+  .list-scanner { padding: 5px 0; font-size: 0.88rem; }
+  .list-card select { max-width: 210px; }
+  .list-card button { padding: 5px 10px; }
   .fold-pct { font-size: 0.7rem; color: var(--text-dim); margin-top: 1px; }
   .role-badge { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: 10px; vertical-align: middle; border: 1px solid var(--border); white-space: nowrap; }
   .role-badge.role-key { color: #1b1300; background: var(--warn-border); border-color: var(--warn-border); }
@@ -1099,6 +1107,7 @@
     <button type="button" data-view="quick">Quick</button>
     <button type="button" class="active" data-view="calculator">Calculator</button>
     <button type="button" data-view="library">Protocol Library</button>
+    <button type="button" data-view="lists">Manage Lists</button>
     <button type="button" data-view="acr">ACR Reference</button>
     <button type="button" data-view="tr-ranges">TR Ranges</button>
     <button type="button" data-view="roles">Exam Roles</button>
@@ -1603,7 +1612,7 @@
       <button type="button" class="btn-secondary" id="import-btn">Import backup</button>
       <input type="file" id="import-file-input" accept="application/json" style="display:none">
     </div>
-    <div class="lib-note">Everything (protocols, ACR minimums, TR ranges, the Key/Supporting exam table, NSA rule exceptions, the outcome log) is stored in this browser only — Export backup bundles them so you can move to another computer.</div>
+    <div class="lib-note">Everything (protocols, the facility/scanner lists, ACR minimums, TR ranges, the Key/Supporting exam table, NSA rule exceptions, the outcome log) is stored in this browser only — Export backup bundles them so you can move to another computer.</div>
 
     <div id="compliance-panel"></div>
 
@@ -1695,6 +1704,38 @@
     </div>
   </div>
 
+  <div class="view" id="view-lists">
+    <div class="panel">
+      <h2>Facilities &amp; scanners</h2>
+      <div class="lib-note">
+        The lists behind the Facility and Scanner dropdowns (Add/Edit protocol, Optimize, Quick). They start from the
+        facilities and scanners already on your protocols. <strong>Rename</strong> a facility or scanner and every protocol
+        using it updates to match. <strong>Merge</strong> folds one entry into another when they're the same thing spelled
+        differently — its protocols move to the one you merge into. Saved in this browser and included in Export backup, so
+        a facility with no protocols keeps its scanner list.
+      </div>
+      <div class="acr-form-footer" style="margin: 0 0 12px;">
+        <button type="button" class="btn-secondary" id="lists-add-facility">+ Add facility</button>
+        <span class="lib-note" style="margin:0;" id="lists-status"></span>
+      </div>
+      <div id="lists-body"></div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="mini-overlay">
+    <div class="modal" style="max-width: 380px;">
+      <div class="modal-header"><h3 id="mini-title"></h3><button type="button" class="modal-close" id="mini-close" aria-label="Close">&times;</button></div>
+      <form id="mini-form" novalidate>
+        <div id="mini-fields"></div>
+        <div class="nsa-hint error" id="mini-error" style="min-height: 1.1em;"></div>
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" id="mini-cancel">Cancel</button>
+          <button type="submit" class="btn-primary" id="mini-ok">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="view" id="view-outcomes">
     <div class="panel" style="margin-bottom: 16px;">
       <h2>Outcome log</h2>
@@ -1782,18 +1823,14 @@
       </div>
       <div class="field">
         <label for="pf-facility">Facility / site</label>
-        <input type="text" id="pf-facility" required placeholder="e.g. St. Mary's Hospital">
+        <select id="pf-facility" required></select>
       </div>
       <div class="field">
-        <label for="pf-scanner-model">Scanner / magnet</label>
-        <input type="text" id="pf-scanner-model" required placeholder="e.g. Philips Ingenia 1.5T">
+        <label for="pf-scanner">Scanner / magnet</label>
+        <select id="pf-scanner" required></select>
       </div>
       <div class="field">
-        <label for="pf-scanner-room">Room / unit label</label>
-        <input type="text" id="pf-scanner-room" placeholder="Optional — e.g. Room 2">
-      </div>
-      <div class="field">
-        <label for="pf-vendor">Scanner vendor (optional)</label>
+        <label for="pf-vendor">Scanner vendor (filled in from the scanner)</label>
         <select id="pf-vendor">
           <option value="">— Generic terms —</option>
           <option>Philips</option>
@@ -1947,8 +1984,10 @@
         <label for="pf-notes">Notes</label>
         <textarea id="pf-notes" rows="3" placeholder="Optional — coil used, breath-hold, indication, etc."></textarea>
       </div>
+      <div class="lib-note" id="pf-saved-status" style="margin:0 0 8px; color: var(--good);"></div>
       <div class="modal-footer">
         <button type="button" class="btn-secondary" id="modal-cancel-btn">Cancel</button>
+        <button type="button" class="btn-secondary" id="modal-save-another-btn">Save and add another</button>
         <button type="submit" class="btn-primary" id="modal-save-btn">Save protocol</button>
       </div>
     </form>
@@ -2018,6 +2057,15 @@
         <select id="opt-sequence-type" required>
           <option value="">Select…</option>
         </select>
+      </div>
+      <div class="field">
+        <label for="opt-facility">Facility</label>
+        <select id="opt-facility"></select>
+      </div>
+      <div class="field">
+        <label for="opt-scanner">Scanner</label>
+        <select id="opt-scanner"></select>
+        <div class="lib-note" style="margin:2px 0 0;">For this run only — a scanner with a vendor switches the terms and the fold-over entry (mm for Philips). The saved protocol isn't changed.</div>
       </div>
       <div class="field">
         <label for="opt-indication">Exam indication (optional)</label>
@@ -3915,6 +3963,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     document.getElementById('view-outcomes').classList.toggle('active', view === 'outcomes');
     document.getElementById('view-quick').classList.toggle('active', view === 'quick');
     document.getElementById('view-roles').classList.toggle('active', view === 'roles');
+    document.getElementById('view-lists').classList.toggle('active', view === 'lists');
+    if (view === 'lists') renderManageLists();
     if (view === 'roles') renderRolesView();
     document.body.classList.toggle('quick-active', view === 'quick');
     if (view === 'outcomes') renderOutcomeLog();
@@ -3973,6 +4023,251 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   }
 
   let protocols = loadProtocols();
+
+  // ---------------------------------------------------------------------
+  // Facility & scanner lists. Protocols still carry plain strings (facility,
+  // scannerModel, scannerRoom, vendor); these lists are what the dropdowns
+  // offer. They're built from the protocols already saved (in memory, nothing
+  // is written until you change something), kept when a facility has no
+  // protocols, editable on the Manage Lists tab, and part of Export backup.
+  // ---------------------------------------------------------------------
+  const FACILITY_LISTS_KEY = 'mriq.facilityLists.v1';
+  const LAST_FORM_SCANNER_KEY = 'mriq.lastFormScanner.v1';
+  const ADD_OPTION = '__add__';
+  const SCANNER_VENDORS = ['Philips', 'GE', 'Siemens', 'Toshiba/Canon', 'Hitachi'];
+  const nameSort = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  const sameText = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+  const entryLabel = s => (s.room ? `${s.model} — ${s.room}` : s.model);
+
+  function sanitizeFacilityLists(raw) {
+    const out = [];
+    const arr = raw && Array.isArray(raw.facilities) ? raw.facilities : (Array.isArray(raw) ? raw : []);
+    arr.forEach(f => {
+      if (!f || typeof f.name !== 'string' || !f.name.trim()) return;
+      let fac = out.find(x => x.name === f.name.trim());
+      if (!fac) { fac = { id: f.id || makeId(), name: f.name.trim(), scanners: [] }; out.push(fac); }
+      (Array.isArray(f.scanners) ? f.scanners : []).forEach(sc => {
+        if (!sc || typeof sc.model !== 'string' || !sc.model.trim()) return;
+        const model = sc.model.trim();
+        const room = String(sc.room || '').trim();
+        const vendor = SCANNER_VENDORS.includes(sc.vendor) ? sc.vendor : '';
+        const have = fac.scanners.find(x => x.model === model && x.room === room);
+        if (have) { if (!have.vendor && vendor) have.vendor = vendor; return; }
+        fac.scanners.push({ id: sc.id || makeId(), model, room, vendor });
+      });
+    });
+    return out;
+  }
+  function loadFacilityLists() {
+    try {
+      const raw = localStorage.getItem(FACILITY_LISTS_KEY);
+      return raw ? sanitizeFacilityLists(JSON.parse(raw)) : [];
+    } catch (e) { return []; }
+  }
+  let facilityLists = loadFacilityLists();
+  function persistFacilityLists() {
+    try {
+      localStorage.setItem(FACILITY_LISTS_KEY, JSON.stringify({ facilities: facilityLists }));
+      setStorageStatus('');
+    } catch (e) {
+      setStorageStatus('Could not save the facility/scanner lists to browser storage. Use Export backup so you don’t lose them.');
+    }
+  }
+  // Adds any facility/scanner a protocol uses that the lists don't have yet.
+  // Exact spellings are kept as separate entries — merging the ones that are
+  // the same thing spelled differently is done by hand on Manage Lists.
+  function syncListsFromProtocols() {
+    let changed = false;
+    protocols.forEach(pr => {
+      const fname = String(pr.facility || '').trim();
+      if (!fname) return;
+      let fac = facilityLists.find(f => f.name === fname);
+      if (!fac) { fac = { id: makeId(), name: fname, scanners: [] }; facilityLists.push(fac); changed = true; }
+      const model = String(pr.scannerModel || '').trim();
+      if (!model) return;
+      const room = String(pr.scannerRoom || '').trim();
+      let sc = fac.scanners.find(x => x.model === model && x.room === room);
+      const vendor = SCANNER_VENDORS.includes(pr.vendor) ? pr.vendor : '';
+      if (!sc) { fac.scanners.push({ id: makeId(), model, room, vendor }); changed = true; }
+      else if (!sc.vendor && vendor) { sc.vendor = vendor; changed = true; }
+    });
+    return changed;
+  }
+  syncListsFromProtocols();
+
+  const protocolsOfFacility = name => protocols.filter(pr => pr.facility === name);
+  const protocolsOfScanner = (facName, sc) => protocols.filter(pr => pr.facility === facName && pr.scannerModel === sc.model && (pr.scannerRoom || '') === sc.room);
+
+  function guessScannerVendor(model) {
+    const m = String(model || '');
+    if (/philips|ingenia|achieva|elition|multiva/i.test(m)) return 'Philips';
+    if (/\bge\b|general electric|signa|discovery|optima|architect/i.test(m)) return 'GE';
+    if (/siemens|magnetom|aera|skyra|prisma|avanto|vida|sola|altea/i.test(m)) return 'Siemens';
+    if (/toshiba|canon|vantage|titan|orian/i.test(m)) return 'Toshiba/Canon';
+    if (/hitachi|oasis|echelon|airis/i.test(m)) return 'Hitachi';
+    return '';
+  }
+
+  function readLastFormScanner() {
+    try {
+      const v = JSON.parse(localStorage.getItem(LAST_FORM_SCANNER_KEY));
+      if (v && typeof v === 'object') return { facility: String(v.facility || ''), scanner: String(v.scanner || '') };
+    } catch (e) { /* first run */ }
+    return { facility: '', scanner: '' };
+  }
+  function rememberFormScanner(facility, scannerLabelText) {
+    try { localStorage.setItem(LAST_FORM_SCANNER_KEY, JSON.stringify({ facility, scanner: scannerLabelText })); } catch (e) { /* convenience only */ }
+  }
+
+  // --- small dialog (type a name / pick a vendor) ---------------------------
+  const miniOverlayEl = document.getElementById('mini-overlay');
+  const miniTitleEl = document.getElementById('mini-title');
+  const miniFieldsEl = document.getElementById('mini-fields');
+  const miniErrorEl = document.getElementById('mini-error');
+  const miniOkEl = document.getElementById('mini-ok');
+  let miniFinish = null;
+  let miniValidate = null;
+  let miniFieldDefs = [];
+
+  function miniDialog({ title, fields, okLabel, validate }) {
+    return new Promise(resolve => {
+      if (miniFinish) miniFinish(null);
+      miniTitleEl.textContent = title;
+      miniFieldDefs = fields;
+      miniValidate = validate || null;
+      miniFieldsEl.innerHTML = fields.map(f => `<div class="field"><label for="mini-f-${f.key}">${escapeHtml(f.label)}</label>${
+        f.type === 'select'
+          ? `<select id="mini-f-${f.key}">${f.options.map(([v, l]) => `<option value="${escapeHtml(v)}"${v === f.value ? ' selected' : ''}>${escapeHtml(l)}</option>`).join('')}</select>`
+          : `<input type="text" id="mini-f-${f.key}" placeholder="${escapeHtml(f.placeholder || '')}" value="${escapeHtml(f.value || '')}" autocomplete="off">`
+      }</div>`).join('');
+      miniErrorEl.textContent = '';
+      miniOkEl.textContent = okLabel || 'Save';
+      miniOverlayEl.classList.add('show');
+      miniFinish = (val) => { miniOverlayEl.classList.remove('show'); miniFinish = null; miniValidate = null; resolve(val); };
+      const first = miniFieldsEl.querySelector('input, select');
+      if (first) first.focus();
+    });
+  }
+  function miniReadValues() {
+    const vals = {};
+    miniFieldDefs.forEach(f => { vals[f.key] = document.getElementById(`mini-f-${f.key}`).value.trim(); });
+    return vals;
+  }
+  document.getElementById('mini-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const vals = miniReadValues();
+    const err = miniValidate ? miniValidate(vals) : '';
+    if (err) { miniErrorEl.textContent = err; return; }
+    if (miniFinish) miniFinish(vals);
+  });
+  const miniCancel = () => { if (miniFinish) miniFinish(null); };
+  document.getElementById('mini-cancel').addEventListener('click', miniCancel);
+  document.getElementById('mini-close').addEventListener('click', miniCancel);
+  miniOverlayEl.addEventListener('click', (e) => { if (e.target === miniOverlayEl) miniCancel(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && miniFinish) miniCancel(); });
+
+  const vendorFieldOptions = [['', '— Generic terms —'], ...SCANNER_VENDORS.map(v => [v, v])];
+
+  async function addFacilityDialog() {
+    const vals = await miniDialog({
+      title: 'Add new facility',
+      okLabel: 'Add facility',
+      fields: [{ key: 'name', label: 'Facility name', placeholder: "e.g. St. Mary's Hospital" }],
+      validate: v => (!v.name ? 'Enter a facility name.' : (facilityLists.some(f => sameText(f.name, v.name)) ? 'That facility is already in the list.' : '')),
+    });
+    if (!vals) return null;
+    const fac = { id: makeId(), name: vals.name, scanners: [] };
+    facilityLists.push(fac);
+    persistFacilityLists();
+    return fac;
+  }
+
+  async function addScannerDialog(facilityName) {
+    const fac = facilityLists.find(f => f.name === facilityName);
+    if (!fac) return null;
+    const vals = await miniDialog({
+      title: `Add new scanner — ${facilityName}`,
+      okLabel: 'Add scanner',
+      fields: [
+        { key: 'model', label: 'Model', placeholder: 'e.g. Philips Ingenia 1.5T' },
+        { key: 'room', label: 'Room or unit label (optional)', placeholder: 'e.g. Room 2' },
+        { key: 'vendor', label: 'Vendor', type: 'select', options: vendorFieldOptions, value: '' },
+      ],
+      validate: v => (!v.model ? 'Enter the scanner model.' : (fac.scanners.some(x => sameText(x.model, v.model) && sameText(x.room, v.room)) ? 'That scanner is already in this facility’s list.' : '')),
+    });
+    if (!vals) return null;
+    // Left on "Generic terms" but the model names a vendor (Philips Ingenia…)? Fill it in.
+    const vendor = vals.vendor || guessScannerVendor(vals.model);
+    const sc = { id: makeId(), model: vals.model, room: vals.room, vendor };
+    fac.scanners.push(sc);
+    persistFacilityLists();
+    return sc;
+  }
+
+  // Facility + scanner dropdowns, with "Add new…" at the bottom of each and
+  // the scanner list limited to the chosen facility. Used by the Add/Edit
+  // form, the Optimize window and the Quick tab.
+  function createFacilityScannerPicker({ facilityEl, scannerEl, autoFirst, onChange }) {
+    let facility = '';
+    let scannerId = '';
+    const curFacility = () => facilityLists.find(f => f.name === facility) || null;
+    const curScanner = () => { const f = curFacility(); return f ? (f.scanners.find(x => x.id === scannerId) || null) : null; };
+    const emit = (why) => { if (onChange) onChange({ facility, scanner: curScanner(), why }); };
+
+    function render() {
+      const names = facilityLists.map(f => f.name).sort(nameSort);
+      if (!names.includes(facility)) facility = autoFirst ? (names[0] || '') : '';
+      facilityEl.innerHTML = (autoFirst && names.length ? '' : '<option value="">Select facility…</option>')
+        + names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')
+        + `<option value="${ADD_OPTION}">＋ Add new facility…</option>`;
+      facilityEl.value = facility;
+      const f = curFacility();
+      const scs = f ? f.scanners.slice().sort((a, b) => nameSort(entryLabel(a), entryLabel(b))) : [];
+      if (!scs.some(x => x.id === scannerId)) scannerId = autoFirst && scs[0] ? scs[0].id : '';
+      scannerEl.innerHTML = (autoFirst && scs.length ? '' : `<option value="">${facility ? 'Select scanner…' : 'Pick a facility first'}</option>`)
+        + scs.map(x => `<option value="${x.id}">${escapeHtml(entryLabel(x))}</option>`).join('')
+        + (facility ? `<option value="${ADD_OPTION}">＋ Add new scanner…</option>` : '');
+      scannerEl.value = scannerId;
+    }
+
+    facilityEl.addEventListener('change', async () => {
+      const v = facilityEl.value;
+      if (v === ADD_OPTION) {
+        const fac = await addFacilityDialog();
+        if (fac) { facility = fac.name; scannerId = ''; render(); emit('facility'); } else render();
+        return;
+      }
+      facility = v; scannerId = ''; render(); emit('facility');
+    });
+    scannerEl.addEventListener('change', async () => {
+      const v = scannerEl.value;
+      if (v === ADD_OPTION) {
+        const sc = await addScannerDialog(facility);
+        if (sc) { scannerId = sc.id; render(); emit('scanner'); } else render();
+        return;
+      }
+      scannerId = v; render(); emit('scanner');
+    });
+
+    return {
+      render,
+      get: () => ({ facility, scanner: curScanner() }),
+      set(facilityName, model, room) {
+        facility = facilityName || '';
+        const f = curFacility();
+        const sc = f ? f.scanners.find(x => x.model === String(model || '').trim() && x.room === String(room || '').trim()) : null;
+        scannerId = sc ? sc.id : '';
+        render();
+      },
+      setByLabel(facilityName, label) {
+        facility = facilityName || '';
+        const f = curFacility();
+        const sc = f ? f.scanners.find(x => entryLabel(x) === label) : null;
+        scannerId = sc ? sc.id : '';
+        render();
+      },
+    };
+  }
 
   // ---------------------------------------------------------------------
   // ACR reference data (per-region minimums: sequences, max slice
@@ -5013,8 +5308,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     subRegionField: document.getElementById('pf-subregion-field'),
     subRegion: document.getElementById('pf-subregion'),
     facility: document.getElementById('pf-facility'),
-    scannerModel: document.getElementById('pf-scanner-model'),
-    scannerRoom: document.getElementById('pf-scanner-room'),
+    scanner: document.getElementById('pf-scanner'),
     vendor: document.getElementById('pf-vendor'),
     sliceOrientationField: document.getElementById('pf-slice-orientation-field'),
     sliceOrientation: document.getElementById('pf-slice-orientation'),
@@ -5103,6 +5397,17 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   pf.vendor.addEventListener('change', updatePfVendorLabels);
   pf.sliceOrientation.addEventListener('change', updatePfVendorLabels);
 
+  // Facility + scanner dropdowns. Picking a scanner fills in the vendor.
+  const pfPicker = createFacilityScannerPicker({
+    facilityEl: pf.facility,
+    scannerEl: pf.scanner,
+    autoFirst: false,
+    onChange: ({ scanner }) => {
+      if (scanner && scanner.vendor) { pf.vendor.value = scanner.vendor; updatePfVendorLabels(); }
+    },
+  });
+  let saveAnotherRequested = false;
+
   // Set by the Quick tab when a sequence type is picked for a protocol; the
   // form has no field for it, so carry it through edit/duplicate unchanged.
   let modalSequenceType = '';
@@ -5120,10 +5425,22 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     pf.name.value = prefill?.name || '';
     pf.region.value = prefill?.region || defaultRegion;
     pf.subRegion.value = prefill?.subRegion || '';
-    pf.facility.value = prefill?.facility || '';
-    pf.scannerModel.value = prefill?.scannerModel || '';
-    pf.scannerRoom.value = prefill?.scannerRoom || '';
+    document.getElementById('pf-saved-status').textContent = '';
+    document.getElementById('modal-save-another-btn').style.display = mode === 'add' ? '' : 'none';
+    if (prefill && prefill.facility) {
+      pfPicker.set(prefill.facility, prefill.scannerModel, prefill.scannerRoom);
+    } else if (mode === 'add') {
+      // A new protocol starts on the facility/scanner you used last.
+      const last = readLastFormScanner();
+      pfPicker.setByLabel(last.facility, last.scanner);
+    } else {
+      pfPicker.set('', '', '');
+    }
     pf.vendor.value = prefill?.vendor || '';
+    {
+      const picked = pfPicker.get().scanner;
+      if (!pf.vendor.value && picked && picked.vendor) pf.vendor.value = picked.vendor;
+    }
     pf.sliceOrientation.value = prefill?.sliceOrientation || 'axial';
     updatePfVendorLabels();
     pf.tr.value = prefill?.tr ?? '';
@@ -5178,6 +5495,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
   protocolForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    const pickedFs = pfPicker.get();
+    if (!pickedFs.facility || !pickedFs.scanner) {
+      saveAnotherRequested = false;
+      alert('Choose a facility and a scanner — or add new ones from the bottom of each dropdown.');
+      return;
+    }
     const nsaValue = parseFloat(pf.nsa.value);
     if (!(Number.isFinite(nsaValue) && nsaValue > 0)) {
       alert('NSA must be greater than 0.');
@@ -5208,9 +5531,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       name: pf.name.value.trim(),
       region: pf.region.value,
       subRegion: pf.region.value === 'Spine' ? pf.subRegion.value : '',
-      facility: pf.facility.value.trim(),
-      scannerModel: pf.scannerModel.value.trim(),
-      scannerRoom: pf.scannerRoom.value.trim(),
+      facility: pickedFs.facility,
+      scannerModel: pickedFs.scanner.model,
+      scannerRoom: pickedFs.scanner.room,
       vendor: pf.vendor.value || '',
       sliceOrientation: pf.vendor.value === 'Philips' ? pf.sliceOrientation.value : '',
       tr: parseFloat(pf.tr.value),
@@ -5248,10 +5571,24 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       protocols.push(record);
     }
     persistProtocols();
+    if (syncListsFromProtocols()) persistFacilityLists();
+    rememberFormScanner(record.facility, entryLabel(pickedFs.scanner));
     renderScannerFilterOptions();
     renderFacilityFilterOptions();
     renderProtocolGrid();
-    closeModal();
+    const again = saveAnotherRequested && !editingId;
+    saveAnotherRequested = false;
+    if (again) {
+      // Same facility/scanner/vendor stay selected for the next protocol.
+      openModal('add', { facility: record.facility, scannerModel: record.scannerModel, scannerRoom: record.scannerRoom, vendor: record.vendor });
+      document.getElementById('pf-saved-status').textContent = `Saved “${record.name}” ✓ — add the next one.`;
+    } else {
+      closeModal();
+    }
+  });
+  document.getElementById('modal-save-another-btn').addEventListener('click', () => {
+    saveAnotherRequested = true;
+    protocolForm.requestSubmit();
   });
 
   // The non-physics fields a panel holds that a saved protocol can also
@@ -5315,6 +5652,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       outcomeLog,
       nsaExceptions,
       examIndications: examKeyRows,
+      facilityLists,
     };
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -5346,6 +5684,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         let incomingOutcomes = [];
         let incomingExceptions = [];
         let incomingRoles = null;
+        let incomingLists = [];
         if (Array.isArray(parsed)) {
           incomingProtocols = parsed;
         } else if (parsed && typeof parsed === 'object') {
@@ -5354,6 +5693,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           if (Array.isArray(parsed.trRanges)) incomingTr = parsed.trRanges;
           if (Array.isArray(parsed.outcomeLog)) incomingOutcomes = parsed.outcomeLog;
           if (Array.isArray(parsed.nsaExceptions)) incomingExceptions = parsed.nsaExceptions;
+          if (parsed.facilityLists) incomingLists = sanitizeFacilityLists(parsed.facilityLists);
           if (parsed.examIndications && typeof parsed.examIndications === 'object' && !Array.isArray(parsed.examIndications)) {
             incomingRoles = sanitizeKeyRows(parsed.examIndications, true);
           }
@@ -5381,9 +5721,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         });
 
         const roleKeysIncoming = incomingRoles ? Object.keys(incomingRoles) : [];
-        if (validProtocols.length === 0 && validAcr.length === 0 && validTr.length === 0 && validOutcomes.length === 0 && newExceptions.length === 0 && roleKeysIncoming.length === 0) {
-          if (incomingOutcomes.length > 0 || cleanedExceptions.length > 0) {
-            alert('Nothing new to import — those logged results / NSA exceptions are already in this browser.');
+        // Only facilities/scanners the lists don't have yet count as "new".
+        const newListEntries = incomingLists.filter(f => {
+          const have = facilityLists.find(x => x.name === f.name);
+          return !have || f.scanners.some(sc => !have.scanners.some(x => x.model === sc.model && x.room === sc.room));
+        });
+        if (newListEntries.length === 0 && validProtocols.length === 0 && validAcr.length === 0 && validTr.length === 0 && validOutcomes.length === 0 && newExceptions.length === 0 && roleKeysIncoming.length === 0) {
+          if (incomingOutcomes.length > 0 || cleanedExceptions.length > 0 || incomingLists.length > 0) {
+            alert('Nothing new to import — those logged results / NSA exceptions / facilities and scanners are already in this browser.');
             return;
           }
           alert('That file doesn’t look like a MR IQ backup.');
@@ -5397,6 +5742,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         if (validOutcomes.length) parts.push(`${validOutcomes.length} logged result(s)`);
         if (newExceptions.length) parts.push(`${newExceptions.length} NSA exception${newExceptions.length === 1 ? '' : 's'}`);
         if (roleKeysIncoming.length) parts.push(`${roleKeysIncoming.length} exam-indication Key/Supporting set${roleKeysIncoming.length === 1 ? '' : 's'}`);
+        if (newListEntries.length) parts.push(`${newListEntries.length} facilit${newListEntries.length === 1 ? 'y' : 'ies'} with new scanners in the Facility/Scanner list`);
         const hasReferenceData = validAcr.length > 0 || validTr.length > 0 || roleKeysIncoming.length > 0;
         const confirmMsg = `Import ${parts.join(', ')}?`
           + ' Protocols are added alongside your current library.'
@@ -5422,6 +5768,22 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
             if (idx >= 0) acrReferences[idx] = record; else acrReferences.push(record);
           });
           persistAcrReferences();
+        }
+
+        // Merge the incoming lists in (never removes anything), then add whatever the imported protocols use.
+        if (incomingLists.length || validProtocols.length) {
+          incomingLists.forEach(f => {
+            let fac = facilityLists.find(x => x.name === f.name);
+            if (!fac) { fac = { id: makeId(), name: f.name, scanners: [] }; facilityLists.push(fac); }
+            f.scanners.forEach(sc => {
+              const have = fac.scanners.find(x => x.model === sc.model && x.room === sc.room);
+              if (!have) fac.scanners.push({ id: makeId(), model: sc.model, room: sc.room, vendor: sc.vendor });
+              else if (!have.vendor && sc.vendor) have.vendor = sc.vendor;
+            });
+          });
+          syncListsFromProtocols();
+          persistFacilityLists();
+          renderManageLists();
         }
 
         if (roleKeysIncoming.length) {
@@ -6625,10 +6987,35 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const optPriorityEl = document.getElementById('opt-priority');
   const optIndicationEl = document.getElementById('opt-indication');
   const optRoleLineEl = document.getElementById('opt-role-line');
-  // The modal's own fold-over entry + phase FOV + the protocol's vendor, for the mm display.
+  // Facility/scanner for THIS run (defaults to the protocol's own); a scanner
+  // with a vendor decides the vendor terms / fold-over entry used below.
+  const optPicker = createFacilityScannerPicker({
+    facilityEl: document.getElementById('opt-facility'),
+    scannerEl: document.getElementById('opt-scanner'),
+    autoFirst: false,
+    onChange: () => updateOptLayout(),
+  });
+  function optVendor() {
+    const sc = optPicker.get().scanner;
+    return (sc && sc.vendor) || (optimizerProtocol ? optimizerProtocol.vendor : '');
+  }
+  // The H/F mm boxes vs the single % field, for the vendor in force now.
+  function updateOptLayout() {
+    if (!optimizerProtocol) return;
+    const mm = oversamplingGroups.opt.readMm();
+    const mmLayout = optVendor() === 'Philips' || Number.isFinite(mm.h) || Number.isFinite(optimizerProtocol.foldOverH);
+    document.getElementById('opt-os-philips').style.display = mmLayout ? 'block' : 'none';
+    document.getElementById('opt-os-pct').style.display = mmLayout ? 'none' : 'flex';
+    document.getElementById('opt-oversampling-label').textContent = mmLayout ? 'Fold-over suppression' : vendorTerms(optVendor()).oversampling;
+    if (!mmLayout) oversamplingGroups.opt.toPercentMode();
+    oversamplingGroups.opt.refresh();
+    updateOptHabitusDerived();
+    updateOptRole();
+  }
+  // The modal's own fold-over entry + phase FOV + the vendor in force, for the mm display.
   function optFoldOverCtx() {
     const mm = oversamplingGroups.opt.readMm();
-    return foldOverContext({ vendor: optimizerProtocol ? optimizerProtocol.vendor : '', fovPhase: parseFloat(optFovPhaseEl.value), axis: mm.axis, h: mm.h, f: mm.f });
+    return foldOverContext({ vendor: optVendor(), fovPhase: parseFloat(optFovPhaseEl.value), axis: mm.axis, h: mm.h, f: mm.f });
   }
   function optRoleInfo() {
     return resolveSequenceRole({
@@ -6698,6 +7085,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       .concat(trRanges.map(r => `<option value="${escapeHtml(r.sequenceType)}">${escapeHtml(r.sequenceType)}</option>`))
       .join('');
     optPriorityEl.value = '';
+    optPicker.set(protocol.facility, protocol.scannerModel, protocol.scannerRoom);
     optIndicationEl.innerHTML = indicationOptionsHtml('— Not selected —');
     optIndicationEl.value = '';
     delete optAggressiveEl.dataset.autoRole;
@@ -6716,10 +7104,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     updateOptHabitusDerived();
     {
       const hasMm = Number.isFinite(protocol.foldOverH) && Number.isFinite(protocol.foldOverF);
-      const mmLayout = protocol.vendor === 'Philips' || hasMm;
+      const mmLayout = optVendor() === 'Philips' || hasMm;
       document.getElementById('opt-os-philips').style.display = mmLayout ? 'block' : 'none';
       document.getElementById('opt-os-pct').style.display = mmLayout ? 'none' : 'flex';
-      document.getElementById('opt-oversampling-label').textContent = mmLayout ? 'Fold-over suppression' : vendorTerms(protocol.vendor).oversampling;
+      document.getElementById('opt-oversampling-label').textContent = mmLayout ? 'Fold-over suppression' : vendorTerms(optVendor()).oversampling;
       if (hasMm) {
         oversamplingGroups.opt.setMm(protocol.foldOverAxis, protocol.foldOverH, protocol.foldOverF);
       } else {
@@ -7027,7 +7415,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // Load both sides so the Calculator's comparison matches what the
     // optimizer just showed — Current = the saved protocol as-is,
     // Proposed = the selected tier's suggestion, ready for manual review.
-    applyProtocolGlobals(optimizerProtocol);
+    applyProtocolGlobals({ ...optimizerProtocol, vendor: optVendor() || optimizerProtocol.vendor });
     applyProtocolToInputs(optimizerOutcome.start, curInputs, 'cur');
     applyProtocolToInputs(tierData.candidate, propInputs, 'prop');
     {
@@ -7858,20 +8246,25 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const fmtQuickNum = (v) => (Number.isFinite(v) ? String(Math.round(v * 100) / 100) : '');
   const fmtClock = (ms) => { const sec = Math.round(ms / 1000); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
 
-  function renderQuick() {
-    const facilities = quickUniq(protocols.map(p => p.facility).filter(Boolean));
-    if (!facilities.includes(quick.facility)) quick.facility = facilities[0] || '';
-    quickEls.facility.innerHTML = facilities.length
-      ? facilities.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('')
-      : '<option value="">No facilities</option>';
-    quickEls.facility.value = quick.facility;
+  // Facility/scanner come from the lists (so a facility or scanner with no
+  // protocols yet still shows up), with Add new… at the bottom of each.
+  const quickPicker = createFacilityScannerPicker({
+    facilityEl: document.getElementById('quick-facility'),
+    scannerEl: document.getElementById('quick-scanner'),
+    autoFirst: true,
+    onChange: ({ facility, scanner }) => {
+      quick.facility = facility;
+      quick.scanner = scanner ? entryLabel(scanner) : '';
+      quick.protocolId = null; quick.work = null;
+      renderQuick();
+    },
+  });
 
-    const scanners = quickUniq(protocols.filter(p => p.facility === quick.facility).map(scannerLabel));
-    if (!scanners.includes(quick.scanner)) quick.scanner = scanners[0] || '';
-    quickEls.scanner.innerHTML = scanners.length
-      ? scanners.map(sc => `<option value="${escapeHtml(sc)}">${escapeHtml(sc)}</option>`).join('')
-      : '<option value="">No scanners</option>';
-    quickEls.scanner.value = quick.scanner;
+  function renderQuick() {
+    quickPicker.setByLabel(quick.facility, quick.scanner);
+    const picked = quickPicker.get();
+    quick.facility = picked.facility;
+    quick.scanner = picked.scanner ? entryLabel(picked.scanner) : '';
     saveQuickSelection();
 
     const list = quickScannerProtocols();
@@ -8187,8 +8580,6 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   }
 
   // --- wiring --------------------------------------------------------------------
-  quickEls.facility.addEventListener('change', () => { quick.facility = quickEls.facility.value; quick.scanner = ''; quick.protocolId = null; quick.work = null; renderQuick(); });
-  quickEls.scanner.addEventListener('change', () => { quick.scanner = quickEls.scanner.value; quick.protocolId = null; quick.work = null; renderQuick(); });
   quickEls.priority.addEventListener('change', runQuick);
   quickEls.indication.addEventListener('change', () => { quick.editingRole = false; renderQuickSeq(); renderQuickRole(); runQuick(); });
   quickEls.aggressive.addEventListener('change', runQuick);
@@ -8239,6 +8630,180 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const closeQuickSheet = () => quickEls.sheetOverlay.classList.remove('show');
   quickEls.sheetOverlay.addEventListener('click', (e) => {
     if (e.target === quickEls.sheetOverlay || e.target.closest('#quick-sheet-close')) closeQuickSheet();
+  });
+
+
+  // --- Manage Lists tab ---------------------------------------------------------
+  const listsBodyEl = document.getElementById('lists-body');
+  const listsStatusEl = document.getElementById('lists-status');
+  const esc = escapeHtml;
+
+  function renderManageLists() {
+    const facs = facilityLists.slice().sort((a, b) => nameSort(a.name, b.name));
+    if (!facs.length) {
+      listsBodyEl.innerHTML = '<div class="quick-empty">No facilities yet — add one above, or save a protocol and its facility and scanner appear here.</div>';
+      return;
+    }
+    const allScanners = [];
+    facs.forEach(f => f.scanners.forEach(sc => allScanners.push({ fac: f, sc })));
+    listsBodyEl.innerHTML = facs.map(f => {
+      const n = protocolsOfFacility(f.name).length;
+      const others = facs.filter(o => o.id !== f.id);
+      const scanners = f.scanners.slice().sort((a, b) => nameSort(entryLabel(a), entryLabel(b)));
+      return `<div class="list-card" data-fid="${f.id}">
+        <div class="list-head">
+          <strong>${esc(f.name)}</strong><span class="dim">${n} protocol${n === 1 ? '' : 's'}</span>
+          <button type="button" class="btn-secondary" data-act="rename-fac">Rename</button>
+          <button type="button" class="btn-secondary" data-act="add-scanner">+ Scanner</button>
+          ${others.length ? `<select data-role="merge-fac" aria-label="Merge ${esc(f.name)} into"><option value="">Merge into…</option>${others.map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join('')}</select><button type="button" class="btn-secondary" data-act="merge-fac">Merge</button>` : ''}
+        </div>
+        <div class="list-scanners">${scanners.length ? scanners.map(sc => {
+          const cnt = protocolsOfScanner(f.name, sc).length;
+          const targets = allScanners.filter(t => t.sc.id !== sc.id);
+          return `<div class="list-scanner" data-sid="${sc.id}">
+            <span>${esc(entryLabel(sc))}</span><span class="dim">${esc(sc.vendor || 'Generic terms')} · ${cnt} protocol${cnt === 1 ? '' : 's'}</span>
+            <button type="button" class="btn-secondary" data-act="edit-scanner">Edit</button>
+            ${targets.length ? `<select data-role="merge-sc" aria-label="Merge ${esc(entryLabel(sc))} into"><option value="">Merge into…</option>${targets.map(t => `<option value="${t.sc.id}">${esc(t.fac.name)} · ${esc(entryLabel(t.sc))}</option>`).join('')}</select><button type="button" class="btn-secondary" data-act="merge-sc">Merge</button>` : ''}
+          </div>`;
+        }).join('') : '<div class="dim" style="font-size:0.82rem;">No scanners yet.</div>'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // Names are used as plain strings in a few remembered selections; keep them pointing at the renamed entry.
+  function remapSelections({ facFrom, facTo, labelFrom, labelTo }) {
+    if (quick.facility === facFrom) {
+      quick.facility = facTo;
+      if (labelFrom !== undefined && quick.scanner === labelFrom) quick.scanner = labelTo;
+      saveQuickSelection();
+    }
+    if (libState.facility === facFrom) libState.facility = facTo;
+    if (labelFrom !== undefined && libState.scanner === labelFrom) libState.scanner = labelTo;
+    const last = readLastFormScanner();
+    if (last.facility === facFrom) rememberFormScanner(facTo, labelFrom !== undefined && last.scanner === labelFrom ? labelTo : last.scanner);
+  }
+
+  function afterListChange(message) {
+    persistProtocols();
+    persistFacilityLists();
+    renderScannerFilterOptions();
+    renderFacilityFilterOptions();
+    renderProtocolGrid();
+    renderManageLists();
+    listsStatusEl.textContent = message || '';
+  }
+
+  const findFacById = id => facilityLists.find(f => f.id === id);
+
+  async function renameFacility(fac) {
+    const vals = await miniDialog({
+      title: 'Rename facility', okLabel: 'Rename',
+      fields: [{ key: 'name', label: 'Facility name', value: fac.name }],
+      validate: v => (!v.name ? 'Enter a name.' : (facilityLists.some(f => f.id !== fac.id && sameText(f.name, v.name)) ? 'Another facility already has that name — use Merge to combine them.' : '')),
+    });
+    if (!vals || vals.name === fac.name) return;
+    const old = fac.name;
+    const n = protocolsOfFacility(old).length;
+    protocols.forEach(pr => { if (pr.facility === old) pr.facility = vals.name; });
+    fac.name = vals.name;
+    remapSelections({ facFrom: old, facTo: vals.name });
+    afterListChange(`Renamed “${old}” to “${vals.name}” — ${n} protocol${n === 1 ? '' : 's'} updated.`);
+  }
+
+  async function addScannerTo(fac) {
+    const sc = await addScannerDialog(fac.name);
+    if (sc) afterListChange(`Added ${entryLabel(sc)} to ${fac.name}.`);
+  }
+
+  async function editScanner(fac, sc) {
+    const vals = await miniDialog({
+      title: `Edit scanner — ${fac.name}`, okLabel: 'Save',
+      fields: [
+        { key: 'model', label: 'Model', value: sc.model },
+        { key: 'room', label: 'Room or unit label (optional)', value: sc.room },
+        { key: 'vendor', label: 'Vendor', type: 'select', options: vendorFieldOptions, value: sc.vendor },
+      ],
+      validate: v => (!v.model ? 'Enter the scanner model.' : (fac.scanners.some(x => x.id !== sc.id && sameText(x.model, v.model) && sameText(x.room, v.room)) ? 'Another scanner in this facility already has that name — use Merge to combine them.' : '')),
+    });
+    if (!vals) return;
+    const oldLabel = entryLabel(sc);
+    const affected = protocolsOfScanner(fac.name, sc);
+    const vendorChanged = vals.vendor !== sc.vendor;
+    affected.forEach(pr => {
+      pr.scannerModel = vals.model;
+      pr.scannerRoom = vals.room;
+      if (vendorChanged && vals.vendor) pr.vendor = vals.vendor;
+    });
+    sc.model = vals.model; sc.room = vals.room; sc.vendor = vals.vendor;
+    remapSelections({ facFrom: fac.name, facTo: fac.name, labelFrom: oldLabel, labelTo: entryLabel(sc) });
+    afterListChange(`Updated ${entryLabel(sc)} — ${affected.length} protocol${affected.length === 1 ? '' : 's'} updated.`);
+  }
+
+  function mergeFacilities(src, dst) {
+    const n = protocolsOfFacility(src.name).length;
+    if (!confirm(`Merge “${src.name}” into “${dst.name}”? Its ${n} protocol${n === 1 ? '' : 's'} and ${src.scanners.length} scanner${src.scanners.length === 1 ? '' : 's'} move to “${dst.name}”, and “${src.name}” is removed from the list.`)) return;
+    protocols.forEach(pr => { if (pr.facility === src.name) pr.facility = dst.name; });
+    src.scanners.forEach(sc => {
+      const same = dst.scanners.find(x => x.model === sc.model && x.room === sc.room);
+      if (same) { if (!same.vendor && sc.vendor) same.vendor = sc.vendor; } else dst.scanners.push(sc);
+    });
+    facilityLists = facilityLists.filter(f => f.id !== src.id);
+    remapSelections({ facFrom: src.name, facTo: dst.name });
+    afterListChange(`Merged “${src.name}” into “${dst.name}” — ${n} protocol${n === 1 ? '' : 's'} updated.`);
+  }
+
+  function mergeScanners(srcFac, src, dstFac, dst) {
+    const affected = protocolsOfScanner(srcFac.name, src);
+    if (!confirm(`Merge ${entryLabel(src)} (${srcFac.name}) into ${entryLabel(dst)} (${dstFac.name})? Its ${affected.length} protocol${affected.length === 1 ? '' : 's'} move to that scanner, and the entry is removed from the list.`)) return;
+    const oldLabel = entryLabel(src);
+    affected.forEach(pr => {
+      pr.facility = dstFac.name;
+      pr.scannerModel = dst.model;
+      pr.scannerRoom = dst.room;
+      if (dst.vendor) pr.vendor = dst.vendor;
+    });
+    if (!dst.vendor && src.vendor) dst.vendor = src.vendor;
+    srcFac.scanners = srcFac.scanners.filter(x => x.id !== src.id);
+    // Remembered selections that pointed at the removed scanner now point at the one it merged into.
+    if (quick.facility === srcFac.name && quick.scanner === oldLabel) { quick.facility = dstFac.name; quick.scanner = entryLabel(dst); saveQuickSelection(); }
+    const last = readLastFormScanner();
+    if (last.facility === srcFac.name && last.scanner === oldLabel) rememberFormScanner(dstFac.name, entryLabel(dst));
+    if (libState.facility === srcFac.name && libState.scanner === oldLabel) { libState.facility = ''; libState.scanner = ''; }
+    afterListChange(`Merged ${oldLabel} into ${entryLabel(dst)} — ${affected.length} protocol${affected.length === 1 ? '' : 's'} updated.`);
+  }
+
+  listsBodyEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const card = btn.closest('.list-card');
+    const fac = card ? findFacById(card.dataset.fid) : null;
+    if (!fac) return;
+    const row = btn.closest('.list-scanner');
+    const sc = row ? fac.scanners.find(x => x.id === row.dataset.sid) : null;
+    switch (btn.dataset.act) {
+      case 'rename-fac': renameFacility(fac); break;
+      case 'add-scanner': addScannerTo(fac); break;
+      case 'edit-scanner': if (sc) editScanner(fac, sc); break;
+      case 'merge-fac': {
+        const target = findFacById(card.querySelector('select[data-role="merge-fac"]').value);
+        if (!target) { listsStatusEl.textContent = 'Pick the facility to merge into first.'; return; }
+        mergeFacilities(fac, target);
+        break;
+      }
+      case 'merge-sc': {
+        const targetId = row.querySelector('select[data-role="merge-sc"]').value;
+        let tFac = null; let tSc = null;
+        facilityLists.forEach(f => f.scanners.forEach(x => { if (x.id === targetId) { tFac = f; tSc = x; } }));
+        if (!tSc) { listsStatusEl.textContent = 'Pick the scanner to merge into first.'; return; }
+        if (sc) mergeScanners(fac, sc, tFac, tSc);
+        break;
+      }
+      default: break;
+    }
+  });
+  document.getElementById('lists-add-facility').addEventListener('click', async () => {
+    const fac = await addFacilityDialog();
+    if (fac) afterListChange(`Added facility “${fac.name}”.`);
   });
 
   // --- Exam Roles tab ---------------------------------------------------------
