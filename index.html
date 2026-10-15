@@ -609,6 +609,11 @@
     cursor: pointer;
   }
   .card-actions button:hover { border-color: var(--accent); color: var(--accent); }
+  /* Move up / down: full-size tap targets for a phone. */
+  .card-move { margin-top: 10px; }
+  .card-move button { flex: 1 1 0; min-height: 44px; font-size: 0.82rem; }
+  .card-move button:disabled { opacity: 0.35; cursor: default; }
+  .card-move button:disabled:hover { border-color: var(--border); color: var(--text); }
   .card-actions button.btn-danger { color: var(--bad); border-color: var(--bad); background: transparent; }
   .card-actions button.btn-danger:hover { background: var(--bad); color: #fff; }
   .card-actions button.load-btn { border-color: var(--accent); color: var(--accent); }
@@ -1640,6 +1645,8 @@
       <button type="button" class="btn-secondary" id="export-btn">Export backup</button>
       <button type="button" class="btn-secondary" id="import-btn">Import backup</button>
       <button type="button" class="btn-secondary" id="csv-open-btn">Import from spreadsheet</button>
+      <button type="button" class="btn-secondary" id="order-reset-btn">Reset to default order</button>
+      <span class="lib-note" id="order-status" style="margin:0;"></span>
       <input type="file" id="import-file-input" accept="application/json" style="display:none">
     </div>
     <div class="lib-note">Everything (protocols, the facility/scanner lists, ACR minimums, TR ranges, the Key/Supporting exam table, NSA rule exceptions, the outcome log) is stored in this browser only — Export backup bundles them so you can move to another computer.</div>
@@ -4073,6 +4080,37 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   let protocols = loadProtocols();
 
   // ---------------------------------------------------------------------
+  // Library order. `protocols` itself stays in creation order (that's the
+  // "default order"); a custom order is a separate list of ids, so
+  // "Reset to default order" can put things back. Unmoved protocols keep their
+  // current place (the first move snapshots the whole current order), and
+  // protocols not in the list (new ones, CSV rows) go to the bottom.
+  // ---------------------------------------------------------------------
+  const PROTOCOL_ORDER_KEY = 'mriq.protocolOrder.v1';
+  function loadProtocolOrder() {
+    try {
+      const v = JSON.parse(localStorage.getItem(PROTOCOL_ORDER_KEY));
+      return Array.isArray(v) ? v.filter(x => typeof x === 'string') : null;
+    } catch (e) { return null; }
+  }
+  let protocolOrder = loadProtocolOrder(); // null = default order
+  function persistProtocolOrder() {
+    try {
+      if (protocolOrder) protocolOrder = protocolOrder.filter(id => protocols.some(pr => pr.id === id));
+      if (protocolOrder && protocolOrder.length) localStorage.setItem(PROTOCOL_ORDER_KEY, JSON.stringify(protocolOrder));
+      else { protocolOrder = null; localStorage.removeItem(PROTOCOL_ORDER_KEY); }
+    } catch (e) {
+      setStorageStatus('Could not save the protocol order to browser storage. Use Export backup so you don’t lose it.');
+    }
+  }
+  function orderedProtocols() {
+    if (!protocolOrder || !protocolOrder.length) return protocols.slice();
+    const pos = new Map(protocolOrder.map((id, i) => [id, i]));
+    const known = protocols.filter(pr => pos.has(pr.id)).sort((a, b) => pos.get(a.id) - pos.get(b.id));
+    return known.concat(protocols.filter(pr => !pos.has(pr.id)));
+  }
+
+  // ---------------------------------------------------------------------
   // Facility & scanner lists. Protocols still carry plain strings (facility,
   // scannerModel, scannerRoom, vendor); these lists are what the dropdowns
   // offer. They're built from the protocols already saved (in memory, nothing
@@ -4912,7 +4950,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   });
 
   function filterProtocols() {
-    return protocols.filter(p => {
+    return orderedProtocols().filter(p => {
       if (libState.region !== 'All' && p.region !== libState.region) return false;
       if (libState.region === 'Spine' && libState.subRegion !== 'All' && (p.subRegion || '') !== libState.subRegion) return false;
       if (libState.scanner && scannerLabel(p) !== libState.scanner) return false;
@@ -5070,7 +5108,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     return `<div class="planning-note-callout"><span class="planning-note-label">📐 Planning note</span>${escapeHtml(p.planningNotes)}</div>`;
   }
 
-  function protocolCardHtml(p) {
+  function protocolCardHtml(p, isFirst, isLast) {
     const notesHtml = p.notes ? `<div class="protocol-notes">${escapeHtml(p.notes)}</div>` : '';
     const regionLabel = p.region + (p.region === 'Spine' && p.subRegion ? ' · ' + p.subRegion : '');
     const thicknessLabel = typeof p.sliceThicknessMm === 'number' ? ` · ${p.sliceThicknessMm}mm` : '';
@@ -5092,6 +5130,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         ${acrTagHtml}
         ${healthScoreHtml(p)}
         ${notesHtml}
+        <div class="card-actions card-move">
+          <button type="button" data-action="move-up" aria-label="Move ${escapeHtml(p.name)} up"${isFirst ? ' disabled' : ''}>▲ Move up</button>
+          <button type="button" data-action="move-down" aria-label="Move ${escapeHtml(p.name)} down"${isLast ? ' disabled' : ''}>▼ Move down</button>
+        </div>
         <div class="card-actions">
           <button type="button" class="load-btn" data-action="load-current">→ Current</button>
           <button type="button" class="load-btn" data-action="load-proposed">→ Proposed</button>
@@ -5211,10 +5253,42 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (list.length === 0) {
       protocolGridEl.innerHTML = `<div class="empty-state">No saved protocols here yet. Use “+ Add Protocol” or save from the Calculator tab.</div>`;
     } else {
-      protocolGridEl.innerHTML = list.map(protocolCardHtml).join('');
+      protocolGridEl.innerHTML = list.map((pr, i) => protocolCardHtml(pr, i === 0, i === list.length - 1)).join('');
     }
     renderCompliancePanel(list);
   }
+
+  // Swaps a protocol with its neighbour among the cards currently shown. Hidden
+  // protocols (other regions/facilities/scanners/search) keep their places.
+  function moveProtocol(id, dir) {
+    const visible = filterProtocols();
+    const i = visible.findIndex(pr => pr.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= visible.length) return;
+    const full = orderedProtocols().map(pr => pr.id);
+    const a = full.indexOf(visible[i].id);
+    const b = full.indexOf(visible[j].id);
+    [full[a], full[b]] = [full[b], full[a]];
+    protocolOrder = full;
+    persistProtocolOrder();
+    renderProtocolGrid();
+    orderStatusEl.textContent = '';
+    const card = protocolGridEl.querySelector(`.protocol-card[data-id="${CSS.escape(id)}"]`);
+    if (card) {
+      const again = card.querySelector(`[data-action="${dir < 0 ? 'move-up' : 'move-down'}"]`);
+      (again && !again.disabled ? again : card).focus?.({ preventScroll: true });
+      card.scrollIntoView({ block: 'nearest' });
+    }
+  }
+  const orderStatusEl = document.getElementById('order-status');
+  document.getElementById('order-reset-btn').addEventListener('click', () => {
+    if (!protocolOrder) { orderStatusEl.textContent = 'Already in the default order.'; return; }
+    if (!confirm('Put every protocol back in its default (creation) order? Your custom order will be lost.')) return;
+    protocolOrder = null;
+    persistProtocolOrder();
+    renderProtocolGrid();
+    orderStatusEl.textContent = 'Back to the default order.';
+  });
 
   protocolGridEl.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action]');
@@ -5256,10 +5330,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       case 'duplicate':
         openModal('add', { ...protocol, id: null, name: protocol.name + ' (Copy)' });
         break;
+      case 'move-up': moveProtocol(id, -1); break;
+      case 'move-down': moveProtocol(id, 1); break;
       case 'delete':
         if (confirm(`Delete "${protocol.name}"? This can’t be undone.`)) {
           protocols = protocols.filter(p => p.id !== id);
           persistProtocols();
+          persistProtocolOrder();
           renderScannerFilterOptions();
           renderFacilityFilterOptions();
           renderProtocolGrid();
@@ -5701,6 +5778,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       nsaExceptions,
       examIndications: examKeyRows,
       facilityLists,
+      // ids of the protocols above, in the order the Library shows them (null = default order)
+      protocolOrder: protocolOrder ? protocolOrder.filter(id => protocols.some(pr => pr.id === id)) : null,
     };
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -5733,6 +5812,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         let incomingExceptions = [];
         let incomingRoles = null;
         let incomingLists = [];
+        let incomingOrder = null;
         if (Array.isArray(parsed)) {
           incomingProtocols = parsed;
         } else if (parsed && typeof parsed === 'object') {
@@ -5742,6 +5822,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           if (Array.isArray(parsed.outcomeLog)) incomingOutcomes = parsed.outcomeLog;
           if (Array.isArray(parsed.nsaExceptions)) incomingExceptions = parsed.nsaExceptions;
           if (parsed.facilityLists) incomingLists = sanitizeFacilityLists(parsed.facilityLists);
+          if (Array.isArray(parsed.protocolOrder)) incomingOrder = parsed.protocolOrder.filter(x => typeof x === 'string');
           if (parsed.examIndications && typeof parsed.examIndications === 'object' && !Array.isArray(parsed.examIndications)) {
             incomingRoles = sanitizeKeyRows(parsed.examIndications, true);
           }
@@ -5798,14 +5879,29 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         if (!confirm(confirmMsg)) return;
 
         if (validProtocols.length) {
-          const imported = validProtocols.map(p => ({
-            ...p,
-            id: makeId(),
-            scannerModel: p.scannerModel || p.scanner || '',
-            scannerRoom: p.scannerRoom || '',
-          }));
+          // Imported protocols get new ids, so the backup's order is carried over by mapping old ids to new.
+          const existingOrder = orderedProtocols().map(pr => pr.id);
+          const idMap = new Map();
+          const imported = validProtocols.map(p => {
+            const newId = makeId();
+            if (typeof p.id === 'string') idMap.set(p.id, newId);
+            return {
+              ...p,
+              id: newId,
+              scannerModel: p.scannerModel || p.scanner || '',
+              scannerRoom: p.scannerRoom || '',
+            };
+          });
           protocols = protocols.concat(imported);
           persistProtocols();
+          // A backup with a saved order: what you already have stays first, then the imported ones in the backup's order.
+          // (A backup without one — an older file — leaves the order alone; the new ones go to the bottom.)
+          if (incomingOrder && incomingOrder.length) {
+            const fromBackup = incomingOrder.map(o => idMap.get(o)).filter(Boolean);
+            const rest = imported.map(pr => pr.id).filter(nid => !fromBackup.includes(nid));
+            protocolOrder = existingOrder.concat(fromBackup, rest);
+            persistProtocolOrder();
+          }
         }
 
         if (validAcr.length) {
