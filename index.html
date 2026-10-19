@@ -5210,7 +5210,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       + `<path d="M140 112 q-14 22 -6 46 M160 112 q14 22 6 46" fill="none" stroke="var(--text-dim)" stroke-width="5" stroke-opacity="0.45" stroke-linecap="round"/>`
       + `<text x="8" y="16" ${PG_LABEL}>anterior ↑</text><text x="70" y="252" ${PG_LABEL}>R</text><text x="224" y="252" ${PG_LABEL}>L</text>`;
   }
-  // Sagittal cervical spine, anterior to the left.
+  // Sagittal cervical spine, anterior to the left. Each body is tilted a
+  // little (lordosis); disc blocks take the average of their two neighbours.
+  const PG_CSPINE_TILT = [-10, -7, -3, 0, 3, 7, 10];
   function pgSagCspine() {
     let s = `<path d="M60 40 Q120 6 230 28" ${PG_ANAT}/><path d="M128 38 L152 58" ${PG_ANAT}/>`
       + `<text x="70" y="30" ${PG_LABEL}>skull base</text>`;
@@ -5219,7 +5221,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       const y = 64 + i * 26, x = 108 - Math.sin((i / 6) * Math.PI) * 10; // gentle lordosis
       const hgt = i === 0 ? 30 : 20;
       const top = i === 0 ? y - 10 : y;
-      s += `<rect x="${x}" y="${top}" width="38" height="${hgt}" rx="4" fill="var(--text-dim)" fill-opacity="0.18" stroke="var(--text-dim)" stroke-width="1.2"/>`;
+      s += `<rect x="${x}" y="${top}" width="38" height="${hgt}" rx="4" fill="var(--text-dim)" fill-opacity="0.18" stroke="var(--text-dim)" stroke-width="1.2" transform="rotate(${PG_CSPINE_TILT[i]} ${x + 19} ${top + hgt / 2})"/>`;
       s += `<text x="${x - 30}" y="${y + 14}" ${PG_LABEL}>${n}</text>`;
       s += `<path d="M${x + 72} ${y + 4} l26 6 l-26 6 Z" fill="var(--text-dim)" fill-opacity="0.25"/>`;
     });
@@ -5243,7 +5245,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     'brain-ax': {
       title: 'Brain · axial',
       planOn: ['SAG', 'COR'],
-      angle: 'On the mid-sag, parallel to the AC-PC line (or the subcallosal line along the underside of the corpus callosum, if that’s your site’s habit).',
+      angle: 'On the mid-sag, parallel to the corpus callosum line (along the underside of the corpus callosum). Use AC-PC only if the order or site asks for it.',
       from: 'Vertex (top of the brain)',
       to: 'Foramen magnum (bottom of the cerebellum)',
       typicalCoverageMm: [120, 160],
@@ -5252,13 +5254,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         'Phase R-L keeps eye-movement ghosts from running back through the brain.',
         'Post-contrast: reuse the pre-contrast geometry so pre and post line up slice for slice.',
       ],
-      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 152, cy: 114, w: 200, h: 168, angle: 8 })
-        + pgRefLine(92, 120, 212, 137, 'AC-PC', 214, 142), 'Axial brain stack planned on a mid-sagittal head'),
+      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 152, cy: 114, w: 200, h: 168, angle: 6 })
+        + pgRefLine(104, 109, 210, 119, 'CC line', 206, 132), 'Axial brain stack planned on a mid-sagittal head'),
     },
     'brain-cor': {
       title: 'Brain · coronal',
       planOn: ['SAG', 'AX'],
-      angle: 'On the mid-sag, perpendicular to the axial (AC-PC) line, so the stack runs roughly parallel to the brainstem.',
+      angle: 'On the mid-sag, perpendicular to the corpus callosum line, so the stack runs roughly parallel to the brainstem.',
       from: 'Frontal pole',
       to: 'Occipital pole',
       typicalCoverageMm: [140, 180],
@@ -5267,8 +5269,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         'Pituitary, IAC or temporal-lobe coronals cover much less. Follow that protocol’s own notes.',
         'Post-contrast: reuse the pre-contrast geometry.',
       ],
-      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 156, cy: 110, w: 170, h: 172, angle: 98 })
-        + pgRefLine(92, 120, 212, 137, 'AC-PC', 214, 142), 'Coronal brain stack planned on a mid-sagittal head'),
+      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 156, cy: 110, w: 170, h: 172, angle: 96 })
+        + pgRefLine(104, 109, 210, 119, 'CC line', 206, 132), 'Coronal brain stack planned on a mid-sagittal head'),
     },
     'brain-sag': {
       title: 'Brain · sagittal',
@@ -5287,7 +5289,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     'brain-3d': {
       title: 'Brain · 3D volume',
       planOn: ['SAG', 'COR'],
-      angle: 'Same angle as your 2D axials (AC-PC) so the reformats come out straight.',
+      angle: 'Same angle as your 2D axials (corpus callosum line) so the reformats come out straight.',
       from: 'Vertex, with a little to spare',
       to: 'Below the foramen magnum, with the whole cerebellum in',
       typicalCoverageMm: [140, 190],
@@ -5296,8 +5298,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         'A 3D volume can wrap in two directions (phase and slice), so check fold-over suppression on both.',
         'Reformat into the planes your site reads after the scan.',
       ],
-      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 152, cy: 118, w: 204, h: 184, angle: 8, lines: 34, slab: true })
-        + pgRefLine(92, 120, 212, 137, 'AC-PC', 214, 142), '3D brain volume planned on a mid-sagittal head'),
+      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 152, cy: 118, w: 204, h: 184, angle: 6, lines: 34, slab: true })
+        + pgRefLine(104, 109, 210, 119, 'CC line', 206, 132), '3D brain volume planned on a mid-sagittal head'),
     },
     'cspine-sag': {
       title: 'C-spine · sagittal',
@@ -5318,18 +5320,20 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     'cspine-ax': {
       title: 'C-spine · axial',
       planOn: ['SAG', 'COR'],
-      angle: 'Perpendicular to the cord on the sag. Use one straight stack, or blocks angled parallel to each disc (C2-3 to C7-T1), per site preference.',
-      from: 'C2',
-      to: 'T1',
+      angle: 'One block per disc, each angled parallel to its disc space (C2-3 through C7-T1) and roughly perpendicular to the cord. Use one straight stack only if the order asks for it.',
+      from: 'C2-3 disc',
+      to: 'C7-T1 disc',
+      coverageNote: 'With disc blocks this is total slice coverage, not one continuous stretch.',
       typicalCoverageMm: [90, 130],
       tips: [
         'On the coronal, check the stack isn’t tilted left-right.',
-        'Per-disc blocks: aim each block parallel to its disc space and cover the foramina on both sides.',
+        'Center each block on its disc and make it wide enough to cover the foramina on both sides.',
+        'If the order asks for a straight stack (for example cord or trauma), plan one block perpendicular to the cord from C2 to T1.',
         'An anterior sat band over the throat cuts swallowing artifact.',
       ],
       diagram: () => pgSvg(pgSagCspine()
         + `<rect x="18" y="58" width="36" height="186" fill="var(--text-dim)" fill-opacity="0.12" stroke="var(--text-dim)" stroke-dasharray="3 3"/><text x="10" y="54" ${PG_LABEL}>sat band</text>`
-        + pgStack({ cx: 158, cy: 150, w: 120, h: 180, angle: 0, lines: 14 })
+        + PG_CSPINE_TILT.slice(1).map((t, i) => pgStack({ cx: 156, cy: 64 + i * 26 + 23, w: 110, h: 10, angle: (t + PG_CSPINE_TILT[i]) / 2, lines: 4 })).join('')
         + pgRefLine(164, 48, 164, 250, '', 0, 0), 'Axial C-spine stack planned on a sagittal spine'),
     },
   };
@@ -5382,7 +5386,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const [lo, hi] = guide.typicalCoverageMm;
     const band = mm < lo ? ['bad', 'Below typical'] : mm > hi ? ['warn', 'Above typical'] : ['good', 'OK'];
     return `<div class="pg-coverage"><span class="pg-badge ${band[0]}">${band[1]}</span> `
-      + `${n} × ${t} mm = <strong>${mm} mm</strong> <span class="dim">· typical ${lo}–${hi} mm · gap not included</span></div>`;
+      + `${n} × ${t} mm = <strong>${mm} mm</strong> <span class="dim">· typical ${lo}–${hi} mm · gap not included${guide.coverageNote ? ' · ' + escapeHtml(guide.coverageNote) : ''}</span></div>`;
   }
 
   const planGuideOverlay = document.getElementById('planguide-overlay');
