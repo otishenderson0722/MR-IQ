@@ -1122,6 +1122,33 @@
     font-size: 0.88rem;
   }
   .tr-range-row .tr-range-sep { color: var(--text-dim); font-size: 0.8rem; }
+
+  /* Slice planning guide sheet */
+  .pg-modal { max-width: 440px; }
+  .pg-sub { font-size: 0.86rem; color: var(--text-dim); margin: -6px 0 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: space-between; }
+  .pg-chips { display: inline-flex; gap: 4px; align-items: center; }
+  .pg-chip { background: rgba(79, 168, 224, 0.15); border: 1px solid var(--accent); color: var(--accent); border-radius: 999px; padding: 1px 8px; font-weight: 700; font-size: 0.74rem; }
+  .pg-diagram { display: block; width: 100%; max-width: 340px; height: auto; margin: 10px auto; background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; }
+  .pg-steps { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; margin: 8px 0 10px; font-size: 0.88rem; }
+  .pg-steps dt { color: var(--accent); font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; padding-top: 2px; }
+  .pg-steps dd { margin: 0; }
+  .pg-coverage { font-size: 0.86rem; background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .pg-coverage.muted, .pg-coverage .dim { color: var(--text-dim); }
+  .pg-badge { font-size: 0.74rem; font-weight: 700; border-radius: 999px; padding: 1px 8px; border: 1px solid; }
+  .pg-badge.good { color: var(--good); border-color: var(--good); }
+  .pg-badge.warn { color: var(--warn-border); border-color: var(--warn-border); }
+  .pg-badge.bad { color: var(--bad); border-color: var(--bad); }
+  .pg-tips { margin-top: 10px; font-size: 0.86rem; }
+  .pg-tips summary { cursor: pointer; min-height: 36px; display: flex; align-items: center; color: var(--accent); font-weight: 600; }
+  .pg-tips ul { margin: 4px 0 0; padding-left: 18px; }
+  .pg-tips li { margin-bottom: 4px; }
+  .pg-links { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 0.86rem; }
+  .pg-links-label { color: var(--text-dim); font-size: 0.76rem; font-weight: 700; text-transform: uppercase; }
+  .pg-links a { color: var(--accent); }
+  .pg-foot { margin-top: 10px; }
+  .planning-note-callout + .pg-diagram { margin-top: 12px; }
+  .quick-plan-btn { margin-top: 4px; min-height: 36px; background: var(--panel-2); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 4px 12px; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+  .card-actions button.plan-btn { border-color: var(--accent); color: var(--accent); }
 </style>
 </head>
 <body>
@@ -1377,7 +1404,7 @@
           </div>
           <div class="field">
             <label for="cur-te">TE (ms, optional)</label>
-            <input type="number" id="cur-te" min="1" step="1">
+            <input type="number" id="cur-te" min="1" step="any">
           </div>
           <div class="field">
             <label for="cur-tr">TR (ms)</label>
@@ -1563,7 +1590,7 @@
         </div>
         <div class="field">
           <label for="prop-te">TE (ms, optional)</label>
-          <input type="number" id="prop-te" min="1" step="1">
+          <input type="number" id="prop-te" min="1" step="any">
         </div>
         <div class="field">
           <label for="prop-tr">TR (ms)</label>
@@ -1913,7 +1940,7 @@
       </div>
       <div class="field">
         <label for="pf-te">TE (ms, optional)</label>
-        <input type="number" id="pf-te" min="1" step="1">
+        <input type="number" id="pf-te" min="1" step="any">
       </div>
       <div class="field">
         <label for="pf-nsa" id="pf-nsa-label">NSA</label>
@@ -2034,6 +2061,14 @@
       <div class="notes-field">
         <label for="pf-planning-notes">Planning notes (optional)</label>
         <textarea id="pf-planning-notes" rows="2" placeholder="Site-specific slice angling/positioning guidance — e.g. &quot;angle axials to the corpus callosum, not AC-PC&quot;. Shown prominently on this protocol's card — plain text only, doesn't affect any calculation."></textarea>
+      </div>
+      <div class="field">
+        <label for="pf-planning-guide">Planning guide</label>
+        <select id="pf-planning-guide"></select>
+      </div>
+      <div class="notes-field">
+        <label for="pf-learn-links">Learn more links (optional)</label>
+        <textarea id="pf-learn-links" rows="2" placeholder="One per line: Title | https://… — shown at the bottom of the planning guide."></textarea>
       </div>
       <div class="notes-field">
         <label for="pf-notes">Notes</label>
@@ -2286,6 +2321,19 @@
     <div class="modal-footer" style="justify-content: space-between;">
       <button type="button" class="btn-secondary" id="converter-apply-current-btn">Apply to Current →</button>
       <button type="button" class="btn-primary" id="converter-apply-proposed-btn">Apply to Proposed →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="planguide-overlay">
+  <div class="modal pg-modal" role="dialog" aria-modal="true" aria-labelledby="planguide-title">
+    <div class="modal-header">
+      <h3 id="planguide-title">Planning</h3>
+      <button type="button" class="modal-close" id="planguide-close" aria-label="Close">&times;</button>
+    </div>
+    <div id="planguide-body"></div>
+    <div class="modal-footer">
+      <button type="button" class="btn-secondary" id="planguide-done">← Back</button>
     </div>
   </div>
 </div>
@@ -5108,6 +5156,263 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     return `<div class="planning-note-callout"><span class="planning-note-label">📐 Planning note</span>${escapeHtml(p.planningNotes)}</div>`;
   }
 
+  // ---------------------------------------------------------------------
+  // Slice planning guides — generic "how to plan this" sheets (reference
+  // view, angle line, coverage landmarks, schematic diagram) matched to a
+  // protocol by region + slice orientation, or picked on the protocol.
+  // Text and diagrams are our own teaching schematics, not to scale. A
+  // protocol's own planningNotes always show above the generic guide.
+  // ---------------------------------------------------------------------
+  const PG_ANAT = 'fill="none" stroke="var(--text-dim)" stroke-width="1.6"';
+  const PG_LABEL = 'font-size="10" fill="var(--text-dim)" font-family="inherit"';
+
+  // A stack of parallel slice lines inside its coverage box. Local frame:
+  // lines run horizontally (length w), stacked down the coverage (height h),
+  // then the group is rotated `angle` degrees about (cx, cy).
+  function pgStack({ cx, cy, w, h, angle, lines = 11, slab = false }) {
+    const x0 = -w / 2, y0 = -h / 2;
+    let out = `<g transform="translate(${cx} ${cy}) rotate(${angle})">`;
+    out += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="var(--accent)" fill-opacity="${slab ? 0.22 : 0.08}" stroke="var(--accent)" stroke-width="1.4"/>`;
+    for (let i = 0; i < lines; i++) {
+      const y = y0 + (h * i) / (lines - 1);
+      out += `<line x1="${x0}" y1="${y}" x2="${x0 + w}" y2="${y}" stroke="var(--accent)" stroke-width="${slab ? 0.6 : 1.1}" stroke-opacity="0.9"/>`;
+    }
+    return out + '</g>';
+  }
+  function pgRefLine(x1, y1, x2, y2, label, lx, ly) {
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--warn-border)" stroke-width="2" stroke-dasharray="6 4"/>`
+      + (label ? `<text x="${lx}" y="${ly}" font-size="10" font-weight="700" fill="var(--warn-border)">${label}</text>` : '');
+  }
+  function pgSvg(inner, caption) {
+    return `<svg class="pg-diagram" viewBox="0 0 300 260" role="img" aria-label="${escapeHtml(caption)}" xmlns="http://www.w3.org/2000/svg">${inner}`
+      + `<text x="296" y="256" text-anchor="end" font-size="8" fill="var(--text-dim)" opacity="0.7">schematic · not to scale</text></svg>`;
+  }
+
+  // Mid-sagittal head, anterior (face) to the left.
+  function pgSagHead() {
+    return `<ellipse cx="152" cy="112" rx="94" ry="84" ${PG_ANAT}/>`
+      + `<path d="M64 128 Q56 140 50 152 Q60 158 58 166 Q64 172 62 180 Q66 194 82 204 Q98 214 112 238" ${PG_ANAT}/>`
+      + `<path d="M222 172 Q212 200 206 240" ${PG_ANAT}/>`
+      + `<ellipse cx="156" cy="106" rx="80" ry="66" fill="none" stroke="var(--text-dim)" stroke-width="1" stroke-opacity="0.6"/>`
+      + `<path d="M112 104 Q150 74 196 104 Q186 98 150 92 Q124 94 118 108 Z" fill="var(--text-dim)" fill-opacity="0.45"/>`
+      + `<path d="M162 128 Q168 162 170 200" fill="none" stroke="var(--text-dim)" stroke-opacity="0.5" stroke-width="13" stroke-linecap="round"/>`
+      + `<ellipse cx="200" cy="154" rx="27" ry="17" fill="var(--text-dim)" fill-opacity="0.2" stroke="var(--text-dim)" stroke-width="1"/>`
+      + `<text x="120" y="88" ${PG_LABEL}>corpus callosum</text>`
+      + `<text x="178" y="214" ${PG_LABEL}>foramen magnum</text>`
+      + `<text x="138" y="22" ${PG_LABEL}>vertex</text>`;
+  }
+  // Axial head, anterior (nose) up, radiological display.
+  function pgAxHead() {
+    return `<ellipse cx="150" cy="134" rx="82" ry="102" ${PG_ANAT}/>`
+      + `<path d="M138 34 Q150 14 162 34" ${PG_ANAT}/>`
+      + `<path d="M68 124 q-10 10 0 22 M232 124 q10 10 0 22" ${PG_ANAT}/>`
+      + `<ellipse cx="150" cy="136" rx="70" ry="90" fill="none" stroke="var(--text-dim)" stroke-width="1" stroke-opacity="0.6"/>`
+      + `<path d="M140 112 q-14 22 -6 46 M160 112 q14 22 6 46" fill="none" stroke="var(--text-dim)" stroke-width="5" stroke-opacity="0.45" stroke-linecap="round"/>`
+      + `<text x="8" y="16" ${PG_LABEL}>anterior ↑</text><text x="70" y="252" ${PG_LABEL}>R</text><text x="224" y="252" ${PG_LABEL}>L</text>`;
+  }
+  // Sagittal cervical spine, anterior to the left.
+  function pgSagCspine() {
+    let s = `<path d="M60 40 Q120 6 230 28" ${PG_ANAT}/><path d="M128 38 L152 58" ${PG_ANAT}/>`
+      + `<text x="70" y="30" ${PG_LABEL}>skull base</text>`;
+    const names = ['C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'T1'];
+    names.forEach((n, i) => {
+      const y = 64 + i * 26, x = 108 - Math.sin((i / 6) * Math.PI) * 10; // gentle lordosis
+      const hgt = i === 0 ? 30 : 20;
+      const top = i === 0 ? y - 10 : y;
+      s += `<rect x="${x}" y="${top}" width="38" height="${hgt}" rx="4" fill="var(--text-dim)" fill-opacity="0.18" stroke="var(--text-dim)" stroke-width="1.2"/>`;
+      s += `<text x="${x - 30}" y="${y + 14}" ${PG_LABEL}>${n}</text>`;
+      s += `<path d="M${x + 72} ${y + 4} l26 6 l-26 6 Z" fill="var(--text-dim)" fill-opacity="0.25"/>`;
+    });
+    s += `<path d="M164 48 Q156 140 164 250" fill="none" stroke="var(--text-dim)" stroke-opacity="0.5" stroke-width="12" stroke-linecap="round"/>`
+      + `<text x="226" y="244" ${PG_LABEL}>cord</text>`;
+    return s;
+  }
+  // Axial cervical vertebra, anterior up.
+  function pgAxCspine() {
+    return `<ellipse cx="150" cy="78" rx="44" ry="28" fill="var(--text-dim)" fill-opacity="0.18" stroke="var(--text-dim)" stroke-width="1.2"/>`
+      + `<path d="M112 96 L104 136 Q110 200 150 226 Q190 200 196 136 L188 96" ${PG_ANAT}/>`
+      + `<ellipse cx="150" cy="148" rx="30" ry="24" fill="none" stroke="var(--text-dim)" stroke-width="1" stroke-opacity="0.7"/>`
+      + `<ellipse cx="150" cy="148" rx="17" ry="11" fill="var(--text-dim)" fill-opacity="0.45"/>`
+      + `<ellipse cx="80" cy="122" rx="12" ry="9" ${PG_ANAT}/><ellipse cx="220" cy="122" rx="12" ry="9" ${PG_ANAT}/>`
+      + `<text x="38" y="150" ${PG_LABEL}>foramen</text><text x="214" y="150" ${PG_LABEL}>foramen</text>`
+      + `<text x="132" y="62" ${PG_LABEL}>body</text><text x="166" y="176" ${PG_LABEL}>cord</text>`
+      + `<text x="8" y="16" ${PG_LABEL}>anterior ↑</text>`;
+  }
+
+  const PLANNING_GUIDES = {
+    'brain-ax': {
+      title: 'Brain · axial',
+      planOn: ['SAG', 'COR'],
+      angle: 'On the mid-sag, parallel to the AC-PC line (or the subcallosal line along the underside of the corpus callosum, if that’s your site’s habit).',
+      from: 'Vertex (top of the brain)',
+      to: 'Foramen magnum (bottom of the cerebellum)',
+      typicalCoverageMm: [120, 160],
+      tips: [
+        'On the coronal, level the stack so both hemispheres are cut at the same height (perpendicular to the midline).',
+        'Phase R-L keeps eye-movement ghosts from running back through the brain.',
+        'Post-contrast: reuse the pre-contrast geometry so pre and post line up slice for slice.',
+      ],
+      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 152, cy: 114, w: 200, h: 168, angle: 8 })
+        + pgRefLine(92, 120, 212, 137, 'AC-PC', 214, 142), 'Axial brain stack planned on a mid-sagittal head'),
+    },
+    'brain-cor': {
+      title: 'Brain · coronal',
+      planOn: ['SAG', 'AX'],
+      angle: 'On the mid-sag, perpendicular to the axial (AC-PC) line, so the stack runs roughly parallel to the brainstem.',
+      from: 'Frontal pole',
+      to: 'Occipital pole',
+      typicalCoverageMm: [140, 180],
+      tips: [
+        'On the axial, set the stack perpendicular to the midline so left and right cut at the same level.',
+        'Pituitary, IAC or temporal-lobe coronals cover much less. Follow that protocol’s own notes.',
+        'Post-contrast: reuse the pre-contrast geometry.',
+      ],
+      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 156, cy: 110, w: 170, h: 172, angle: 98 })
+        + pgRefLine(92, 120, 212, 137, 'AC-PC', 214, 142), 'Coronal brain stack planned on a mid-sagittal head'),
+    },
+    'brain-sag': {
+      title: 'Brain · sagittal',
+      planOn: ['AX', 'COR'],
+      angle: 'Parallel to the midline (falx) on both the axial and the coronal.',
+      from: 'Right lateral edge of the brain',
+      to: 'Left lateral edge of the brain',
+      typicalCoverageMm: [120, 150],
+      tips: [
+        'Put the middle slice exactly on the midline. With an odd number of slices one slice lands on it, giving a true mid-sag (corpus callosum, pituitary and brainstem in one image).',
+        'If the head is turned or tilted, follow the falx, not the localizer grid.',
+      ],
+      diagram: () => pgSvg(pgAxHead() + pgStack({ cx: 150, cy: 136, w: 190, h: 140, angle: 90, lines: 13 })
+        + pgRefLine(150, 40, 150, 232, 'midline', 156, 50), 'Sagittal brain stack planned on an axial head'),
+    },
+    'brain-3d': {
+      title: 'Brain · 3D volume',
+      planOn: ['SAG', 'COR'],
+      angle: 'Same angle as your 2D axials (AC-PC) so the reformats come out straight.',
+      from: 'Vertex, with a little to spare',
+      to: 'Below the foramen magnum, with the whole cerebellum in',
+      typicalCoverageMm: [140, 190],
+      tips: [
+        'The outer few slices of a 3D slab are often weaker (slab-edge), so leave a margin above and below.',
+        'A 3D volume can wrap in two directions (phase and slice), so check fold-over suppression on both.',
+        'Reformat into the planes your site reads after the scan.',
+      ],
+      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 152, cy: 118, w: 204, h: 184, angle: 8, lines: 34, slab: true })
+        + pgRefLine(92, 120, 212, 137, 'AC-PC', 214, 142), '3D brain volume planned on a mid-sagittal head'),
+    },
+    'cspine-sag': {
+      title: 'C-spine · sagittal',
+      planOn: ['AX', 'COR'],
+      angle: 'Parallel to the cord on the coronal. On the axial, line up with the midline of the vertebral body and spinous process.',
+      from: 'Right neural foramen',
+      to: 'Left neural foramen',
+      typicalCoverageMm: [40, 60],
+      tips: [
+        'FOV top at the posterior fossa / clivus and bottom around T2-T3, so you can count down from C2.',
+        'Put the middle slice through the center of the cord. An odd slice count gives you one true midline slice.',
+        'If the neck is rotated, angle to the vertebral body on the axial, not to the head.',
+        'An anterior sat band over the throat cuts swallowing artifact. Keep it off the vertebral bodies.',
+      ],
+      diagram: () => pgSvg(pgAxCspine() + pgStack({ cx: 150, cy: 140, w: 210, h: 156, angle: 90, lines: 11 })
+        + pgRefLine(150, 40, 150, 236, 'midline', 156, 36), 'Sagittal C-spine stack planned on an axial vertebra'),
+    },
+    'cspine-ax': {
+      title: 'C-spine · axial',
+      planOn: ['SAG', 'COR'],
+      angle: 'Perpendicular to the cord on the sag. Use one straight stack, or blocks angled parallel to each disc (C2-3 to C7-T1), per site preference.',
+      from: 'C2',
+      to: 'T1',
+      typicalCoverageMm: [90, 130],
+      tips: [
+        'On the coronal, check the stack isn’t tilted left-right.',
+        'Per-disc blocks: aim each block parallel to its disc space and cover the foramina on both sides.',
+        'An anterior sat band over the throat cuts swallowing artifact.',
+      ],
+      diagram: () => pgSvg(pgSagCspine()
+        + `<rect x="18" y="58" width="36" height="186" fill="var(--text-dim)" fill-opacity="0.12" stroke="var(--text-dim)" stroke-dasharray="3 3"/><text x="10" y="54" ${PG_LABEL}>sat band</text>`
+        + pgStack({ cx: 158, cy: 150, w: 120, h: 180, angle: 0, lines: 14 })
+        + pgRefLine(164, 48, 164, 250, '', 0, 0), 'Axial C-spine stack planned on a sagittal spine'),
+    },
+  };
+
+  function guessOrientation(p) {
+    if (p.sliceOrientation) return p.sliceOrientation;
+    const n = String(p.name || '');
+    if (/\bsag/i.test(n)) return 'sagittal';
+    if (/\bcor/i.test(n)) return 'coronal';
+    if (/\bax/i.test(n)) return 'axial';
+    return '';
+  }
+  function autoPlanningGuideId(p) {
+    const orient = guessOrientation(p);
+    if (p.region === 'Brain') {
+      if (/\b3D\b/i.test(p.sequenceType || '') || /\b3D\b/i.test(p.name || '')) return 'brain-3d';
+      return { axial: 'brain-ax', coronal: 'brain-cor', sagittal: 'brain-sag' }[orient] || null;
+    }
+    const isCspine = p.region === 'Spine' && (p.subRegion === 'C-spine' || /\bc[- ]?spine\b|cervical/i.test(p.name || ''));
+    if (isCspine) return { axial: 'cspine-ax', sagittal: 'cspine-sag' }[orient] || null;
+    return null;
+  }
+  // planningGuideId: '' / missing = Auto, 'none' = hide, otherwise a guide id.
+  function planningGuideFor(p) {
+    if (!p || p.planningGuideId === 'none') return null;
+    const id = PLANNING_GUIDES[p.planningGuideId] ? p.planningGuideId : autoPlanningGuideId(p);
+    return id ? { id, ...PLANNING_GUIDES[id] } : null;
+  }
+
+  // "Title | https://…" per line (or a bare URL). Only http(s) links are kept.
+  function parseLearnLinks(text) {
+    return String(text || '').split('\n').map(line => {
+      const parts = line.split('|').map(s => s.trim());
+      const url = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+      if (!/^https?:\/\/\S+$/i.test(url)) return null;
+      const title = parts.length > 1 ? parts.slice(0, -1).join(' | ') : url;
+      return { title, url };
+    }).filter(Boolean);
+  }
+  function learnLinksToText(links) {
+    return (Array.isArray(links) ? links : []).map(l => (l.title && l.title !== l.url ? `${l.title} | ${l.url}` : l.url)).join('\n');
+  }
+
+  function coverageCheckHtml(p, guide) {
+    const n = Number(p.slices), t = Number(p.sliceThicknessMm);
+    if (!(Number.isFinite(n) && n > 0 && Number.isFinite(t) && t > 0)) {
+      return `<div class="pg-coverage muted">Add slices and slice thickness to this protocol to check coverage.</div>`;
+    }
+    const mm = Math.round(n * t);
+    const [lo, hi] = guide.typicalCoverageMm;
+    const band = mm < lo ? ['bad', 'Below typical'] : mm > hi ? ['warn', 'Above typical'] : ['good', 'OK'];
+    return `<div class="pg-coverage"><span class="pg-badge ${band[0]}">${band[1]}</span> `
+      + `${n} × ${t} mm = <strong>${mm} mm</strong> <span class="dim">· typical ${lo}–${hi} mm · gap not included</span></div>`;
+  }
+
+  const planGuideOverlay = document.getElementById('planguide-overlay');
+  function openPlanningGuide(p) {
+    const guide = planningGuideFor(p);
+    if (!guide) return;
+    document.getElementById('planguide-title').textContent = p.name;
+    const links = Array.isArray(p.learnLinks) ? p.learnLinks.filter(l => l && /^https?:\/\//i.test(l.url || '')) : [];
+    document.getElementById('planguide-body').innerHTML = `
+      <div class="pg-sub">${escapeHtml(guide.title)} <span class="pg-chips">Plan on ${guide.planOn.map(v => `<span class="pg-chip">${v}</span>`).join('')}</span></div>
+      ${p.planningNotes ? `<div class="planning-note-callout"><span class="planning-note-label">📐 Site notes — these win over the guide below</span>${escapeHtml(p.planningNotes)}</div>` : ''}
+      ${guide.diagram()}
+      <dl class="pg-steps">
+        <dt>Angle</dt><dd>${escapeHtml(guide.angle)}</dd>
+        <dt>From</dt><dd>${escapeHtml(guide.from)}</dd>
+        <dt>To</dt><dd>${escapeHtml(guide.to)}</dd>
+      </dl>
+      ${coverageCheckHtml(p, guide)}
+      <details class="pg-tips"><summary>Tips (${guide.tips.length})</summary><ul>${guide.tips.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul></details>
+      ${links.length ? `<div class="pg-links"><div class="pg-links-label">Learn more</div>${links.map(l => `<a href="${escapeHtml(l.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(l.title || l.url)} ↗</a>`).join('')}</div>` : ''}
+      <div class="lib-note pg-foot">Generic guide. Always follow your site’s protocol and the radiologist’s request.</div>`;
+    planGuideOverlay.classList.add('show');
+    document.getElementById('planguide-close').focus();
+  }
+  function closePlanningGuide() { planGuideOverlay.classList.remove('show'); }
+  document.getElementById('planguide-close').addEventListener('click', closePlanningGuide);
+  document.getElementById('planguide-done').addEventListener('click', closePlanningGuide);
+  planGuideOverlay.addEventListener('click', (e) => { if (e.target === planGuideOverlay) closePlanningGuide(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && planGuideOverlay.classList.contains('show')) closePlanningGuide(); });
+
   function protocolCardHtml(p, isFirst, isLast) {
     const notesHtml = p.notes ? `<div class="protocol-notes">${escapeHtml(p.notes)}</div>` : '';
     const regionLabel = p.region + (p.region === 'Spine' && p.subRegion ? ' · ' + p.subRegion : '');
@@ -5139,6 +5444,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           <button type="button" class="load-btn" data-action="load-proposed">→ Proposed</button>
           <button type="button" class="load-btn" data-action="optimize">⚡ Optimize</button>
           <button type="button" data-action="convert">🧮 Convert</button>
+          ${planningGuideFor(p) ? '<button type="button" class="plan-btn" data-action="plan">📐 Plan</button>' : ''}
           <button type="button" data-action="edit">Edit</button>
           <button type="button" data-action="duplicate">Duplicate</button>
           <button type="button" class="btn-danger" data-action="delete">Delete</button>
@@ -5324,6 +5630,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       case 'convert':
         openConverterModal(protocol);
         break;
+      case 'plan':
+        openPlanningGuide(protocol);
+        break;
       case 'edit':
         openModal('edit', protocol);
         break;
@@ -5460,7 +5769,25 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     acrHint: document.getElementById('pf-acr-hint'),
     notes: document.getElementById('pf-notes'),
     planningNotes: document.getElementById('pf-planning-notes'),
+    planningGuide: document.getElementById('pf-planning-guide'),
+    learnLinks: document.getElementById('pf-learn-links'),
   };
+
+  // Planning guide picker: Auto shows which guide it would match right now.
+  function refreshPlanningGuideOptions() {
+    const auto = autoPlanningGuideId({
+      name: pf.name.value, region: pf.region.value, subRegion: pf.region.value === 'Spine' ? pf.subRegion.value : '',
+      sliceOrientation: pf.vendor.value === 'Philips' ? pf.sliceOrientation.value : '', sequenceType: modalSequenceType,
+    });
+    const keep = pf.planningGuide.value;
+    pf.planningGuide.innerHTML = `<option value="">Auto${auto ? ' (' + escapeHtml(PLANNING_GUIDES[auto].title) + ')' : ' (no match)'}</option>`
+      + Object.entries(PLANNING_GUIDES).map(([id, g]) => `<option value="${id}">${escapeHtml(g.title)}</option>`).join('')
+      + '<option value="none">None (hide)</option>';
+    pf.planningGuide.value = keep;
+  }
+  ['name', 'region', 'subRegion', 'vendor', 'sliceOrientation'].forEach(k => {
+    pf[k].addEventListener(k === 'name' ? 'input' : 'change', refreshPlanningGuideOptions);
+  });
 
   restrictNsaKeys(pf.nsa);
   pf.nsa.addEventListener('input', () => setNsaHint(document.getElementById('pf-nsa-hint'), pf.nsa.value));
@@ -5598,6 +5925,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     pf.consoleTime.value = Number.isFinite(prefill?.consoleTimeSec) && prefill.consoleTimeSec > 0 ? formatConsoleTime(prefill.consoleTimeSec) : '';
     pf.notes.value = prefill?.notes || '';
     pf.planningNotes.value = prefill?.planningNotes || '';
+    pf.learnLinks.value = learnLinksToText(prefill?.learnLinks);
+    refreshPlanningGuideOptions();
+    pf.planningGuide.value = prefill?.planningGuideId && (PLANNING_GUIDES[prefill.planningGuideId] || prefill.planningGuideId === 'none') ? prefill.planningGuideId : '';
     toggleSubregionField();
     refreshAcrSequenceOptions();
     pf.acrSequence.value = prefill?.acrSequenceId || '';
@@ -5685,6 +6015,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       acrSequenceId: pf.acrSequence.value || '',
       notes: pf.notes.value.trim(),
       planningNotes: pf.planningNotes.value.trim(),
+      planningGuideId: pf.planningGuide.value || '',
+      learnLinks: parseLearnLinks(pf.learnLinks.value),
       sequenceType: modalSequenceType,
       roleCategory: modalRoleCategory,
       updatedAt: new Date().toISOString(),
@@ -8369,6 +8701,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
   const quickUniq = (list) => Array.from(new Set(list)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   const quickProtocol = () => protocols.find(p => p.id === quick.protocolId) || null;
+  quickEls.planning.addEventListener('click', (e) => {
+    if (e.target.closest('[data-action="open-plan-guide"]')) openPlanningGuide(quickProtocol());
+  });
   function quickScannerProtocols() {
     return protocols
       .filter(p => p.facility === quick.facility && scannerLabel(p) === quick.scanner)
@@ -8422,7 +8757,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // Everything below the buttons for the currently loaded protocol.
   function renderQuickProtocolDetail() {
     const p = quickProtocol();
-    quickEls.planning.innerHTML = p ? planningNoteHtml(p) : '';
+    quickEls.planning.innerHTML = p
+      ? planningNoteHtml(p) + (planningGuideFor(p) ? '<button type="button" class="quick-plan-btn" data-action="open-plan-guide">📐 How to plan</button>' : '')
+      : '';
     renderQuickSeq();
     renderQuickRole();
     renderQuickFields();
