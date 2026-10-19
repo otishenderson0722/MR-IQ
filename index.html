@@ -5163,8 +5163,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // Text and diagrams are our own teaching schematics, not to scale. A
   // protocol's own planningNotes always show above the generic guide.
   // ---------------------------------------------------------------------
-  const PG_ANAT = 'fill="none" stroke="var(--text-dim)" stroke-width="1.6"';
-  const PG_LABEL = 'font-size="10" fill="var(--text-dim)" font-family="inherit"';
+  // Diagrams are drawn to read like a console localizer: grayscale anatomy
+  // on black (T1 look for the brain, T2 look for the C-spine), with the
+  // slice stack and reference line drawn over it. Original drawings, no
+  // patient images. Fixed grays on purpose: an MR image is gray in any theme.
+  const PG_LABEL = 'font-size="10" font-weight="600" fill="#f2f5f7" stroke="#000" stroke-width="3" paint-order="stroke" font-family="inherit"';
 
   // A stack of parallel slice lines inside its coverage box. Local frame:
   // lines run horizontally (length w), stacked down the coverage (height h),
@@ -5172,73 +5175,119 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   function pgStack({ cx, cy, w, h, angle, lines = 11, slab = false }) {
     const x0 = -w / 2, y0 = -h / 2;
     let out = `<g transform="translate(${cx} ${cy}) rotate(${angle})">`;
-    out += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="var(--accent)" fill-opacity="${slab ? 0.22 : 0.08}" stroke="var(--accent)" stroke-width="1.4"/>`;
+    out += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#4fc3ff" fill-opacity="${slab ? 0.2 : 0.07}" stroke="#4fc3ff" stroke-width="1.5"/>`;
     for (let i = 0; i < lines; i++) {
       const y = y0 + (h * i) / (lines - 1);
-      out += `<line x1="${x0}" y1="${y}" x2="${x0 + w}" y2="${y}" stroke="var(--accent)" stroke-width="${slab ? 0.6 : 1.1}" stroke-opacity="0.9"/>`;
+      out += `<line x1="${x0}" y1="${y}" x2="${x0 + w}" y2="${y}" stroke="#4fc3ff" stroke-width="${slab ? 0.6 : 1.1}" stroke-opacity="0.95"/>`;
     }
     return out + '</g>';
   }
   function pgRefLine(x1, y1, x2, y2, label, lx, ly) {
-    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="var(--warn-border)" stroke-width="2" stroke-dasharray="6 4"/>`
-      + (label ? `<text x="${lx}" y="${ly}" font-size="10" font-weight="700" fill="var(--warn-border)">${label}</text>` : '');
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#ffa94d" stroke-width="2.2" stroke-dasharray="6 4"/>`
+      + (label ? `<text x="${lx}" y="${ly}" font-size="10" font-weight="700" fill="#ffa94d" stroke="#000" stroke-width="3" paint-order="stroke">${label}</text>` : '');
   }
   function pgSvg(inner, caption) {
-    return `<svg class="pg-diagram" viewBox="0 0 300 260" role="img" aria-label="${escapeHtml(caption)}" xmlns="http://www.w3.org/2000/svg">${inner}`
-      + `<text x="296" y="256" text-anchor="end" font-size="8" fill="var(--text-dim)" opacity="0.7">schematic · not to scale</text></svg>`;
+    return `<svg class="pg-diagram" viewBox="0 0 300 260" role="img" aria-label="${escapeHtml(caption)}" xmlns="http://www.w3.org/2000/svg">`
+      + `<rect width="300" height="260" fill="#000"/>${inner}`
+      + `<text x="294" y="254" text-anchor="end" font-size="8" fill="#8b98a5">schematic · not to scale</text></svg>`;
   }
-
-  // Mid-sagittal head, anterior (face) to the left.
-  function pgSagHead() {
-    return `<ellipse cx="152" cy="112" rx="94" ry="84" ${PG_ANAT}/>`
-      + `<path d="M64 128 Q56 140 50 152 Q60 158 58 166 Q64 172 62 180 Q66 194 82 204 Q98 214 112 238" ${PG_ANAT}/>`
-      + `<path d="M222 172 Q212 200 206 240" ${PG_ANAT}/>`
-      + `<ellipse cx="156" cy="106" rx="80" ry="66" fill="none" stroke="var(--text-dim)" stroke-width="1" stroke-opacity="0.6"/>`
-      + `<path d="M112 104 Q150 74 196 104 Q186 98 150 92 Q124 94 118 108 Z" fill="var(--text-dim)" fill-opacity="0.45"/>`
-      + `<path d="M162 128 Q168 162 170 200" fill="none" stroke="var(--text-dim)" stroke-opacity="0.5" stroke-width="13" stroke-linecap="round"/>`
-      + `<ellipse cx="200" cy="154" rx="27" ry="17" fill="var(--text-dim)" fill-opacity="0.2" stroke="var(--text-dim)" stroke-width="1"/>`
-      + `<text x="120" y="88" ${PG_LABEL}>corpus callosum</text>`
-      + `<text x="178" y="214" ${PG_LABEL}>foramen magnum</text>`
-      + `<text x="138" y="22" ${PG_LABEL}>vertex</text>`;
-  }
-  // Axial head, anterior (nose) up, radiological display.
-  function pgAxHead() {
-    return `<ellipse cx="150" cy="134" rx="82" ry="102" ${PG_ANAT}/>`
-      + `<path d="M138 34 Q150 14 162 34" ${PG_ANAT}/>`
-      + `<path d="M68 124 q-10 10 0 22 M232 124 q10 10 0 22" ${PG_ANAT}/>`
-      + `<ellipse cx="150" cy="136" rx="70" ry="90" fill="none" stroke="var(--text-dim)" stroke-width="1" stroke-opacity="0.6"/>`
-      + `<path d="M140 112 q-14 22 -6 46 M160 112 q14 22 6 46" fill="none" stroke="var(--text-dim)" stroke-width="5" stroke-opacity="0.45" stroke-linecap="round"/>`
-      + `<text x="8" y="16" ${PG_LABEL}>anterior ↑</text><text x="70" y="252" ${PG_LABEL}>R</text><text x="224" y="252" ${PG_LABEL}>L</text>`;
-  }
-  // Sagittal cervical spine, anterior to the left. Each body is tilted a
-  // little (lordosis); disc blocks take the average of their two neighbours.
-  const PG_CSPINE_TILT = [-10, -7, -3, 0, 3, 7, 10];
-  function pgSagCspine() {
-    let s = `<path d="M60 40 Q120 6 230 28" ${PG_ANAT}/><path d="M128 38 L152 58" ${PG_ANAT}/>`
-      + `<text x="70" y="30" ${PG_LABEL}>skull base</text>`;
-    const names = ['C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'T1'];
-    names.forEach((n, i) => {
-      const y = 64 + i * 26, x = 108 - Math.sin((i / 6) * Math.PI) * 10; // gentle lordosis
-      const hgt = i === 0 ? 30 : 20;
-      const top = i === 0 ? y - 10 : y;
-      s += `<rect x="${x}" y="${top}" width="38" height="${hgt}" rx="4" fill="var(--text-dim)" fill-opacity="0.18" stroke="var(--text-dim)" stroke-width="1.2" transform="rotate(${PG_CSPINE_TILT[i]} ${x + 19} ${top + hgt / 2})"/>`;
-      s += `<text x="${x - 30}" y="${y + 14}" ${PG_LABEL}>${n}</text>`;
-      s += `<path d="M${x + 72} ${y + 4} l26 6 l-26 6 Z" fill="var(--text-dim)" fill-opacity="0.25"/>`;
-    });
-    s += `<path d="M164 48 Q156 140 164 250" fill="none" stroke="var(--text-dim)" stroke-opacity="0.5" stroke-width="12" stroke-linecap="round"/>`
-      + `<text x="226" y="244" ${PG_LABEL}>cord</text>`;
+  // Short dark sulci pointing inward from an ellipse, between two angles (degrees).
+  function pgSulci(cx, cy, rx, ry, fromDeg, toDeg, n, len = 9) {
+    let s = '';
+    for (let i = 0; i < n; i++) {
+      const a = (fromDeg + ((toDeg - fromDeg) * (i + 0.5)) / n) * Math.PI / 180;
+      const x = cx + rx * Math.cos(a), y = cy + ry * Math.sin(a);
+      const k = (len + (i % 3) * 3) / Math.hypot(x - cx, y - cy);
+      s += `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x - (x - cx) * k).toFixed(1)}" y2="${(y - (y - cy) * k).toFixed(1)}" stroke="#2c2c2c" stroke-width="1.6" stroke-linecap="round"/>`;
+    }
     return s;
   }
-  // Axial cervical vertebra, anterior up.
+
+  // Mid-sagittal head, T1 look, anterior (face) to the left.
+  function pgSagHead() {
+    return `<path d="M70 80 C75 30 140 8 180 14 C235 22 262 70 258 120 C256 160 240 190 222 205 L218 260 L122 260 C118 240 104 228 92 222 C80 218 70 214 68 206 C62 200 66 192 60 188 C56 184 60 180 56 176 C52 172 54 166 46 160 L40 150 C46 140 56 128 58 116 C60 104 64 92 70 80 Z" fill="#c4c4c4"/>`
+      + `<path d="M74 104 C74 44 126 18 172 20 C226 24 252 66 250 116 C249 140 242 160 230 176 L200 178 L186 162 L150 158 L120 150 L92 140 C82 132 74 120 74 104 Z" fill="#161616"/>`
+      + `<path d="M82 104 C82 50 130 27 172 28 C220 32 243 70 242 114 C241 132 236 146 228 156 C214 152 200 148 186 146 L170 140 C150 142 130 140 112 136 C94 130 82 120 82 104 Z" fill="#8a8a8a"/>`
+      + `<ellipse cx="162" cy="94" rx="58" ry="42" fill="#b0b0b0"/>`
+      + pgSulci(162, 92, 80, 64, 175, 365, 15)
+      + `<path d="M130 102 C140 88 182 86 190 98 C178 96 148 96 132 106 Z" fill="#262626"/>`
+      + `<path d="M130 106 C118 98 120 84 140 79 C160 74 182 76 193 86 C200 93 199 101 190 103" fill="none" stroke="#e6e6e6" stroke-width="6" stroke-linecap="round"/>`
+      + `<ellipse cx="162" cy="114" rx="18" ry="9" fill="#8a8a8a"/>`
+      + `<path d="M162 112 C170 112 173 120 173 132 C174 148 172 162 170 178 L169 260 L160 260 L160 178 C152 170 148 158 150 144 C151 130 154 116 162 112 Z" fill="#9c9c9c"/>`
+      + `<path d="M178 150 L186 158 L180 166 Z" fill="#262626"/>`
+      + `<path d="M184 156 C198 148 224 150 232 162 C238 178 226 194 206 196 C190 196 180 184 184 168 Z" fill="#949494"/>`
+      + `<path d="M190 174 L216 162 M200 170 L222 176 M196 178 L214 188" stroke="#d6d6d6" stroke-width="1.6" fill="none"/>`
+      + `<line x1="132" y1="148" x2="146" y2="186" stroke="#b6b6b6" stroke-width="6" stroke-linecap="round"/>`
+      + `<ellipse cx="116" cy="150" rx="12" ry="9" fill="#0c0c0c"/><ellipse cx="136" cy="139" rx="5" ry="4" fill="#9c9c9c"/>`
+      + `<path d="M58 128 L104 144 L108 174 L60 172 Z" fill="#141414"/>`
+      + `<line x1="60" y1="176" x2="112" y2="176" stroke="#bdbdbd" stroke-width="3"/>`
+      + `<path d="M66 180 C80 178 108 180 116 188 C120 202 112 216 92 218 C78 216 68 204 66 180 Z" fill="#8e8e8e"/>`
+      + `<path d="M116 182 C122 200 124 230 128 260 L120 260 C116 232 112 204 110 186 Z" fill="#080808"/>`
+      + [0, 1, 2].map(i => `<rect x="${134 + i}" y="${198 + i * 22}" width="20" height="16" rx="3" fill="#b8b8b8"/>`).join('')
+      + `<text x="122" y="68" ${PG_LABEL}>corpus callosum</text>`
+      + `<text x="200" y="214" ${PG_LABEL}>cerebellum</text>`
+      + `<text x="14" y="16" font-size="9" fill="#8b98a5">SAG · anterior ←</text>`;
+  }
+  // Axial head at the level of the lateral ventricles, T1 look, anterior up.
+  function pgAxHead() {
+    const horn = 'M144 100 C130 110 128 142 138 170 C140 158 142 128 147 108 Z';
+    return `<ellipse cx="150" cy="136" rx="86" ry="106" fill="#c4c4c4"/><path d="M136 34 Q150 8 164 34 Z" fill="#c4c4c4"/>`
+      + `<ellipse cx="62" cy="136" rx="6" ry="15" fill="#c4c4c4"/><ellipse cx="238" cy="136" rx="6" ry="15" fill="#c4c4c4"/>`
+      + `<ellipse cx="150" cy="136" rx="79" ry="99" fill="#161616"/>`
+      + `<ellipse cx="150" cy="136" rx="73" ry="93" fill="#8a8a8a"/>`
+      + `<ellipse cx="150" cy="138" rx="54" ry="72" fill="#b0b0b0"/>`
+      + pgSulci(150, 136, 73, 93, 0, 360, 22)
+      + `<line x1="150" y1="44" x2="150" y2="94" stroke="#161616" stroke-width="3"/><line x1="150" y1="180" x2="150" y2="229" stroke="#161616" stroke-width="3"/>`
+      + `<path d="${horn}" fill="#262626"/><path d="${horn}" fill="#262626" transform="translate(300 0) scale(-1 1)"/>`
+      + `<path d="M140 98 Q150 90 160 98" fill="none" stroke="#e6e6e6" stroke-width="4" stroke-linecap="round"/>`
+      + `<text x="14" y="16" font-size="9" fill="#8b98a5">AX · anterior ↑</text>`
+      + `<text x="34" y="140" ${PG_LABEL}>R</text><text x="258" y="140" ${PG_LABEL}>L</text>`;
+  }
+  // Sagittal cervical spine, T2 look (bright CSF and discs), anterior to the left.
+  // Each body is tilted a little for the lordosis; disc blocks take the
+  // average of their two neighbours.
+  const PG_CSPINE_TILT = [-10, -7, -3, 0, 3, 7, 10];
+  const pgCanalX = y => 182 - 12 * Math.sin(Math.PI * y / 260);
+  const pgDiscY = i => 52 + i * 28 + 25; // disc below body i (C2-3 … C7-T1)
+  function pgSagCspine() {
+    const side = (off) => Array.from({ length: 27 }, (_, k) => { const y = k * 10; return `${(pgCanalX(y) + off).toFixed(1)} ${y}`; });
+    const band = (l, r) => `M${side(l).join(' L')} L${side(r).reverse().join(' L')} Z`;
+    let s = `<rect width="300" height="260" fill="#2c2c2c"/>`
+      + `<path d="M268 0 C272 90 276 180 280 260 L300 260 L300 0 Z" fill="#6a6a6a"/>`
+      + `<path d="M${(pgCanalX(0) - 108).toFixed(0)} 0 C64 90 70 180 78 260 L64 260 C56 180 52 90 ${(pgCanalX(0) - 122).toFixed(0)} 0 Z" fill="#050505"/>`
+      + `<path d="M170 0 L262 0 C264 22 240 40 208 42 C188 42 174 30 170 14 Z" fill="#707070"/>`
+      + `<path d="${band(-16, 16)}" fill="#e8e8e8"/>`
+      + `<path d="${band(-7, 7)}" fill="#8c8c8c"/>`;
+    const names = ['C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'T1'];
+    names.forEach((n, i) => {
+      const top = i === 0 ? 34 : 52 + i * 28, hgt = i === 0 ? 40 : 22;
+      const cy = top + hgt / 2, cx = pgCanalX(cy) - 42;
+      if (i < 6) s += `<rect x="${(pgCanalX(pgDiscY(i)) - 58).toFixed(1)}" y="${pgDiscY(i) - 4}" width="32" height="8" rx="3" fill="#c8c8c8" transform="rotate(${(PG_CSPINE_TILT[i] + PG_CSPINE_TILT[i + 1]) / 2} ${(pgCanalX(pgDiscY(i)) - 42).toFixed(1)} ${pgDiscY(i)})"/>`;
+      s += `<rect x="${(cx - 18).toFixed(1)}" y="${top}" width="36" height="${hgt}" rx="4" fill="#6c6c6c" transform="rotate(${PG_CSPINE_TILT[i]} ${cx.toFixed(1)} ${cy})"/>`;
+      s += `<path d="M${(pgCanalX(cy) + 18).toFixed(1)} ${cy - 8} l${44 + i * 2} ${8 + i} l-${44 + i * 2} 6 Z" fill="#555"/>`;
+      s += `<text x="${(cx - 40).toFixed(1)}" y="${cy + 4}" text-anchor="end" ${PG_LABEL}>${n}</text>`;
+    });
+    return s + `<text x="${(pgCanalX(236) + 20).toFixed(0)}" y="236" ${PG_LABEL}>cord</text>`
+      + `<text x="14" y="16" font-size="9" fill="#8b98a5">SAG · anterior ←</text>`;
+  }
+  // Axial cervical vertebra, T2 look, anterior up.
   function pgAxCspine() {
-    return `<ellipse cx="150" cy="78" rx="44" ry="28" fill="var(--text-dim)" fill-opacity="0.18" stroke="var(--text-dim)" stroke-width="1.2"/>`
-      + `<path d="M112 96 L104 136 Q110 200 150 226 Q190 200 196 136 L188 96" ${PG_ANAT}/>`
-      + `<ellipse cx="150" cy="148" rx="30" ry="24" fill="none" stroke="var(--text-dim)" stroke-width="1" stroke-opacity="0.7"/>`
-      + `<ellipse cx="150" cy="148" rx="17" ry="11" fill="var(--text-dim)" fill-opacity="0.45"/>`
-      + `<ellipse cx="80" cy="122" rx="12" ry="9" ${PG_ANAT}/><ellipse cx="220" cy="122" rx="12" ry="9" ${PG_ANAT}/>`
-      + `<text x="38" y="150" ${PG_LABEL}>foramen</text><text x="214" y="150" ${PG_LABEL}>foramen</text>`
-      + `<text x="132" y="62" ${PG_LABEL}>body</text><text x="166" y="176" ${PG_LABEL}>cord</text>`
-      + `<text x="8" y="16" ${PG_LABEL}>anterior ↑</text>`;
+    return `<ellipse cx="150" cy="128" rx="134" ry="106" fill="#2c2c2c" stroke="#6a6a6a" stroke-width="3"/>`
+      + `<ellipse cx="110" cy="202" rx="36" ry="24" fill="#3a3a3a"/><ellipse cx="190" cy="202" rx="36" ry="24" fill="#3a3a3a"/>`
+      + `<ellipse cx="150" cy="40" rx="22" ry="14" fill="#050505"/>`
+      + `<circle cx="98" cy="66" r="7" fill="#050505"/><circle cx="202" cy="66" r="7" fill="#050505"/>`
+      + `<circle cx="82" cy="80" r="9" fill="#050505"/><circle cx="218" cy="80" r="9" fill="#050505"/>`
+      + `<ellipse cx="150" cy="98" rx="38" ry="22" fill="#6c6c6c"/>`
+      + `<ellipse cx="96" cy="104" rx="15" ry="10" fill="#5a5a5a"/><ellipse cx="204" cy="104" rx="15" ry="10" fill="#5a5a5a"/>`
+      + `<circle cx="96" cy="104" r="5" fill="#050505"/><circle cx="204" cy="104" r="5" fill="#050505"/>`
+      + `<path d="M128 126 L104 116 M172 126 L196 116" stroke="#b4b4b4" stroke-width="7" stroke-linecap="round"/>`
+      + `<path d="M124 146 L150 196 L176 146" fill="none" stroke="#5a5a5a" stroke-width="10" stroke-linejoin="round"/>`
+      + `<line x1="150" y1="196" x2="150" y2="218" stroke="#5a5a5a" stroke-width="9" stroke-linecap="round"/>`
+      + `<ellipse cx="150" cy="134" rx="28" ry="18" fill="#e8e8e8"/>`
+      + `<ellipse cx="150" cy="134" rx="15" ry="9" fill="#8c8c8c"/>`
+      + `<text x="40" y="152" ${PG_LABEL}>foramen</text><text x="218" y="152" ${PG_LABEL}>foramen</text>`
+      + `<text x="150" y="88" text-anchor="middle" ${PG_LABEL}>body</text><text x="150" y="170" text-anchor="middle" ${PG_LABEL}>cord</text>`
+      + `<text x="14" y="16" font-size="9" fill="#8b98a5">AX · anterior ↑</text>`;
   }
 
   const PLANNING_GUIDES = {
@@ -5254,8 +5303,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         'Phase R-L keeps eye-movement ghosts from running back through the brain.',
         'Post-contrast: reuse the pre-contrast geometry so pre and post line up slice for slice.',
       ],
-      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 152, cy: 114, w: 200, h: 168, angle: 6 })
-        + pgRefLine(104, 109, 210, 119, 'CC line', 206, 132), 'Axial brain stack planned on a mid-sagittal head'),
+      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 160, cy: 104, w: 210, h: 172, angle: -3 })
+        + pgRefLine(114, 108, 206, 103, 'CC line', 196, 120), 'Axial brain stack planned on a mid-sagittal head'),
     },
     'brain-cor': {
       title: 'Brain · coronal',
@@ -5269,8 +5318,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         'Pituitary, IAC or temporal-lobe coronals cover much less. Follow that protocol’s own notes.',
         'Post-contrast: reuse the pre-contrast geometry.',
       ],
-      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 156, cy: 110, w: 170, h: 172, angle: 96 })
-        + pgRefLine(104, 109, 210, 119, 'CC line', 206, 132), 'Coronal brain stack planned on a mid-sagittal head'),
+      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 162, cy: 106, w: 184, h: 170, angle: 87 })
+        + pgRefLine(114, 108, 206, 103, 'CC line', 196, 120), 'Coronal brain stack planned on a mid-sagittal head'),
     },
     'brain-sag': {
       title: 'Brain · sagittal',
@@ -5283,8 +5332,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         'Put the middle slice exactly on the midline. With an odd number of slices one slice lands on it, giving a true mid-sag (corpus callosum, pituitary and brainstem in one image).',
         'If the head is turned or tilted, follow the falx, not the localizer grid.',
       ],
-      diagram: () => pgSvg(pgAxHead() + pgStack({ cx: 150, cy: 136, w: 190, h: 140, angle: 90, lines: 13 })
-        + pgRefLine(150, 40, 150, 232, 'midline', 156, 50), 'Sagittal brain stack planned on an axial head'),
+      diagram: () => pgSvg(pgAxHead() + pgStack({ cx: 150, cy: 136, w: 196, h: 140, angle: 90, lines: 13 })
+        + pgRefLine(150, 34, 150, 238, 'midline', 156, 48), 'Sagittal brain stack planned on an axial head'),
     },
     'brain-3d': {
       title: 'Brain · 3D volume',
@@ -5298,8 +5347,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         'A 3D volume can wrap in two directions (phase and slice), so check fold-over suppression on both.',
         'Reformat into the planes your site reads after the scan.',
       ],
-      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 152, cy: 118, w: 204, h: 184, angle: 6, lines: 34, slab: true })
-        + pgRefLine(104, 109, 210, 119, 'CC line', 206, 132), '3D brain volume planned on a mid-sagittal head'),
+      diagram: () => pgSvg(pgSagHead() + pgStack({ cx: 160, cy: 108, w: 212, h: 186, angle: -3, lines: 34, slab: true })
+        + pgRefLine(114, 108, 206, 103, 'CC line', 196, 120), '3D brain volume planned on a mid-sagittal head'),
     },
     'cspine-sag': {
       title: 'C-spine · sagittal',
@@ -5314,8 +5363,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         'If the neck is rotated, angle to the vertebral body on the axial, not to the head.',
         'An anterior sat band over the throat cuts swallowing artifact. Keep it off the vertebral bodies.',
       ],
-      diagram: () => pgSvg(pgAxCspine() + pgStack({ cx: 150, cy: 140, w: 210, h: 156, angle: 90, lines: 11 })
-        + pgRefLine(150, 40, 150, 236, 'midline', 156, 36), 'Sagittal C-spine stack planned on an axial vertebra'),
+      diagram: () => pgSvg(pgAxCspine() + pgStack({ cx: 150, cy: 128, w: 212, h: 124, angle: 90, lines: 11 })
+        + pgRefLine(150, 22, 150, 234, 'midline', 156, 30), 'Sagittal C-spine stack planned on an axial vertebra'),
     },
     'cspine-ax': {
       title: 'C-spine · axial',
@@ -5332,9 +5381,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         'An anterior sat band over the throat cuts swallowing artifact.',
       ],
       diagram: () => pgSvg(pgSagCspine()
-        + `<rect x="18" y="58" width="36" height="186" fill="var(--text-dim)" fill-opacity="0.12" stroke="var(--text-dim)" stroke-dasharray="3 3"/><text x="10" y="54" ${PG_LABEL}>sat band</text>`
-        + PG_CSPINE_TILT.slice(1).map((t, i) => pgStack({ cx: 156, cy: 64 + i * 26 + 23, w: 110, h: 10, angle: (t + PG_CSPINE_TILT[i]) / 2, lines: 4 })).join('')
-        + pgRefLine(164, 48, 164, 250, '', 0, 0), 'Axial C-spine stack planned on a sagittal spine'),
+        + `<rect x="30" y="44" width="34" height="200" fill="#ffffff" fill-opacity="0.12" stroke="#cfd6dc" stroke-dasharray="4 3"/><text x="22" y="40" ${PG_LABEL}>sat band</text>`
+        + PG_CSPINE_TILT.slice(1).map((t, i) => pgStack({ cx: pgCanalX(pgDiscY(i)) - 18, cy: pgDiscY(i), w: 104, h: 10, angle: (t + PG_CSPINE_TILT[i]) / 2, lines: 4 })).join(''), 'Axial C-spine stack planned on a sagittal spine'),
     },
   };
 
