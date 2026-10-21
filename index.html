@@ -887,6 +887,18 @@
   .list-scanner { padding: 5px 0; font-size: 0.88rem; }
   .list-card select { max-width: 210px; }
   .list-card button { padding: 5px 10px; }
+  .exam-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .exam-tabs button { background: var(--panel-2); color: var(--text-dim); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; min-height: 40px; cursor: pointer; font-size: 0.88rem; }
+  .exam-tabs button.active { color: var(--text); border-color: var(--accent); }
+  .exam-meta { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 6px; }
+  .exam-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  .exam-table th, .exam-table td { border-bottom: 1px solid var(--border); padding: 6px 6px; text-align: left; vertical-align: top; }
+  .exam-table td:first-child, .exam-table th:first-child { width: 28px; color: var(--text-dim); }
+  .exam-table .ta { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .exam-total { margin: 10px 0 4px; font-size: 1.05rem; font-weight: 800; }
+  .exam-flag { display: block; font-size: 0.74rem; color: var(--warn-border); margin-top: 2px; }
+  .exam-flag.bad { color: var(--bad); }
+  .confirm-flag { background: rgba(240, 200, 60, 0.18); border: 1px solid var(--warn-border); border-radius: 6px; padding: 3px 8px; font-size: 0.8rem; font-weight: 700; margin: 6px 0; }
   .fold-pct { font-size: 0.7rem; color: var(--text-dim); margin-top: 1px; }
   .role-badge { display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 1px 7px; border-radius: 10px; vertical-align: middle; border: 1px solid var(--border); white-space: nowrap; }
   .role-badge.role-key { color: #1b1300; background: var(--warn-border); border-color: var(--warn-border); }
@@ -1169,6 +1181,7 @@
     <button type="button" class="active" data-view="calculator">Calculator</button>
     <button type="button" data-view="library">Protocol Library</button>
     <button type="button" data-view="lists">Manage Lists</button>
+    <button type="button" data-view="exams">Exams</button>
     <button type="button" data-view="acr">ACR Reference</button>
     <button type="button" data-view="tr-ranges">TR Ranges</button>
     <button type="button" data-view="roles">Exam Roles</button>
@@ -1381,7 +1394,7 @@
           </div>
           <div class="field" id="cur-sense-field">
             <label for="cur-sense" id="cur-sense-label">SENSE (parallel imaging factor)</label>
-            <input type="number" id="cur-sense" value="2" min="1" step="0.1">
+            <input type="number" id="cur-sense" value="2" min="1" step="any">
           </div>
           <div id="cur-cs-voxel-section" style="display:none">
             <div class="field">
@@ -1408,7 +1421,7 @@
           </div>
           <div class="field">
             <label for="cur-tr">TR (ms)</label>
-            <input type="number" id="cur-tr" value="500" min="1" step="1">
+            <input type="number" id="cur-tr" value="500" min="0.1" step="any">
           </div>
           <div class="tr-range-indicator" id="cur-tr-range"></div>
           <div class="field">
@@ -1567,7 +1580,7 @@
         </div>
         <div class="field" id="prop-sense-field">
           <label for="prop-sense" id="prop-sense-label">SENSE (parallel imaging factor)</label>
-          <input type="number" id="prop-sense" value="2" min="1" step="0.1">
+          <input type="number" id="prop-sense" value="2" min="1" step="any">
         </div>
         <div id="prop-cs-voxel-section" style="display:none">
           <div class="field">
@@ -1594,7 +1607,7 @@
         </div>
         <div class="field">
           <label for="prop-tr">TR (ms)</label>
-          <input type="number" id="prop-tr" value="500" min="1" step="1">
+          <input type="number" id="prop-tr" value="500" min="0.1" step="any">
         </div>
         <div class="tr-range-indicator" id="prop-tr-range"></div>
       </div>
@@ -1786,6 +1799,18 @@
     </div>
   </div>
 
+  <div class="view" id="view-exams">
+    <div class="panel">
+      <h2>Exams</h2>
+      <div class="lib-note">
+        Each exam is an ordered set of protocols with the total console time. Members are matched by protocol, or by
+        name and facility when the set doesn't name one. Saved in this browser and included in Export backup.
+      </div>
+      <div class="exam-tabs" id="exam-tabs"></div>
+      <div id="exam-body"></div>
+    </div>
+  </div>
+
   <div class="view" id="view-lists">
     <div class="panel">
       <h2>Facilities &amp; scanners</h2>
@@ -1895,7 +1920,7 @@
         </select>
       </div>
       <div class="field" id="pf-subregion-field" style="display:none">
-        <label for="pf-subregion">Spine sub-region</label>
+        <label for="pf-subregion">Sub-region</label>
         <select id="pf-subregion">
           <option value="">General / unspecified</option>
           <option>C-spine</option>
@@ -1932,7 +1957,7 @@
       </div>
       <div class="field">
         <label for="pf-tr">TR (ms)</label>
-        <input type="number" id="pf-tr" min="1" step="1" required>
+        <input type="number" id="pf-tr" min="0.1" step="any" required>
       </div>
       <div class="field">
         <label for="pf-etl" id="pf-etl-label">Echo train length (optional)</label>
@@ -1981,7 +2006,7 @@
       </div>
       <div class="field" id="pf-sense-field">
         <label for="pf-sense" id="pf-sense-label">SENSE (parallel imaging factor)</label>
-        <input type="number" id="pf-sense" min="1" step="0.1">
+        <input type="number" id="pf-sense" min="1" step="any">
       </div>
       <div id="pf-cs-voxel-section" style="display:none">
         <div class="field">
@@ -4067,6 +4092,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     document.getElementById('view-quick').classList.toggle('active', view === 'quick');
     document.getElementById('view-roles').classList.toggle('active', view === 'roles');
     document.getElementById('view-lists').classList.toggle('active', view === 'lists');
+    document.getElementById('view-exams').classList.toggle('active', view === 'exams');
+    if (view === 'exams') renderExamsView();
     if (view === 'lists') renderManageLists();
     if (view === 'roles') renderRolesView();
     document.body.classList.toggle('quick-active', view === 'quick');
@@ -4080,7 +4107,34 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // ---------------------------------------------------------------------
   const STORAGE_KEY = 'mriq.protocolLibrary.v1';
   const REGIONS = ['All', 'Brain', 'Spine', 'Abdomen', 'MSK/Extremity', 'Other'];
-  const SPINE_SUBREGIONS = ['All', 'C-spine', 'T-spine', 'L-spine'];
+  // Regions that have sub-regions (the same mechanism for all of them).
+  const SUBREGIONS = {
+    Spine: ['C-spine', 'T-spine', 'L-spine'],
+    Brain: ['Orbits', 'IAC', 'Pituitary', 'Fast brain'],
+  };
+  const SPINE_SUBREGIONS = ['All', ...SUBREGIONS.Spine];
+  // Library sub-tabs. Brain also gets "General" = no sub-region (routine, seizure and MS brain).
+  const subregionTabsFor = region => (SUBREGIONS[region] ? ['All', ...(region === 'Brain' ? ['General'] : []), ...SUBREGIONS[region]] : []);
+  // "Orbits" (plural) on purpose: it matches the exam name and the default NSA exception keyword.
+  const LEGACY_REGION_MAP = { orbit: 'Orbits', orbits: 'Orbits', iac: 'IAC', pituitary: 'Pituitary' };
+  const FAST_BRAIN_IDS = new Set([
+    '7b0dcd24-c535-5367-9f67-708b60b35b69', '3e6c7d0f-4ede-55a6-990a-a5f5de3427a5', '1598a89f-57ba-5eda-b851-90312e9e24c6',
+    'f321baf7-4e50-52e5-8726-2422ee876843', 'cff74ed7-a27e-55ef-9c5a-de9dc0243c64',
+  ]);
+  // Old top-level Orbit / IAC / Pituitary regions become Brain + that sub-region, and the
+  // five Fast brain protocols get their sub-region. Returns {region, subRegion}.
+  function normalizeRegion(p) {
+    let region = p.region;
+    let subRegion = p.subRegion || '';
+    const legacy = LEGACY_REGION_MAP[String(region || '').trim().toLowerCase()];
+    if (legacy) { region = 'Brain'; subRegion = legacy; }
+    else if (region === 'Brain' && !subRegion && FAST_BRAIN_IDS.has(p.id)) subRegion = 'Fast brain';
+    return { region, subRegion };
+  }
+  function normalizeAcrRegion(r) {
+    const legacy = LEGACY_REGION_MAP[String((r && r.region) || '').trim().toLowerCase()];
+    return legacy ? { ...r, region: 'Brain', subRegion: legacy } : r;
+  }
 
   function makeId() {
     if (window.crypto && typeof crypto.randomUUID === 'function') {
@@ -4095,12 +4149,17 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       if (!Array.isArray(parsed)) return [];
-      // Migrate legacy single-field `scanner` records to scannerModel/scannerRoom.
-      return parsed.map(p => ({
-        ...p,
-        scannerModel: p.scannerModel || p.scanner || '',
-        scannerRoom: p.scannerRoom || '',
-      }));
+      // Migrate legacy single-field `scanner` records to scannerModel/scannerRoom, and
+      // old Orbit/IAC/Pituitary regions to Brain sub-regions (saved back only if something changed).
+      let migrated = false;
+      const mapped = parsed.map(p => {
+        const base = { ...p, scannerModel: p.scannerModel || p.scanner || '', scannerRoom: p.scannerRoom || '' };
+        const n = normalizeRegion(base);
+        if (n.region !== base.region || n.subRegion !== (base.subRegion || '')) { migrated = true; return { ...base, region: n.region, subRegion: n.subRegion }; }
+        return base;
+      });
+      if (migrated) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(mapped)); } catch (e) { /* will retry on the next save */ } }
+      return mapped;
     } catch (e) {
       return [];
     }
@@ -4134,6 +4193,60 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // current place (the first move snapshots the whole current order), and
   // protocols not in the list (new ones, CSV rows) go to the bottom.
   // ---------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------
+  // Exam sets: a named, ordered list of protocols (an exam) with the total
+  // console time. Members are matched by protocol id where the set gives one,
+  // otherwise by name + facility. Saved in this browser, part of Export backup.
+  // ---------------------------------------------------------------------
+  const EXAM_SETS_KEY = 'mriq.examSets.v1';
+  function sanitizeExamSets(raw) {
+    const arr = Array.isArray(raw) ? raw : [];
+    const out = [];
+    const same = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase(); // (runs at startup, before the shared helpers exist)
+    arr.forEach(e => {
+      if (!e || typeof e !== 'object' || typeof e.name !== 'string' || !e.name.trim()) return;
+      const names = Array.isArray(e.protocols) ? e.protocols.filter(x => typeof x === 'string' && x.trim()) : [];
+      if (!names.length) return;
+      const ids = Array.isArray(e.protocolIds) ? e.protocolIds : [];
+      // A legacy Orbit/IAC/Pituitary set becomes Brain + sub-region; the Fast brain set gets its own.
+      const nr = normalizeRegion({ region: typeof e.region === 'string' ? e.region : '', subRegion: typeof e.subRegion === 'string' ? e.subRegion : '' });
+      if (nr.region === 'Brain' && !nr.subRegion && same(e.name, 'Fast brain')) nr.subRegion = 'Fast brain';
+      const set = {
+        id: typeof e.id === 'string' && e.id ? e.id : makeId(),
+        name: e.name.trim(),
+        facility: typeof e.facility === 'string' ? e.facility.trim() : '',
+        region: nr.region,
+        subRegion: nr.subRegion,
+        scannerModel: typeof e.scannerModel === 'string' ? e.scannerModel : '',
+        basedOn: typeof e.basedOn === 'string' ? e.basedOn : '',
+        note: typeof e.note === 'string' ? e.note : '',
+        protocols: names,
+        protocolIds: names.map((_, i) => (typeof ids[i] === 'string' && ids[i] ? ids[i] : null)),
+      };
+      if (!out.some(x => same(x.name, set.name) && same(x.facility, set.facility))) out.push(set);
+    });
+    return out;
+  }
+  function loadExamSets() {
+    try {
+      const rawArr = JSON.parse(localStorage.getItem(EXAM_SETS_KEY));
+      const sets = sanitizeExamSets(rawArr);
+      // Saved back only if an old Orbit/IAC/Pituitary region was moved under Brain.
+      const moved = Array.isArray(rawArr) && sets.some(st => {
+        const r = rawArr.find(x => x && x.name === st.name && String(x.facility || '').trim() === st.facility);
+        return r && (String(r.region || '') !== st.region || String(r.subRegion || '') !== st.subRegion);
+      });
+      if (moved) { try { localStorage.setItem(EXAM_SETS_KEY, JSON.stringify(sets)); } catch (e) { /* retry on next save */ } }
+      return sets;
+    } catch (e) { return []; }
+  }
+  let examSets = loadExamSets();
+  function persistExamSets() {
+    try { localStorage.setItem(EXAM_SETS_KEY, JSON.stringify(examSets)); setStorageStatus(''); }
+    catch (e) { setStorageStatus('Could not save the exam sets to browser storage. Use Export backup so you don’t lose them.'); }
+  }
+
   const PROTOCOL_ORDER_KEY = 'mriq.protocolOrder.v1';
   function loadProtocolOrder() {
     try {
@@ -4415,7 +4528,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       const raw = localStorage.getItem(ACR_STORAGE_KEY);
       if (!raw) return [];
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
+      if (!Array.isArray(parsed)) return [];
+      // An ACR entry saved under Orbit/IAC/Pituitary moves to Brain + that sub-region rather than being dropped.
+      const mapped = parsed.map(normalizeAcrRegion);
+      if (mapped.some((r, i) => r !== parsed[i])) { try { localStorage.setItem(ACR_STORAGE_KEY, JSON.stringify(mapped)); } catch (e) { /* retry on next save */ } }
+      return mapped;
     } catch (e) {
       return [];
     }
@@ -4967,9 +5084,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     regionTabsEl.innerHTML = REGIONS.map(r =>
       `<button type="button" data-region="${escapeHtml(r)}" class="${r === libState.region ? 'active' : ''}">${escapeHtml(r)}</button>`
     ).join('');
-    subregionTabsEl.style.display = libState.region === 'Spine' ? 'flex' : 'none';
-    if (libState.region === 'Spine') {
-      subregionTabsEl.innerHTML = SPINE_SUBREGIONS.map(sr =>
+    const subTabs = subregionTabsFor(libState.region);
+    subregionTabsEl.style.display = subTabs.length ? 'flex' : 'none';
+    if (subTabs.length) {
+      subregionTabsEl.innerHTML = subTabs.map(sr =>
         `<button type="button" data-subregion="${escapeHtml(sr)}" class="${sr === libState.subRegion ? 'active' : ''}">${escapeHtml(sr)}</button>`
       ).join('');
     }
@@ -4997,10 +5115,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     renderProtocolGrid();
   });
 
-  function filterProtocols() {
+  function filterProtocols(opts) {
     return orderedProtocols().filter(p => {
       if (libState.region !== 'All' && p.region !== libState.region) return false;
-      if (libState.region === 'Spine' && libState.subRegion !== 'All' && (p.subRegion || '') !== libState.subRegion) return false;
+      if (!(opts && opts.ignoreSubRegion) && SUBREGIONS[libState.region] && libState.subRegion !== 'All') {
+        const want = libState.subRegion === 'General' ? '' : libState.subRegion;
+        if ((p.subRegion || '') !== want) return false;
+      }
       if (libState.scanner && scannerLabel(p) !== libState.scanner) return false;
       if (libState.facility && p.facility !== libState.facility) return false;
       if (libState.search) {
@@ -5011,11 +5132,15 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     });
   }
 
+  // A value that was never entered shows as a dash, never as "null".
+  const shownVal = v => (Number.isFinite(v) ? v : '—');
+  // Protocols whose notes say CONFIRM (in capitals) still need checking against the console.
+  const needsConfirmation = p => /\bCONFIRM\b/.test(String((p && p.notes) || ''));
   function accelSummaryLabel(p) {
     const accelType = p.accelType || 'sense';
     if (accelType === 'none') return 'No accel.';
     const label = accelType === 'cs-sense' ? 'CS-SENSE' : vendorTerms(p.vendor).sense;
-    return `${label} ${p.sense}`;
+    return `${label} ${shownVal(p.sense)}`;
   }
 
   // Protocol Health Score — a summary/scoring layer, not a new calculation
@@ -5397,6 +5522,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   function autoPlanningGuideId(p) {
     const orient = guessOrientation(p);
     if (p.region === 'Brain') {
+      // Orbits, IAC and pituitary are small-FOV exams: the whole-brain guides (corpus callosum line,
+      // vertex to foramen magnum) don't apply. A guide picked by hand on the protocol still works.
+      if (['Orbits', 'IAC', 'Pituitary'].includes(p.subRegion)) return null;
       if (/\b3D\b/i.test(p.sequenceType || '') || /\b3D\b/i.test(p.name || '')) return 'brain-3d';
       return { axial: 'brain-ax', coronal: 'brain-cor', sagittal: 'brain-sag' }[orient] || null;
     }
@@ -5467,7 +5595,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
   function protocolCardHtml(p, isFirst, isLast) {
     const notesHtml = p.notes ? `<div class="protocol-notes">${escapeHtml(p.notes)}</div>` : '';
-    const regionLabel = p.region + (p.region === 'Spine' && p.subRegion ? ' · ' + p.subRegion : '');
+    const regionLabel = p.region + (p.subRegion ? ' · ' + p.subRegion : '');
     const thicknessLabel = typeof p.sliceThicknessMm === 'number' ? ` · ${p.sliceThicknessMm}mm` : '';
     const acrSeqLabel = resolveAcrSequenceLabel(p);
     const acrTagHtml = acrSeqLabel ? `<div class="acr-tag">ACR: ${escapeHtml(acrSeqLabel)}</div>` : '';
@@ -5482,8 +5610,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           <span class="badge badge-scanner">${escapeHtml(scannerLabel(p))}</span>
           ${vendorBadgeHtml}
         </div>
+        ${needsConfirmation(p) ? '<div class="confirm-flag">⚠ Needs confirmation — see the notes below</div>' : ''}
         ${planningNoteHtml(p)}
-        <div class="protocol-params">TR ${p.tr} ms · ${terms.nsa} ${p.nsa} · ${accelSummaryLabel(p)} · ${p.freqMatrix}×${p.phaseMatrix}${thicknessLabel}${Number.isFinite(p.consoleTimeSec) && p.consoleTimeSec > 0 ? ` · TA ${formatConsoleTime(p.consoleTimeSec)}` : ''}</div>
+        <div class="protocol-params">TR ${shownVal(p.tr)} ms · ${terms.nsa} ${shownVal(p.nsa)} · ${accelSummaryLabel(p)} · ${shownVal(p.freqMatrix)}×${shownVal(p.phaseMatrix)}${thicknessLabel}${Number.isFinite(p.consoleTimeSec) && p.consoleTimeSec > 0 ? ` · TA ${formatConsoleTime(p.consoleTimeSec)}` : ''}</div>
         ${acrTagHtml}
         ${healthScoreHtml(p)}
         ${notesHtml}
@@ -5509,6 +5638,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   function renderCompliancePanel(scoped) {
     const region = libState.region;
     const subRegion = libState.subRegion;
+    // Brain ACR minimums are brain-wide, so check every Brain protocol (still honoring the facility/scanner/search filters).
+    if (region === 'Brain') scoped = filterProtocols({ ignoreSubRegion: true });
 
     if (region === 'All') {
       compliancePanelEl.innerHTML = '';
@@ -5601,7 +5732,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         ${thicknessHtml}
         ${matrixHtml}
         ${coverageHtml}
-        <div class="compliance-note">Reflects the ${scoped.length} saved protocol(s) currently shown${scopeNote ? ' (filtered by ' + scopeNote + ')' : ''}. Presence, slice-thickness, and matrix floor checks only — does not verify TR/SENSE values or actual scan coverage.</div>
+        <div class="compliance-note">Reflects the ${scoped.length} saved ${region === 'Brain' ? 'Brain protocol(s) — Brain ACR minimums cover every sub-region, so the sub-tab doesn’t narrow this check' : 'protocol(s) currently shown'}${scopeNote ? ' (filtered by ' + scopeNote + ')' : ''}. Presence, slice-thickness, and matrix floor checks only — does not verify TR/SENSE values or actual scan coverage.</div>
       </div>`;
   }
 
@@ -5724,6 +5855,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     document.getElementById(`${panel}-fov-freq`).value = pos(fovFreq);
     document.getElementById(`${panel}-fov-phase`).value = pos(fovPhase);
     document.getElementById(`${panel}-thickness`).value = pos(thickness);
+    // The fold-over mm note needs the phase FOV just set above; refresh it so it doesn't say "treated as 0%".
+    if (oversamplingGroups[panel]) oversamplingGroups[panel].refresh();
     // Console time (TA) belongs to the Current panel only.
     if (panel === 'cur') {
       const ta = o.consoleTimeSec !== undefined ? o.consoleTimeSec : p.consoleTimeSec;
@@ -5828,7 +5961,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // Planning guide picker: Auto shows which guide it would match right now.
   function refreshPlanningGuideOptions() {
     const auto = autoPlanningGuideId({
-      name: pf.name.value, region: pf.region.value, subRegion: pf.region.value === 'Spine' ? pf.subRegion.value : '',
+      name: pf.name.value, region: pf.region.value, subRegion: SUBREGIONS[pf.region.value] ? pf.subRegion.value : '',
       sliceOrientation: pf.vendor.value === 'Philips' ? pf.sliceOrientation.value : '', sequenceType: modalSequenceType,
     });
     const keep = pf.planningGuide.value;
@@ -5849,8 +5982,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
   let editingId = null;
 
+  // Sub-region choices follow the chosen region (the same table the Library tabs use).
+  function fillSubregionOptions(keep) {
+    const subs = SUBREGIONS[pf.region.value] || [];
+    pf.subRegion.innerHTML = '<option value="">General / unspecified</option>' + subs.map(sr => `<option value="${escapeHtml(sr)}">${escapeHtml(sr)}</option>`).join('');
+    pf.subRegion.value = subs.includes(keep) ? keep : '';
+  }
   function toggleSubregionField() {
-    pf.subRegionField.style.display = pf.region.value === 'Spine' ? 'flex' : 'none';
+    pf.subRegionField.style.display = SUBREGIONS[pf.region.value] ? 'flex' : 'none';
   }
 
   function refreshAcrSequenceOptions() {
@@ -5870,8 +6009,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   }
 
   pf.region.addEventListener('change', () => {
+    fillSubregionOptions('');
     toggleSubregionField();
     refreshAcrSequenceOptions();
+    refreshPlanningGuideOptions();
   });
   pf.subRegion.addEventListener('change', refreshAcrSequenceOptions);
 
@@ -5928,7 +6069,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const defaultRegion = libState.region !== 'All' ? libState.region : '';
     pf.name.value = prefill?.name || '';
     pf.region.value = prefill?.region || defaultRegion;
-    pf.subRegion.value = prefill?.subRegion || '';
+    // A new protocol started from a Library tab pre-fills the sub-region too; editing keeps the stored one.
+    const defaultSubRegion = (!prefill?.region && SUBREGIONS[libState.region] && !['All', 'General'].includes(libState.subRegion)) ? libState.subRegion : '';
+    fillSubregionOptions(prefill?.subRegion || defaultSubRegion);
     document.getElementById('pf-saved-status').textContent = '';
     document.getElementById('modal-save-another-btn').style.display = mode === 'add' ? '' : 'none';
     if (prefill && prefill.facility) {
@@ -6037,7 +6180,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       id: editingId || makeId(),
       name: pf.name.value.trim(),
       region: pf.region.value,
-      subRegion: pf.region.value === 'Spine' ? pf.subRegion.value : '',
+      subRegion: SUBREGIONS[pf.region.value] ? pf.subRegion.value : '',
       facility: pickedFs.facility,
       scannerModel: pickedFs.scanner.model,
       scannerRoom: pickedFs.scanner.room,
@@ -6164,6 +6307,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       facilityLists,
       // ids of the protocols above, in the order the Library shows them (null = default order)
       protocolOrder: protocolOrder ? protocolOrder.filter(id => protocols.some(pr => pr.id === id)) : null,
+      examSets,
     };
     const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -6197,6 +6341,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         let incomingRoles = null;
         let incomingLists = [];
         let incomingOrder = null;
+        let incomingExamSets = [];
         if (Array.isArray(parsed)) {
           incomingProtocols = parsed;
         } else if (parsed && typeof parsed === 'object') {
@@ -6206,14 +6351,28 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           if (Array.isArray(parsed.outcomeLog)) incomingOutcomes = parsed.outcomeLog;
           if (Array.isArray(parsed.nsaExceptions)) incomingExceptions = parsed.nsaExceptions;
           if (parsed.facilityLists) incomingLists = sanitizeFacilityLists(parsed.facilityLists);
+          if (Array.isArray(parsed.examSets)) incomingExamSets = sanitizeExamSets(parsed.examSets);
           if (Array.isArray(parsed.protocolOrder)) incomingOrder = parsed.protocolOrder.filter(x => typeof x === 'string');
           if (parsed.examIndications && typeof parsed.examIndications === 'object' && !Array.isArray(parsed.examIndications)) {
             incomingRoles = sanitizeKeyRows(parsed.examIndications, true);
           }
         }
 
-        const validProtocols = incomingProtocols.filter(p => p && typeof p === 'object' && p.name && p.region);
-        const validAcr = incomingAcr.filter(r => r && typeof r === 'object' && r.region && Array.isArray(r.sequences));
+        // A protocol whose id is already stored (or repeats earlier in the file) is skipped,
+        // so importing the same file twice never makes duplicates. Ids are kept, which is
+        // also what lets exam sets and the saved order find their protocols.
+        const storedIds = new Set(protocols.map(pr => pr.id));
+        const seenIds = new Set();
+        let skippedExisting = 0;
+        const validProtocols = incomingProtocols.filter(p => p && typeof p === 'object' && p.name && p.region).filter(p => {
+          const id = typeof p.id === 'string' && p.id ? p.id : null;
+          if (id && (storedIds.has(id) || seenIds.has(id))) { skippedExisting += 1; return false; }
+          if (id) seenIds.add(id);
+          return true;
+        });
+        // Exam sets already here (same name + facility) are left alone.
+        const newExamSets = incomingExamSets.filter(e => !examSets.some(x => sameText(x.name, e.name) && sameText(x.facility, e.facility)));
+        const validAcr = incomingAcr.filter(r => r && typeof r === 'object' && r.region && Array.isArray(r.sequences)).map(normalizeAcrRegion);
         const validTr = incomingTr.filter(r => r && typeof r === 'object' && r.sequenceType);
 
         // Skip any entry already in the log (same id) so re-importing the
@@ -6239,9 +6398,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           const have = facilityLists.find(x => x.name === f.name);
           return !have || f.scanners.some(sc => !have.scanners.some(x => x.model === sc.model && x.room === sc.room));
         });
-        if (newListEntries.length === 0 && validProtocols.length === 0 && validAcr.length === 0 && validTr.length === 0 && validOutcomes.length === 0 && newExceptions.length === 0 && roleKeysIncoming.length === 0) {
-          if (incomingOutcomes.length > 0 || cleanedExceptions.length > 0 || incomingLists.length > 0) {
-            alert('Nothing new to import — those logged results / NSA exceptions / facilities and scanners are already in this browser.');
+        if (newExamSets.length === 0 && newListEntries.length === 0 && validProtocols.length === 0 && validAcr.length === 0 && validTr.length === 0 && validOutcomes.length === 0 && newExceptions.length === 0 && roleKeysIncoming.length === 0) {
+          if (skippedExisting > 0 || incomingExamSets.length > 0 || incomingOutcomes.length > 0 || cleanedExceptions.length > 0 || incomingLists.length > 0) {
+            alert('Nothing new to import — everything in that file (protocols, exam sets, results, exceptions, facilities and scanners) is already in this browser.');
             return;
           }
           alert('That file doesn’t look like a MR IQ backup.');
@@ -6249,7 +6408,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         }
 
         const parts = [];
-        if (validProtocols.length) parts.push(`${validProtocols.length} protocol(s)`);
+        if (validProtocols.length) parts.push(`${validProtocols.length} protocol(s)${skippedExisting ? ` (${skippedExisting} already here, skipped)` : ''}`);
+        if (newExamSets.length) parts.push(`${newExamSets.length} exam set${newExamSets.length === 1 ? '' : 's'}`);
         if (validAcr.length) parts.push(`${validAcr.length} ACR reference entr${validAcr.length === 1 ? 'y' : 'ies'}`);
         if (validTr.length) parts.push(`${validTr.length} TR range entr${validTr.length === 1 ? 'y' : 'ies'}`);
         if (validOutcomes.length) parts.push(`${validOutcomes.length} logged result(s)`);
@@ -6267,10 +6427,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           const existingOrder = orderedProtocols().map(pr => pr.id);
           const idMap = new Map();
           const imported = validProtocols.map(p => {
-            const newId = makeId();
+            const newId = (typeof p.id === 'string' && p.id) ? p.id : makeId();
             if (typeof p.id === 'string') idMap.set(p.id, newId);
+            const nr = normalizeRegion({ ...p, id: newId });
             return {
               ...p,
+              region: nr.region,
+              subRegion: nr.subRegion,
               id: newId,
               scannerModel: p.scannerModel || p.scanner || '',
               scannerRoom: p.scannerRoom || '',
@@ -6296,6 +6459,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
             if (idx >= 0) acrReferences[idx] = record; else acrReferences.push(record);
           });
           persistAcrReferences();
+        }
+
+        if (newExamSets.length) {
+          examSets = examSets.concat(newExamSets);
+          persistExamSets();
+          renderExamsView();
         }
 
         // Merge the incoming lists in (never removes anything), then add whatever the imported protocols use.
@@ -7906,6 +8075,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       etl: optimizerProtocol.etl,
       slices: parseFloat(optSlicesEl.value),
     };
+    if (!isValid(start)) {
+      optimizerErrorEl.textContent = 'This protocol is missing a value the optimizer needs (TR, NSA, acceleration factor or matrix). Edit the protocol and fill those in first.';
+      optimizerErrorEl.style.display = 'block';
+      return;
+    }
     // The saved console time belongs to the saved values; re-anchor it if the
     // modal's one-off edits (oversampling) still allow that, else drop it.
     start.consoleTimeSec = rebaseConsoleTimeSec(optimizerProtocol.consoleTimeSec, paramsFromProtocol(optimizerProtocol), start);
@@ -8915,7 +9089,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // --- the four editable things --------------------------------------------
   const QUICK_STEPS = {
     nsa: { step: 1, min: 1 },
-    tr: { step: 10, min: 1 },
+    tr: { step: 10, min: 0.1 },
     sense: { step: 0.5, min: 1 },
     freq: { step: 2, min: 16 },
     phase: { step: 2, min: 16 },
@@ -8974,6 +9148,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   function quickStep(key, dir) {
     if (!quick.work) return;
     const def = QUICK_STEPS[key];
+    // A very short TR (a 3D or gradient-echo scan, e.g. 7.2 ms) needs small steps.
+    if (key === 'tr') def.step = (Number.isFinite(quick.work.tr) && quick.work.tr < 20) ? 0.1 : 10;
     if (key === 'sense') def.step = (quickProtocol() && quickProtocol().accelType === 'cs-sense') ? 0.1 : 0.5;
     const v = Number.isFinite(quick.work[key]) ? quick.work[key] : def.min;
     let next = Math.round((v + dir * def.step) * 100) / 100;
@@ -9349,6 +9525,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const csvLoose = t => String(t == null ? '' : t).toLowerCase().replace(/[—–]/g, '-').replace(/\s+/g, '');
   const CSV_HEADER_KEYS = Object.fromEntries(CSV_HEADERS.map(h => [csvLoose(h), h]));
   const CSV_REGIONS = ['Brain', 'Spine', 'Abdomen', 'MSK/Extremity', 'Other'];
+  // Optional "Sub-region" / "Subregion" column (not in the template). Orbit/Orbits/IAC/Pituitary in the Region column also work.
+  CSV_HEADER_KEYS.subregion = 'Sub-region';
+  CSV_HEADER_KEYS['sub-region'] = 'Sub-region';
   const CSV_ORIENTATIONS = ['axial', 'sagittal', 'coronal'];
   const csvState = { items: [], applied: false };
 
@@ -9459,10 +9638,23 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       const nv = h => (num[h].blank || num[h].error ? null : num[h].value);
 
       let region = cell('Region');
+      let subRegion = '';
       if (region) {
-        const hit = CSV_REGIONS.find(r => csvLoose(r) === csvLoose(region));
-        if (hit) region = hit; else problems.push(`Region “${region}” isn't one of ${CSV_REGIONS.join(', ')}`);
+        const legacy = LEGACY_REGION_MAP[region.trim().toLowerCase()];
+        if (legacy) { region = 'Brain'; subRegion = legacy; }
+        else {
+          const hit = CSV_REGIONS.find(r => csvLoose(r) === csvLoose(region));
+          if (hit) region = hit; else problems.push(`Region “${region}” isn't one of ${CSV_REGIONS.join(', ')} (or Orbits, IAC, Pituitary)`);
+        }
       } else warn('No region — it will only show under “All” in the Library');
+      const subText = cell('Sub-region');
+      if (subText && region) {
+        const valid = SUBREGIONS[region] || [];
+        const hit = valid.find(v => csvLoose(v) === csvLoose(subText))
+          || (region === 'Brain' ? LEGACY_REGION_MAP[subText.trim().toLowerCase()] : '');
+        if (hit) subRegion = hit;
+        else warn(valid.length ? `Sub-region “${subText}” isn't one of ${valid.join(', ')} for ${region} — ignored` : `${region} has no sub-regions — “${subText}” was ignored`);
+      }
 
       let vendorCol = cell('Vendor');
       if (vendorCol) {
@@ -9601,7 +9793,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         id: makeId(),
         name: it.name,
         region,
-        subRegion: '',
+        subRegion,
         facility: facName,
         scannerModel: scModel,
         scannerRoom: scRoom,
@@ -9756,6 +9948,74 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  });
+
+
+  // --- Exams tab ----------------------------------------------------------------
+  const examState = { id: '' };
+  // Finds each member of an exam: by id when the set names one, else by name + facility
+  // (exact name first, then ignoring case). Several matches use the first and say so.
+  function resolveExamMembers(set) {
+    return set.protocols.map((name, i) => {
+      const id = set.protocolIds[i];
+      if (id) {
+        const hit = protocols.find(pr => pr.id === id);
+        if (hit) return { name, protocol: hit, via: 'id', matches: 1 };
+      }
+      const here = protocols.filter(pr => !set.facility || sameText(pr.facility, set.facility));
+      let found = here.filter(pr => pr.name === name);
+      if (!found.length) found = here.filter(pr => sameText(pr.name, name));
+      return { name, protocol: found[0] || null, via: found.length ? 'name' : '', matches: found.length };
+    });
+  }
+  function renderExamsView() {
+    const tabsEl = document.getElementById('exam-tabs');
+    const bodyEl = document.getElementById('exam-body');
+    if (!examSets.length) {
+      tabsEl.innerHTML = '';
+      bodyEl.innerHTML = '<div class="quick-empty">No exams yet. Import a backup file that includes exam sets (Protocol Library → Import backup).</div>';
+      return;
+    }
+    if (!examSets.some(e => e.id === examState.id)) examState.id = examSets[0].id;
+    tabsEl.innerHTML = examSets.map(e => `<button type="button" data-exam="${escapeHtml(e.id)}" class="${e.id === examState.id ? 'active' : ''}">${escapeHtml(e.name)}</button>`).join('');
+    const set = examSets.find(e => e.id === examState.id);
+    const members = resolveExamMembers(set);
+    let total = 0; let withTime = 0;
+    const rows = members.map((m, i) => {
+      const pr = m.protocol;
+      const ta = pr && Number.isFinite(pr.consoleTimeSec) && pr.consoleTimeSec > 0 ? pr.consoleTimeSec : null;
+      if (ta !== null) { total += ta; withTime += 1; }
+      const flags = [];
+      if (!pr) flags.push('<span class="exam-flag bad">Not found in this library</span>');
+      else {
+        if (m.via === 'name' && m.matches > 1) flags.push(`<span class="exam-flag">${m.matches} protocols share this name here — using the first</span>`);
+        if (needsConfirmation(pr)) flags.push('<span class="exam-flag">⚠ Needs confirmation — see its notes</span>');
+        if (ta === null) flags.push('<span class="exam-flag">No console time saved</span>');
+      }
+      const sub = pr ? [pr.region, pr.subRegion, pr.sliceOrientation, scannerLabel(pr)].filter(Boolean).join(' · ') : '';
+      return `<tr><td>${i + 1}</td><td><strong>${escapeHtml(m.name)}</strong>${sub ? `<div class="exam-meta" style="margin:0;">${escapeHtml(sub)}</div>` : ''}${flags.join('')}</td><td class="ta">${ta !== null ? formatConsoleTime(ta) : '—'}</td></tr>`;
+    }).join('');
+    const missing = members.length - withTime;
+    bodyEl.innerHTML = `<div class="exam-meta">${escapeHtml([set.facility, set.scannerModel, set.region + (set.subRegion ? ' · ' + set.subRegion : '')].filter(Boolean).join(' · '))}${set.basedOn ? ` · based on ${escapeHtml(set.basedOn)}` : ''}</div>`
+      + (set.note ? `<div class="lib-note" style="margin-bottom:8px;">${escapeHtml(set.note)}</div>` : '')
+      + `<table class="exam-table"><thead><tr><th>#</th><th>Protocol</th><th>Console time</th></tr></thead><tbody>${rows}</tbody></table>`
+      + `<div class="exam-total">Total console time: ${withTime ? formatConsoleTime(total) : '—'}</div>`
+      + (missing ? `<div class="lib-note">${missing} of ${members.length} member${members.length === 1 ? '' : 's'} ${missing === 1 ? 'has' : 'have'} no console time, so the total is partial.</div>` : '')
+      + `<div class="lib-note"><button type="button" class="btn-secondary" id="exam-remove-btn">Remove this exam</button> (removes only the list, never the protocols)</div>`;
+  }
+  document.getElementById('exam-tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-exam]');
+    if (!b) return;
+    examState.id = b.dataset.exam;
+    renderExamsView();
+  });
+  document.getElementById('exam-body').addEventListener('click', (e) => {
+    if (!e.target.closest('#exam-remove-btn')) return;
+    const set = examSets.find(x => x.id === examState.id);
+    if (!set || !confirm(`Remove the exam “${set.name}”? The protocols stay in your library.`)) return;
+    examSets = examSets.filter(x => x.id !== set.id);
+    persistExamSets();
+    renderExamsView();
   });
 
   // --- Exam Roles tab ---------------------------------------------------------
