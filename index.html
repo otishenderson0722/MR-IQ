@@ -56,8 +56,10 @@
     gap: 16px;
     margin-bottom: 20px;
   }
+  /* minmax(0, 1fr) + min-width 0: a long label or note can't stretch a column past the screen on a phone. */
+  .columns > * { min-width: 0; }
   @media (max-width: 700px) {
-    .columns { grid-template-columns: 1fr; }
+    .columns { grid-template-columns: minmax(0, 1fr); }
   }
 
   .panel {
@@ -1109,8 +1111,12 @@
     text-align: right;
   }
   .tr-range-indicator.status-ok { color: var(--good); }
-  .tr-range-indicator.status-near { color: var(--warn-border); }
-  .tr-range-indicator.status-outside { color: var(--bad); font-weight: 600; }
+  .tr-range-indicator.status-near { color: var(--warn-border); font-size: 0.88rem; font-weight: 600; }
+  /* Outside range: a filled box, not small text, so it can't be missed at the scanner. */
+  .tr-range-indicator.status-outside {
+    color: #fff; background: var(--bad); font-weight: 700; font-size: 1rem;
+    text-align: left; padding: 8px 12px; border-radius: 8px; margin: -4px 0 12px;
+  }
   .tr-range-indicator.status-unset { color: var(--text-dim); font-style: italic; }
 
   /* TR Ranges reference editor */
@@ -1161,6 +1167,44 @@
   .planning-note-callout + .pg-diagram { margin-top: 12px; }
   .quick-plan-btn { margin-top: 4px; min-height: 36px; background: var(--panel-2); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 4px 12px; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
   .card-actions button.plan-btn { border-color: var(--accent); color: var(--accent); }
+  /* Bigger flags and warnings (Otis, 2026-10-23): every caution in the app is
+     sized up and bolded here so it's caught at a glance on a phone at the scanner. */
+  .warning-banner { font-size: 1rem; font-weight: 600; border-width: 2px; }
+  .warning-banner strong { font-size: 1.05rem; }
+  .quick-timewarn { font-size: 0.9rem; }
+  .confidence-tag { font-size: 0.8rem; padding: 2px 8px; }
+  .health-score-badge, .outcome-badge, .pg-badge { font-size: 0.85rem; }
+  .csv-warn, .exam-flag { font-size: 0.9rem; font-weight: 700; }
+  .csv-confirm { font-size: 0.88rem; font-weight: 700; }
+  .confirm-flag { font-size: 0.95rem; padding: 6px 10px; }
+  .role-badge { font-size: 0.8rem; }
+  .role-banner, .quality-trade-banner { font-size: 0.95rem; }
+  .tier-matrix-caveat, .time-input-warning, .habitus-caveat-card { font-size: 0.9rem; font-weight: 700; }
+  .aggressive-caveat-card { font-size: 0.92rem; padding: 7px 10px; }
+  .aggressive-caveat-banner { font-size: 1.05rem; }
+  .aggressive-caveat-banner ul { font-size: 0.95rem; }
+  .habitus-caveat-banner { font-size: 1rem; }
+  /* Library card health flags: a boxed, bold line instead of small orange text. */
+  .health-bullets { gap: 6px; }
+  .health-bullets li { font-size: 0.88rem; }
+  .health-bullets li.flag {
+    font-size: 0.95rem; font-weight: 700; color: var(--warn-text);
+    background: var(--warn-bg); border: 2px solid var(--warn-border); border-radius: 8px;
+    padding: 6px 10px 6px 30px;
+  }
+  .health-bullets li.flag::before { content: '⚠'; left: 9px; top: 6px; }
+  /* Phone fit (Otis, 2026-10-23): nothing may scroll sideways on a phone. */
+  @media (max-width: 700px) {
+    .optimizer-tier-grid { grid-template-columns: minmax(0, 1fr); }
+    .optimizer-tier-card { min-width: 0; }
+    .optimizer-tier-card .tier-metrics { flex-wrap: wrap; }
+    .tr-range-row input[type=text] { min-width: 0; }
+    .tr-range-row input[type=number] { width: 64px; }
+    .field { flex-wrap: wrap; }
+    .field > * { min-width: 0; max-width: 100%; }
+    .optimizer-compare { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); }
+    .optimizer-compare .confidence-tag { white-space: normal; margin-left: 0; }
+  }
 </style>
 </head>
 <body>
@@ -3997,6 +4041,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (propStatus && propStatus.cls === 'outside') {
       trRangeWarningEl.textContent = `⚠ Proposed TR (${proposed.tr} ms) falls outside the accepted ${propSequenceTypeEl.value} range (${propRange.minTr}–${propRange.maxTr} ms) at your site — this is a contrast-character change, not just an SNR trade-off.`;
       trRangeWarningEl.classList.add('show');
+    } else if (curStatus && curStatus.cls === 'outside') {
+      // The saved/console TR itself is outside range (e.g. TR "shortest" stretched by slice count) — call it out too.
+      trRangeWarningEl.textContent = `⚠ Current TR (${current.tr} ms) is outside the accepted ${curSequenceTypeEl.value} range (${curRange.minTr}–${curRange.maxTr} ms) at your site. Check the TR on the console; "shortest" can run long when there are many slices.`;
+      trRangeWarningEl.classList.add('show');
     } else {
       trRangeWarningEl.classList.remove('show');
     }
@@ -5004,7 +5052,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (!Number.isFinite(minTr) || !Number.isFinite(maxTr)) {
       return { cls: 'unset', text: `No ${range.sequenceType} range set yet` };
     }
-    if (tr < minTr || tr > maxTr) return { cls: 'outside', text: 'Outside range' };
+    if (tr < minTr || tr > maxTr) return { cls: 'outside', text: `⚠ TR ${tr} ms is OUTSIDE the ${range.sequenceType} range (${minTr}–${maxTr} ms)` };
     const span = maxTr - minTr;
     const nearThreshold = span * 0.15;
     if (tr - minTr <= nearThreshold) return { cls: 'near', text: 'Within range (near lower bound)' };
