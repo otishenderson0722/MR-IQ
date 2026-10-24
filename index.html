@@ -98,6 +98,7 @@
     text-align: right;
   }
   .field input:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+  .field input.ge-check { width: 22px; height: 22px; flex: 0 0 auto; }
   .matrix-row { display: flex; align-items: center; gap: 6px; }
   .matrix-row input { width: 60px; }
   .matrix-row span { color: var(--text-dim); font-size: 0.85rem; }
@@ -1205,6 +1206,65 @@
     .optimizer-compare { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); }
     .optimizer-compare .confidence-tag { white-space: normal; margin-left: 0; }
   }
+
+  /* Console card (Otis, 2026-10-24): only the changed settings, stock → new in big
+     bold text, grouped by console tab, tap each line once it's entered; swipe
+     between the sequences of an exam. Full-screen so it reads at arm's length. */
+  .cc-open-btn { display: block; width: 100%; min-height: 48px; margin: 0 0 16px; font-size: 1.05rem; font-weight: 700; }
+  .cc-overlay { display: none; position: fixed; inset: 0; z-index: 60; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: max(12px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+  .cc-overlay.show { display: block; }
+  .cc-inner { max-width: 480px; margin: 0 auto; }
+  .cc-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .cc-head-text { min-width: 0; }
+  .cc-title { font-size: 1.05rem; font-weight: 700; }
+  .cc-sub { color: var(--text-dim); font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+  .cc-close { min-height: 44px; min-width: 76px; font-size: 1rem; flex: 0 0 auto; }
+  .cc-deck { position: relative; display: flex; align-items: flex-start; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-bottom: 4px; }
+  .cc-deck::-webkit-scrollbar { display: none; }
+  .cc-card { flex: 0 0 100%; min-width: 0; scroll-snap-align: center; background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .cc-pos { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+  .cc-name { font-size: 1.5rem; font-weight: 800; margin: 0; overflow-wrap: anywhere; }
+  .cc-meta { font-size: 0.85rem; color: var(--text-dim); }
+  .cc-pill { align-self: flex-start; border: 1px solid var(--accent); color: var(--accent); background: var(--panel-2); border-radius: 999px; padding: 4px 12px; font-weight: 700; font-size: 0.9rem; }
+  .cc-tab { display: flex; flex-direction: column; gap: 6px; }
+  .cc-tab-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); }
+  .cc-row { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px; color: var(--text); font: inherit; cursor: pointer; }
+  .cc-row:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .cc-box { width: 30px; height: 30px; border-radius: 8px; border: 2px solid var(--text-dim); display: grid; place-items: center; font-size: 1.1rem; font-weight: 900; color: transparent; }
+  .cc-row.done { background: rgba(63, 185, 80, 0.14); border-color: var(--good); }
+  .cc-row.done .cc-box { background: var(--good); border-color: var(--good); color: #08130b; }
+  .cc-row.done .cc-param, .cc-row.done .cc-vals { opacity: 0.75; }
+  .cc-param { display: block; font-size: 0.85rem; color: var(--text-dim); }
+  .cc-vals { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 1.35rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .cc-old { color: var(--text-dim); font-weight: 600; text-decoration: line-through; text-decoration-thickness: 2px; }
+  .cc-arrow { color: var(--text-dim); font-weight: 600; }
+  .cc-untouched { font-size: 0.85rem; color: var(--text-dim); border: 1px dashed var(--border); border-radius: 10px; padding: 8px 10px; }
+  .cc-warn { background: var(--warn-bg); border: 2px solid var(--warn-border); color: var(--warn-text); border-radius: 10px; padding: 10px 12px; font-size: 1.02rem; font-weight: 800; line-height: 1.35; }
+  .cc-warn small { display: block; font-weight: 600; font-size: 0.88rem; margin-top: 4px; }
+  .cc-warn.stop { background: rgba(240, 103, 79, 0.18); border-color: var(--bad); color: #ffd2c9; font-size: 1.1rem; }
+  .cc-warn button { margin-top: 8px; min-height: 44px; font-size: 0.95rem; font-weight: 700; }
+  .cc-target { border: 2px solid var(--border); background: var(--panel-2); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .cc-target.all-in { border-color: var(--good); }
+  .cc-target-label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+  .cc-metrics { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .cc-metric { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .cc-k { font-size: 0.8rem; color: var(--text-dim); }
+  .cc-big { font-size: 2rem; font-weight: 900; line-height: 1.05; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .cc-big.verify { font-size: 1.15rem; color: var(--warn-text); }
+  .cc-was { font-size: 0.85rem; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+  .cc-progress { font-weight: 800; font-size: 1rem; text-align: center; padding: 8px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border); }
+  .cc-target.all-in .cc-progress { background: var(--good); border-color: var(--good); color: #08130b; }
+  .cc-stock { background: rgba(63, 185, 80, 0.14); border: 2px solid var(--good); border-radius: 10px; padding: 14px; font-size: 1.15rem; font-weight: 800; text-align: center; }
+  .cc-stock small { display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-dim); margin-top: 4px; }
+  .cc-foot { display: flex; flex-wrap: wrap; gap: 8px; }
+  .cc-foot button { min-height: 44px; }
+  .cc-dots { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .cc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .cc-dot.has { background: var(--text-dim); }
+  .cc-dot.on { background: var(--accent); width: 20px; border-radius: 4px; }
+  .cc-hint { text-align: center; color: var(--text-dim); font-size: 0.85rem; margin-top: 6px; }
+  .cs-refused-banner.show { background: rgba(240, 103, 79, 0.18); border-color: var(--bad); color: #ffd2c9; }
 </style>
 </head>
 <body>
@@ -1670,6 +1730,9 @@
     <div class="warning-banner" id="priority-flag-banner"></div>
     <div class="warning-banner" id="tr-range-warning-banner"></div>
     <div class="warning-banner" id="cs-sense-precision-banner"></div>
+    <div class="warning-banner cs-refused-banner" id="cs-refused-banner"></div>
+
+    <button type="button" class="btn-primary cc-open-btn" id="cc-calc-btn">📋 Console card — what to enter</button>
 
     <div class="results">
       <div class="result-card">
@@ -1696,7 +1759,7 @@
     <div class="info-note" id="oversampling-note"></div>
 
     <footer>
-      <strong>Model notes:</strong> Scan time ≈ TR × NSA × phase steps × (1 + oversampling%) ÷ (SENSE × TSE/turbo factor). TSE/turbo factor is now included (previously excluded entirely, which produced a ~9.5× real-world discrepancy on a TSE cervical axial T2 — est. ~19 min vs an actual ~2 min); it doesn't scale time perfectly linearly in practice and can also affect achievable voxel size, similar to the CS-SENSE factor, so treat this as a major improvement over the prior order-of-magnitude error, not a claim of precise linearity — verify any meaningful TSE factor change at console. Multi-package slice timing (additional TR passes once slice count exceeds what fits per TR) still isn't modeled — there's no reliable way to estimate max-slices-per-TR with what this app tracks — so entering a slice count flags the time estimate as "Verify at console" instead of silently under-predicting (confirmed ~6× off on an axial brain T2, 24 slices, est. ~19s vs an actual ~2:00). Still excludes partial Fourier and prep pulses (fat sat, IR). <strong>Console time (TA):</strong> TR is no longer treated as a time lever at all — real scans showed time doesn't scale with TR when slice count limits it (TR 548 → 400 was predicted at 1:11 and took 2:26). If you enter the console's own time for the Current values, the proposed time is that number scaled only by NSA, phase steps, acceleration factor and oversampling, and any proposal where TR, TSE factor, slice count or a CS-SENSE factor changed shows "Verify at console" instead of a number.
+      <strong>Model notes:</strong> Scan time ≈ TR × NSA × phase steps × (1 + oversampling%) ÷ (SENSE × TSE/turbo factor). TSE/turbo factor is now included (previously excluded entirely, which produced a ~9.5× real-world discrepancy on a TSE cervical axial T2 — est. ~19 min vs an actual ~2 min); it doesn't scale time perfectly linearly in practice and can also affect achievable voxel size, similar to the CS-SENSE factor, so treat this as a major improvement over the prior order-of-magnitude error, not a claim of precise linearity — verify any meaningful TSE factor change at console. Multi-package slice timing (additional TR passes once slice count exceeds what fits per TR) still isn't modeled — there's no reliable way to estimate max-slices-per-TR with what this app tracks — so entering a slice count flags the time estimate as "Verify at console" instead of silently under-predicting (confirmed ~6× off on an axial brain T2, 24 slices, est. ~19s vs an actual ~2:00). Still excludes partial Fourier and prep pulses (fat sat, IR). <strong>GE:</strong> phase steps = phase matrix × phase FOV; Acqs (when entered) multiplies time and makes a slice count trustworthy; a bandwidth change scales SNR by √(old ÷ new); switching No Phase Wrap on or off shows "Verify at console". <strong>Console time (TA):</strong> TR is no longer treated as a time lever at all — real scans showed time doesn't scale with TR when slice count limits it (TR 548 → 400 was predicted at 1:11 and took 2:26). If you enter the console's own time for the Current values, the proposed time is that number scaled only by NSA, phase steps, acceleration factor and oversampling, and any proposal where TR, TSE factor, slice count or a CS-SENSE factor changed shows "Verify at console" instead of a number.
       SNR ≈ (1 / (freq × phase)) × √(NSA × phase steps × (1 + oversampling%)) ÷ (g(R) × √R), assuming FOV and slice thickness stay constant between current and proposed — so voxel size is inferred from matrix size only. TR is not part of this SNR number — its effect on signal (via T1 recovery/saturation) is tissue-dependent, so it's called out qualitatively below instead of folded into the percentage.
       Phase oversampling is modeled like NSA — √(more phase-direction data) — since both just acquire more data in the phase direction, but it doesn't feed voxelFactor: the extra lines extend FOV, not resolution, and are cropped away on recon. Oversampling primarily prevents fold-over/aliasing artifact; the SNR increase is a secondary benefit, not the primary reason to adjust it — don't reduce oversampling below what's needed to prevent aliasing just to save time, even though the calculator will show a time savings for doing so.
       For CS-SENSE, the g-factor model above is skipped — SNR is instead estimated from the ACQ voxel size you enter directly, as (voxel freq × voxel phase) × √(NSA × (1 + oversampling%)), since CS-SENSE's iterative, variable-density reconstruction isn't something this simple model can approximate — treat those estimates as less precise than standard-SENSE ones, and only compare them against other CS-SENSE estimates (see the "not comparable" note when mixing with standard SENSE). Scan time for CS-SENSE isn't estimated at all — dividing by the CS factor like standard SENSE was confirmed ~4x off against actual console time (TR 741, NSA 2, 214×172, CS factor 2.1, TSE factor 7 → this app showed 35.8s, console showed ~150s), and there's no reliable approximation to use instead; the app shows "Verify at console" in its place.
@@ -2047,6 +2110,10 @@
           <option value="cs-sense">CS-SENSE</option>
           <option value="none">None</option>
         </select>
+      </div>
+      <div class="field">
+        <label for="pf-cs-refused">Console refuses CS-SENSE (shows a Conflict)</label>
+        <input type="checkbox" id="pf-cs-refused" class="ge-check">
       </div>
       <div class="field" id="pf-sense-field">
         <label for="pf-sense" id="pf-sense-label">SENSE (parallel imaging factor)</label>
@@ -2407,6 +2474,17 @@
   </div>
 </div>
 
+<div class="cc-overlay" id="cc-overlay" role="dialog" aria-modal="true" aria-labelledby="cc-title">
+  <div class="cc-inner">
+    <div class="cc-head">
+      <div class="cc-head-text"><div class="cc-title" id="cc-title">Console card</div><div class="cc-sub" id="cc-sub"></div></div>
+      <button type="button" class="btn-secondary cc-close" id="cc-close">Close</button>
+    </div>
+    <div class="cc-deck" id="cc-deck"></div>
+    <div class="cc-dots" id="cc-dots" aria-hidden="true"></div>
+    <div class="cc-hint" id="cc-hint"></div>
+  </div>
+</div>
 <script>
 /**
  * MR IQ - scan time / SNR trade-off calculator
@@ -2490,7 +2568,7 @@ function hasSliceCount(params) {
 }
 
 function hasUnreliableTime(params) {
-  return params.accelType === 'cs-sense' || hasSliceCount(params);
+  return params.accelType === 'cs-sense' || (hasSliceCount(params) && !hasAcqs(params));
 }
 
 // Phase oversampling extends the acquired FOV in the phase direction
@@ -2520,9 +2598,46 @@ function tseFactor(params) {
   return Number.isFinite(params.etl) && params.etl > 0 ? params.etl : 1;
 }
 
+// GE phase FOV (PFOV) — a fraction of the FOV, e.g. 0.75. GE quotes the
+// phase matrix for the full FOV, so only matrix x PFOV phase lines are
+// acquired: time and the phase-averaging part of SNR follow that, while
+// voxel size (FOV / matrix) doesn't change. Blank = 1 (every other vendor).
+function pfovFactor(params) {
+  const v = params && params.pfov;
+  return Number.isFinite(v) && v > 0 && v <= 1 ? v : 1;
+}
+function phaseSteps(params) {
+  return params.phaseMatrix * pfovFactor(params);
+}
+
+// GE "Acqs" — how many passes the console needs to fit every slice (it's on
+// the GE scan screen). Entered, it multiplies time and makes a slice count
+// trustworthy again (see hasUnreliableTime); blank = 1.
+function hasAcqs(params) {
+  return Number.isFinite(params && params.acqs) && params.acqs >= 1;
+}
+function acqsFactor(params) {
+  return hasAcqs(params) ? Math.round(params.acqs) : 1;
+}
+
+// GE readout bandwidth (±kHz). SNR goes with 1/sqrt(bandwidth), so a
+// Proposed bandwidth different from Current scales SNR by sqrt(old / new).
+// Only when both sides have one — otherwise no effect, as before.
+function bandwidthSnrFactor(current, proposed) {
+  const a = current && current.bwKhz;
+  const b = proposed && proposed.bwKhz;
+  return Number.isFinite(a) && a > 0 && Number.isFinite(b) && b > 0 ? Math.sqrt(a / b) : 1;
+}
+
+// The GE-only fields a params set carries, so optimizer candidates built
+// from a start keep them.
+function geParamsOf(p) {
+  return { vendor: p.vendor, pfov: p.pfov, npw: !!p.npw, bwKhz: p.bwKhz, acqs: p.acqs };
+}
+
 function acquisitionTimeMs(params) {
-  const { tr, nsa, phaseMatrix } = params;
-  return (tr * nsa * phaseMatrix * oversamplingFactor(params)) / (effectiveAccelFactor(params) * tseFactor(params));
+  const { tr, nsa } = params;
+  return (tr * nsa * phaseSteps(params) * oversamplingFactor(params) * acqsFactor(params)) / (effectiveAccelFactor(params) * tseFactor(params));
 }
 
 // --- Console time (TA) -----------------------------------------------------
@@ -2561,7 +2676,7 @@ function consoleTimeSecOf(params) {
 // NSA x phase steps x oversampling / acceleration — the part of the time
 // formula that scales reliably (no TR, no TSE factor).
 function reliableTimeFactor(params) {
-  return (params.nsa * params.phaseMatrix * oversamplingFactor(params)) / effectiveAccelFactor(params);
+  return (params.nsa * phaseSteps(params) * oversamplingFactor(params) * acqsFactor(params)) / effectiveAccelFactor(params);
 }
 
 // Why a console-anchored time can't be scaled from `from` to `to`.
@@ -2574,7 +2689,8 @@ function consoleTimeVerifyReasons(from, to) {
   }
   if (tseFactor(from) !== tseFactor(to)) reasons.push('TSE factor changed');
   const slicesOf = p => (hasSliceCount(p) ? p.slices : 0);
-  if (slicesOf(from) !== slicesOf(to)) reasons.push('slice count changed');
+  if (slicesOf(from) !== slicesOf(to) && !(hasAcqs(from) && hasAcqs(to))) reasons.push('slice count changed');
+  if (!!from.npw !== !!to.npw) reasons.push('No Phase Wrap changed');
   return reasons;
 }
 
@@ -2594,6 +2710,7 @@ function paramsFromProtocol(p) {
     freqMatrix: p.freqMatrix, phaseMatrix: p.phaseMatrix,
     accelType: p.accelType || 'sense', csVoxelFreq: p.csVoxelFreq, csVoxelPhase: p.csVoxelPhase,
     oversamplingPercent: p.oversamplingPercent || 0, etl: p.etl, slices: p.slices,
+    ...geParamsOf(p),
   };
 }
 
@@ -2631,7 +2748,7 @@ function relativeSnr(params, k = DEFAULT_G_FACTOR_K) {
   const voxelFactor = 1 / (freqMatrix * phaseMatrix);
   const sense = effectiveAccelFactor(params);
   const g = gFactor(sense, k);
-  return (voxelFactor * Math.sqrt(nsa * phaseMatrix * osFactor)) / (g * Math.sqrt(sense));
+  return (voxelFactor * Math.sqrt(nsa * phaseSteps(params) * osFactor)) / (g * Math.sqrt(sense));
 }
 
 /**
@@ -2644,6 +2761,8 @@ function snrReducingChanges(current, proposed) {
   if ((proposed.oversamplingPercent || 0) < (current.oversamplingPercent || 0)) {
     reducers.push('Phase oversampling decreased');
   }
+  if (pfovFactor(proposed) < pfovFactor(current)) reducers.push('Phase FOV decreased');
+  if (bandwidthSnrFactor(current, proposed) < 1) reducers.push('Bandwidth increased');
 
   // Once either side is CS-SENSE, the matrix/g-factor proxies below no
   // longer reliably indicate an SNR change (see relativeSnr) - judge by
@@ -2678,7 +2797,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const timeRatio = timeProposedMs / timeCurrentMs;
 
   const snrCurrent = relativeSnr(current, gFactorK);
-  const snrProposed = relativeSnr(proposed, gFactorK);
+  const snrProposed = relativeSnr(proposed, gFactorK) * bandwidthSnrFactor(current, proposed);
   const snrRatio = snrProposed / snrCurrent;
 
   const reducers = snrReducingChanges(current, proposed);
@@ -2708,7 +2827,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // displaying any of them and show "Verify at console" instead when false.
   const currentTimeUnreliable = hasUnreliableTime(current);
   const proposedTimeUnreliable = hasUnreliableTime(proposed);
-  const timeComparable = !currentTimeUnreliable && !proposedTimeUnreliable;
+  // GE No Phase Wrap switched on or off: the console changes NEX/phase FOV
+  // itself, so only its own scan time is trustworthy.
+  const npwChanged = !!current.npw !== !!proposed.npw;
+  const timeComparable = !currentTimeUnreliable && !proposedTimeUnreliable && !npwChanged;
 
   let time = {
     currentMs: timeCurrentMs,
@@ -2717,7 +2839,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     percentChange: (timeRatio - 1) * 100,
     comparable: timeComparable,
     currentUnreliable: currentTimeUnreliable,
-    proposedUnreliable: proposedTimeUnreliable,
+    proposedUnreliable: proposedTimeUnreliable || npwChanged,
     // The plain formula's ratio (TR and TSE included), kept for the
     // optimizer's "modest time increase" budget either way.
     modelRatio: timeRatio,
@@ -2949,8 +3071,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // category is read from it (plus the Exam/anatomy text), since the
   // Calculator itself has no protocol name field.
   let calcLoadedProtocolName = '';
+  // Its id too (remembered between visits), so a console card made from the
+  // Calculator can be filed under that protocol for the Exams swipe.
+  const CALC_LOADED_KEY = 'mriq.calcLoadedProtocol.v1';
+  let calcLoadedProtocolId = '';
   function noteCalcLoadedProtocol(protocol) {
     calcLoadedProtocolName = protocol ? protocol.name : '';
+    calcLoadedProtocolId = protocol && protocol.id ? protocol.id : '';
+    try { localStorage.setItem(CALC_LOADED_KEY, calcLoadedProtocolId); } catch (e) { /* convenience only */ }
     calcRoleCategoryEl.value = (protocol && protocol.roleCategory) || '';
   }
   function calcRoleInfo() {
@@ -3051,7 +3179,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
   const accelTypeGroups = {};
 
-  function setupAccelTypeGroup(prefix, onChange) {
+  function setupAccelTypeGroup(prefix, onChange, vendorOf) {
     const typeEl = document.getElementById(`${prefix}-accel-type`);
     const senseFieldEl = document.getElementById(`${prefix}-sense-field`);
     const senseLabelEl = document.getElementById(`${prefix}-sense-label`);
@@ -3061,7 +3189,18 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       const accelType = typeEl.value;
       senseFieldEl.style.display = accelType === 'none' ? 'none' : '';
       csSectionEl.style.display = accelType === 'cs-sense' ? 'block' : 'none';
-      senseLabelEl.textContent = accelFactorLabel(vendorSelectEl ? vendorSelectEl.value : '', accelType);
+      const vendor = vendorOf ? vendorOf() : (vendorSelectEl ? vendorSelectEl.value : '');
+      senseLabelEl.textContent = accelFactorLabel(vendor, accelType);
+      // The option names follow the vendor (ASSET on GE), and GE has no
+      // compressed sensing on older consoles, so CS-SENSE isn't offered there.
+      const senseOpt = typeEl.querySelector('option[value="sense"]');
+      if (senseOpt) senseOpt.textContent = vendorTerms(vendor).sense;
+      const csOpt = typeEl.querySelector('option[value="cs-sense"]');
+      if (csOpt) {
+        const noCs = vendor === 'GE' && accelType !== 'cs-sense';
+        csOpt.hidden = noCs;
+        csOpt.disabled = noCs;
+      }
     }
 
     typeEl.addEventListener('change', () => {
@@ -3397,13 +3536,22 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // themselves never move code, only their DOM position does, so no
   // other JS needs to change to support it.
   // ---------------------------------------------------------------------
+  // 'time' is the console time (TA) field, kept last for every vendor.
+  // GE's single parameter screen runs Scan Timing (TE/TR/ETL/bandwidth),
+  // Scanning Range (FOV, slices, thickness), then Acquisition Timing
+  // (matrix, NEX), so its sections are reordered and renamed to match.
   const CONSOLE_TAB_ORDER = {
-    Philips: ['summary', 'geometry', 'contrast'],
+    Philips: ['summary', 'geometry', 'contrast', 'time'],
+    GE: ['contrast', 'geometry', 'summary', 'time'],
   };
   const DEFAULT_CONSOLE_TAB_ORDER = CONSOLE_TAB_ORDER.Philips;
+  const CONSOLE_SECTION_LABELS = {
+    GE: { contrast: 'Scan Timing', geometry: 'Scanning Range', summary: 'Acquisition Timing' },
+  };
 
   function applyConsoleTabOrder(vendor) {
     const order = CONSOLE_TAB_ORDER[vendor] || DEFAULT_CONSOLE_TAB_ORDER;
+    const labels = CONSOLE_SECTION_LABELS[vendor] || {};
     document.querySelectorAll('.panel').forEach(panel => {
       const footer = panel.querySelector('.panel-footer');
       if (!footer) return;
@@ -3411,6 +3559,104 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         const section = panel.querySelector(`.console-section[data-tab="${tab}"]`);
         if (section) panel.insertBefore(section, footer);
       });
+      panel.querySelectorAll('.console-section > .section-divider').forEach(div => {
+        if (!div.dataset.defaultLabel) div.dataset.defaultLabel = div.textContent;
+        div.textContent = labels[div.parentNode.dataset.tab] || div.dataset.defaultLabel;
+      });
+    });
+  }
+
+  // ---------------------------------------------------------------------
+  // GE fields (Signa Excite and other GE consoles): FOV in cm, phase FOV
+  // as a fraction, No Phase Wrap, Acqs and readout bandwidth (±kHz).
+  // Built once into each Calculator panel and shown only when GE is the
+  // vendor — see pfovFactor/acqsFactor/bandwidthSnrFactor for the math.
+  // ---------------------------------------------------------------------
+  function geGeometryFieldsHtml(prefix) {
+    return `
+      <div class="field"><label for="${prefix}-ge-fov">FOV (cm)</label><input type="number" id="${prefix}-ge-fov" min="1" step="0.1" inputmode="decimal" placeholder="e.g. 24"></div>
+      <div class="field"><label for="${prefix}-pfov">Phase FOV (0.5–1.0)</label><input type="number" id="${prefix}-pfov" min="0.5" max="1" step="0.05" inputmode="decimal" placeholder="1.0"></div>
+      <div class="field"><label for="${prefix}-npw">No Phase Wrap (NPW)</label><input type="checkbox" id="${prefix}-npw" class="ge-check"></div>
+      <div class="field"><label for="${prefix}-acqs">Acqs (optional)</label><input type="number" id="${prefix}-acqs" min="1" step="1" inputmode="numeric" placeholder="e.g. 1"></div>`;
+  }
+  function geBandwidthFieldHtml(prefix) {
+    return `<label for="${prefix}-bw">Bandwidth (±kHz, optional)</label><input type="number" id="${prefix}-bw" min="1" step="any" inputmode="decimal" placeholder="e.g. 15.63">`;
+  }
+  // FOV in cm fills the (hidden) mm FOV fields the rest of the app reads.
+  // GE quotes the phase matrix for the full FOV, so phase FOV in mm is the
+  // full FOV too; the fraction lives in its own field.
+  function wireGeFovCm(prefix) {
+    document.getElementById(`${prefix}-ge-fov`).addEventListener('input', (e) => {
+      const cm = parseFloat(e.target.value);
+      const mm = Number.isFinite(cm) && cm > 0 ? String(Math.round(cm * 100) / 10) : '';
+      ['fov-freq', 'fov-phase'].forEach(k => {
+        const el = document.getElementById(`${prefix}-${k}`);
+        el.value = mm;
+        el.dispatchEvent(new Event('input'));
+      });
+    });
+  }
+
+  function buildGeCalcFields(prefix) {
+    const geo = document.createElement('div');
+    geo.id = `${prefix}-ge-geometry`;
+    geo.dataset.geOnly = '1';
+    geo.style.display = 'none';
+    geo.innerHTML = geGeometryFieldsHtml(prefix) + `<div class="lib-note" id="${prefix}-ge-note" style="margin-top:-4px;"></div>`;
+    document.getElementById(`${prefix}-thickness`).closest('.field').after(geo);
+    const bw = document.createElement('div');
+    bw.className = 'field';
+    bw.dataset.geOnly = '1';
+    bw.style.display = 'none';
+    bw.innerHTML = geBandwidthFieldHtml(prefix);
+    document.getElementById(`${prefix}-te`).closest('.field').after(bw);
+    if (prefix === 'cur') {
+      // Console time gets its own section so it stays last in every vendor's order.
+      const taField = document.getElementById('cur-console-time').closest('.field');
+      const sec = document.createElement('div');
+      sec.className = 'console-section';
+      sec.dataset.tab = 'time';
+      taField.closest('.panel').querySelector('.panel-footer').before(sec);
+      sec.appendChild(taField);
+    }
+    wireGeFovCm(prefix);
+  }
+  buildGeCalcFields('cur');
+  buildGeCalcFields('prop');
+
+  function readGeParams(prefix) {
+    const vendor = vendorSelectEl.value;
+    if (vendor !== 'GE') return { vendor };
+    const num = id => parseFloat(document.getElementById(`${prefix}-${id}`).value);
+    return { vendor, pfov: num('pfov'), npw: document.getElementById(`${prefix}-npw`).checked, bwKhz: num('bw'), acqs: num('acqs') };
+  }
+
+  function setGeInputs(panel, p) {
+    const put = (id, v) => { document.getElementById(`${panel}-${id}`).value = Number.isFinite(v) && v > 0 ? v : ''; };
+    put('pfov', p.pfov);
+    put('bw', p.bwKhz);
+    put('acqs', p.acqs);
+    document.getElementById(`${panel}-npw`).checked = !!p.npw;
+  }
+
+  // One line under the GE fields: voxel size, phase lines actually
+  // acquired, and what NPW does.
+  function updateGeNotes() {
+    if (vendorSelectEl.value !== 'GE') return;
+    const round2 = v => Math.round(v * 100) / 100;
+    ['cur', 'prop'].forEach(prefix => {
+      const val = id => parseFloat(document.getElementById(`${prefix}-${id}`).value);
+      const cm = val('ge-fov');
+      const freq = val('freq');
+      const phase = val('phase');
+      const pfov = pfovFactor({ pfov: val('pfov') });
+      const parts = [];
+      if (cm > 0 && freq > 0 && phase > 0) parts.push(`Voxel ≈ ${round2(cm * 10 / freq)} × ${round2(cm * 10 / phase)} mm.`);
+      if (pfov < 1 && phase > 0) parts.push(`About ${Math.round(phase * pfov)} phase lines acquired (phase matrix × phase FOV).`);
+      if (document.getElementById(`${prefix}-npw`).checked) {
+        parts.push('NPW: GE doubles the phase FOV and halves NEX, so time and SNR stay about the same. Check once: console scan time with NPW on vs off.');
+      }
+      document.getElementById(`${prefix}-ge-note`).textContent = parts.join(' ');
     });
   }
 
@@ -3454,6 +3700,19 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     accelTypeGroups.prop.refreshLabel();
 
     sliceOrientationRowEl.style.display = vendor === 'Philips' ? 'flex' : 'none';
+    // GE: show the GE fields; hide phase oversampling (GE uses No Phase
+    // Wrap instead) and the Philips-only "ACQ voxel size" note.
+    const isGe = vendor === 'GE';
+    ['cur', 'prop'].forEach(p => {
+      document.querySelectorAll(`#${p}-ge-geometry, [data-ge-only]`).forEach(el => {
+        if (el.id === `${p}-ge-geometry` || el.contains(document.getElementById(`${p}-bw`))) el.style.display = isGe ? '' : 'none';
+      });
+      document.getElementById(`${p}-oversampling-label`).closest('.field').style.display = isGe ? 'none' : '';
+      document.getElementById(`${p}-oversampling-derived`).style.display = isGe ? 'none' : '';
+      const voxelNote = document.querySelector(`#${p}-thickness`).closest('.console-section').querySelector(':scope > .lib-note');
+      if (voxelNote) voxelNote.style.display = isGe ? 'none' : '';
+    });
+    updateGeNotes();
     const axisPair = axisPairLabel(vendor, sliceOrientationSelectEl.value);
     curFovLabelEl.textContent = `FOV (mm, ${axisPair})`;
     curMatrixLabelEl.textContent = `Matrix (${axisPair})`;
@@ -3483,7 +3742,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       accelType,
       csVoxelFreq: parseFloat(document.getElementById(`${prefix}-cs-voxel-freq`).value),
       csVoxelPhase: parseFloat(document.getElementById(`${prefix}-cs-voxel-phase`).value),
-      oversamplingPercent: oversamplingGroups[prefix] ? oversamplingGroups[prefix].readPercent() : 0,
+      // GE has no separate phase oversampling (No Phase Wrap covers it), and the field is hidden there.
+      oversamplingPercent: oversamplingGroups[prefix] && vendorSelectEl.value !== 'GE' ? oversamplingGroups[prefix].readPercent() : 0,
+      ...readGeParams(prefix),
       // Optional - tseFactor() defaults to 1 (no turbo) when absent, so
       // leaving this blank behaves exactly as before TSE factor was added
       // to the time model.
@@ -3841,6 +4102,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (calcStateReady) saveCalculatorState();
     refreshNsaHints();
     renderCalcRole();
+    updateGeNotes();
     const current = readSet(curInputs, 'cur');
     const proposed = readSet(propInputs, 'prop');
     const k = parseFloat(gK.value);
@@ -3891,6 +4153,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       propTrRangeEl.className = 'tr-range-indicator';
       trRangeWarningEl.classList.remove('show');
       csSenseBannerEl.classList.remove('show');
+      document.getElementById('cs-refused-banner').classList.remove('show');
       timeConfidenceEl.innerHTML = '';
       snrConfidenceEl.innerHTML = '';
       // The optimizer only ever reads the Current panel, so it must still run
@@ -4009,6 +4272,16 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       csSenseBannerEl.classList.remove('show');
     }
 
+    // The console has refused CS-SENSE on this protocol before (Conflicts tab).
+    const csRefusedEl = document.getElementById('cs-refused-banner');
+    const loadedForCs = calcLoadedProtocolId ? protocols.find(pr => pr.id === calcLoadedProtocolId) : null;
+    if (loadedForCs && loadedForCs.csSenseRefused && proposed.accelType === 'cs-sense' && current.accelType !== 'cs-sense') {
+      csRefusedEl.textContent = `⛔ The console refused CS-SENSE on ${loadedForCs.name} (it showed a Conflict). Keep CS-SENSE off; use ${vendorTerms(vendorSelectEl.value).sense} or another change instead.`;
+      csRefusedEl.classList.add('show');
+    } else {
+      csRefusedEl.classList.remove('show');
+    }
+
     const flagText = priorityFlagText(effectivePriority(priorityEl.value, calcRoleInfo()), result, current, proposed);
     if (flagText) {
       priorityFlagEl.textContent = '⚠ ' + flagText;
@@ -4102,12 +4375,19 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   });
 
   document.getElementById('cur-console-time').addEventListener('input', render);
+  ['cur', 'prop'].forEach(p => ['ge-fov', 'pfov', 'acqs', 'bw', 'npw'].forEach(f => {
+    document.getElementById(`${p}-${f}`).addEventListener(f === 'npw' ? 'change' : 'input', render);
+  }));
 
   document.getElementById('reset-btn').addEventListener('click', () => {
     [...Object.values(curInputs), ...Object.values(propInputs)].forEach(el => {
       el.value = '';
     });
     document.getElementById('cur-console-time').value = '';
+    ['cur', 'prop'].forEach(p => {
+      ['ge-fov', 'pfov', 'acqs', 'bw'].forEach(f => { document.getElementById(`${p}-${f}`).value = ''; });
+      document.getElementById(`${p}-npw`).checked = false;
+    });
     noteCalcLoadedProtocol(null);
     matrixStyleGroups.cur.reset();
     matrixStyleGroups.prop.reset();
@@ -5190,6 +5470,18 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const label = accelType === 'cs-sense' ? 'CS-SENSE' : vendorTerms(p.vendor).sense;
     return `${label} ${shownVal(p.sense)}`;
   }
+  // GE extras for the card's parameter line (empty for other vendors).
+  function geParamsSummary(p) {
+    if (p.vendor !== 'GE') return '';
+    const parts = [];
+    if (Number.isFinite(p.fovFreq) && p.fovFreq > 0) parts.push(`FOV ${Math.round(p.fovFreq) / 10} cm`);
+    if (Number.isFinite(p.pfov) && p.pfov > 0 && p.pfov < 1) parts.push(`PFOV ${p.pfov}`);
+    if (p.npw) parts.push('NPW');
+    if (Number.isFinite(p.bwKhz) && p.bwKhz > 0) parts.push(`BW ±${p.bwKhz} kHz`);
+    if (p.freqDir) parts.push(`Freq ${escapeHtml(p.freqDir)}`);
+    if (Number.isFinite(p.acqs) && p.acqs > 0) parts.push(`Acqs ${p.acqs}`);
+    return parts.length ? ' · ' + parts.join(' · ') : '';
+  }
 
   // Protocol Health Score — a summary/scoring layer, not a new calculation
   // engine. Every dimension below reuses a check the app already performs
@@ -5660,7 +5952,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         </div>
         ${needsConfirmation(p) ? '<div class="confirm-flag">⚠ Needs confirmation — see the notes below</div>' : ''}
         ${planningNoteHtml(p)}
-        <div class="protocol-params">TR ${shownVal(p.tr)} ms · ${terms.nsa} ${shownVal(p.nsa)} · ${accelSummaryLabel(p)} · ${shownVal(p.freqMatrix)}×${shownVal(p.phaseMatrix)}${thicknessLabel}${Number.isFinite(p.consoleTimeSec) && p.consoleTimeSec > 0 ? ` · TA ${formatConsoleTime(p.consoleTimeSec)}` : ''}</div>
+        <div class="protocol-params">TR ${shownVal(p.tr)} ms · ${terms.nsa} ${shownVal(p.nsa)} · ${accelSummaryLabel(p)} · ${shownVal(p.freqMatrix)}×${shownVal(p.phaseMatrix)}${thicknessLabel}${geParamsSummary(p)}${Number.isFinite(p.consoleTimeSec) && p.consoleTimeSec > 0 ? ` · TA ${formatConsoleTime(p.consoleTimeSec)}` : ''}</div>
         ${acrTagHtml}
         ${healthScoreHtml(p)}
         ${notesHtml}
@@ -5903,6 +6195,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     document.getElementById(`${panel}-fov-freq`).value = pos(fovFreq);
     document.getElementById(`${panel}-fov-phase`).value = pos(fovPhase);
     document.getElementById(`${panel}-thickness`).value = pos(thickness);
+    document.getElementById(`${panel}-ge-fov`).value = Number.isFinite(fovFreq) && fovFreq > 0 ? Math.round(fovFreq) / 10 : '';
     // The fold-over mm note needs the phase FOV just set above; refresh it so it doesn't say "treated as 0%".
     if (oversamplingGroups[panel]) oversamplingGroups[panel].refresh();
     // Console time (TA) belongs to the Current panel only.
@@ -5929,7 +6222,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // An optimizer suggestion is derived from Current, so Proposed inherits
   // Current's FOV, slice thickness and TE (the optimizer never changes them).
   function copyCurrentExtrasToProposed() {
-    ['fov-freq', 'fov-phase', 'thickness', 'te'].forEach(k => {
+    ['fov-freq', 'fov-phase', 'thickness', 'te', 'ge-fov'].forEach(k => {
       document.getElementById(`prop-${k}`).value = document.getElementById(`cur-${k}`).value;
     });
   }
@@ -5952,6 +6245,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     accelTypeGroups[panel].set(p.accelType || 'sense');
     document.getElementById(`${panel}-cs-voxel-freq`).value = p.csVoxelFreq ?? '';
     document.getElementById(`${panel}-cs-voxel-phase`).value = p.csVoxelPhase ?? '';
+    setGeInputs(panel, p);
     // Always shown in % (the canonical stored unit) regardless of which
     // unit it was originally entered in — same "always resets to the raw
     // style" convention as the matrix style group above.
@@ -6025,7 +6319,16 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   restrictNsaKeys(pf.nsa);
   pf.nsa.addEventListener('input', () => setNsaHint(document.getElementById('pf-nsa-hint'), pf.nsa.value));
   matrixStyleGroups.pf = setupMatrixStyleGroup('pf', () => {});
-  accelTypeGroups.pf = setupAccelTypeGroup('pf', () => {});
+  accelTypeGroups.pf = setupAccelTypeGroup('pf', () => {}, () => pf.vendor.value);
+  // GE fields in the form, right after Number of slices (shown for GE only).
+  const pfGeBox = document.createElement('div');
+  pfGeBox.id = 'pf-ge-fields';
+  pfGeBox.style.display = 'none';
+  pfGeBox.innerHTML = geGeometryFieldsHtml('pf')
+    + `<div class="field">${geBandwidthFieldHtml('pf')}</div>`
+    + `<div class="field"><label for="pf-freq-dir">Freq DIR</label><select id="pf-freq-dir"><option value="">—</option><option>A/P</option><option>R/L</option><option>S/I</option></select></div>`;
+  document.getElementById('pf-slices').closest('.field').after(pfGeBox);
+  wireGeFovCm('pf');
   oversamplingGroups.pf = setupOversamplingGroup('pf', () => {});
 
   let editingId = null;
@@ -6075,6 +6378,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     accelTypeGroups.pf.refreshLabel();
 
     pf.sliceOrientationField.style.display = vendor === 'Philips' ? 'flex' : 'none';
+    // GE: FOV in cm + the GE fields replace the mm FOV row and phase oversampling.
+    const pfIsGe = vendor === 'GE';
+    document.getElementById('pf-ge-fields').style.display = pfIsGe ? '' : 'none';
+    document.getElementById('pf-fov-freq').closest('.field').style.display = pfIsGe ? 'none' : '';
+    document.getElementById('pf-oversampling-label').closest('.field').style.display = pfIsGe ? 'none' : '';
+    document.getElementById('pf-oversampling-derived').style.display = pfIsGe ? 'none' : '';
     // Philips takes fold-over suppression as two mm boxes; everyone else keeps the % field.
     if (vendor === 'Philips') pfMmLayout = true;
     else if (vendor && VENDOR_TERMS[vendor]) pfMmLayout = false; // GE / Siemens / ... keep the % field
@@ -6145,6 +6454,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     setNsaHint(document.getElementById('pf-nsa-hint'), pf.nsa.value);
     pf.sense.value = prefill?.sense ?? '';
     accelTypeGroups.pf.set(prefill?.accelType || 'sense');
+    document.getElementById('pf-cs-refused').checked = !!prefill?.csSenseRefused;
     pf.csVoxelFreq.value = prefill?.csVoxelFreq ?? '';
     pf.csVoxelPhase.value = prefill?.csVoxelPhase ?? '';
     // Only the raw matrix numbers are persisted with a protocol, so editing
@@ -6165,6 +6475,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     }
     pf.sliceThickness.value = prefill?.sliceThicknessMm ?? '';
     pf.slices.value = prefill?.slices ?? '';
+    const pfPos = v => (Number.isFinite(v) && v > 0 ? v : '');
+    document.getElementById('pf-ge-fov').value = Number.isFinite(prefill?.fovFreq) && prefill.fovFreq > 0 ? Math.round(prefill.fovFreq) / 10 : '';
+    document.getElementById('pf-pfov').value = pfPos(prefill?.pfov);
+    document.getElementById('pf-acqs').value = pfPos(prefill?.acqs);
+    document.getElementById('pf-bw').value = pfPos(prefill?.bwKhz);
+    document.getElementById('pf-npw').checked = !!prefill?.npw;
+    document.getElementById('pf-freq-dir').value = ['A/P', 'R/L', 'S/I'].includes(prefill?.freqDir) ? prefill.freqDir : '';
     pf.consoleTime.value = Number.isFinite(prefill?.consoleTimeSec) && prefill.consoleTimeSec > 0 ? formatConsoleTime(prefill.consoleTimeSec) : '';
     pf.notes.value = prefill?.notes || '';
     pf.planningNotes.value = prefill?.planningNotes || '';
@@ -6246,7 +6563,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       phaseMatrix: parseFloat(pf.phase.value),
       fovFreq: pf.fovFreq.value ? parseFloat(pf.fovFreq.value) : null,
       fovPhase: pf.fovPhase.value ? parseFloat(pf.fovPhase.value) : null,
-      oversamplingPercent: oversamplingGroups.pf.readPercent(),
+      oversamplingPercent: pf.vendor.value === 'GE' ? 0 : oversamplingGroups.pf.readPercent(),
+      // GE console fields (blank/false on every other vendor).
+      ...(pf.vendor.value === 'GE' ? (() => {
+        const n = id => { const v = parseFloat(document.getElementById(id).value); return Number.isFinite(v) && v > 0 ? v : null; };
+        return { pfov: n('pf-pfov'), npw: document.getElementById('pf-npw').checked, bwKhz: n('pf-bw'), acqs: n('pf-acqs'), freqDir: document.getElementById('pf-freq-dir').value || '' };
+      })() : {}),
       // Philips fold-over suppression as typed on the console (mm per side + axis);
       // the percentage above is what the math uses. Only kept for Philips.
       foldOverAxis: foldMm ? foldMm.axis : null,
@@ -6262,6 +6584,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       learnLinks: parseLearnLinks(pf.learnLinks.value),
       sequenceType: modalSequenceType,
       roleCategory: modalRoleCategory,
+      csSenseRefused: document.getElementById('pf-cs-refused').checked,
       updatedAt: new Date().toISOString(),
     };
 
@@ -6310,6 +6633,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       sliceThicknessMm: num(`${panel}-thickness`),
       vendor,
       sliceOrientation: vendor === 'Philips' ? sliceOrientationSelectEl.value : '',
+      ...(vendor === 'GE' ? { pfov: num(`${panel}-pfov`), npw: document.getElementById(`${panel}-npw`).checked, bwKhz: num(`${panel}-bw`), acqs: num(`${panel}-acqs`) } : {}),
     };
   }
 
@@ -6489,6 +6813,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           });
           protocols = protocols.concat(imported);
           persistProtocols();
+          seedCsRefused();
           // A backup with a saved order: what you already have stays first, then the imported ones in the backup's order.
           // (A backup without one — an older file — leaves the order alone; the new ones go to the bottom.)
           if (incomingOrder && incomingOrder.length) {
@@ -6809,6 +7134,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // ceilings vary by coil/system, so this just keeps the search from
   // suggesting acceleration nobody would realistically dial in.
   const SENSE_PRACTICAL_CEILING = 3;
+  // Older GE consoles (Signa Excite era, 8-channel coils) top out around
+  // ASSET 2 in practice, so the search stops there on GE.
+  const VENDOR_SENSE_CEILING = { GE: 2 };
+  const VENDOR_AGGRESSIVE_SENSE_CEILING = { GE: 3 };
+  function senseCeilingFor(p) {
+    return VENDOR_SENSE_CEILING[p && p.vendor] || SENSE_PRACTICAL_CEILING;
+  }
 
   // --- Aggressive mode (explicit opt-in only — never a default) --------
   // Starting points, same spirit as the other tunable constants here, not
@@ -7099,7 +7431,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           freqMatrix: start.freqMatrix, phaseMatrix: start.phaseMatrix,
           oversamplingPercent: (start.oversamplingPercent || 0) + addOs,
           accelType: start.accelType, csVoxelFreq: start.csVoxelFreq, csVoxelPhase: start.csVoxelPhase,
-          etl: start.etl, slices: start.slices,
+          etl: start.etl, slices: start.slices, ...geParamsOf(start),
         };
         const result = compareProtocols(start, candidate, gFactorK);
         if (result.snr.comparable && result.snr.ratio >= NSA_RULE_MIN_SNR_RATIO) {
@@ -7120,7 +7452,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       freqMatrix: start.freqMatrix, phaseMatrix: start.phaseMatrix,
       oversamplingPercent: start.oversamplingPercent,
       accelType: start.accelType, csVoxelFreq: start.csVoxelFreq, csVoxelPhase: start.csVoxelPhase,
-      etl: start.etl, slices: start.slices,
+      etl: start.etl, slices: start.slices, ...geParamsOf(start),
     };
 
     if (!isT1 && !isT2) {
@@ -7157,7 +7489,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
               ? `fold-over suppression ${foldOverView(foldOver, start.oversamplingPercent, offset.candidate.oversamplingPercent).text}`
               : `oversampling +${roundTenth(osAdded)} pts`)
             : null,
-          senseChanged ? `SENSE ${start.sense}→${offset.candidate.sense}` : null,
+          senseChanged ? `${vendorTerms(start.vendor).sense} ${start.sense}→${offset.candidate.sense}` : null,
         ].filter(Boolean).join(', ') || 'no further changes needed';
         return {
           ruleApplies: true, excepted: false, changed: true, toNsa: 1, candidate: offset.candidate, result: offset.result,
@@ -7262,7 +7594,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       // the starting value through unchanged. Slice count is a coverage
       // requirement, not a speed knob either — never searched, always
       // carried through unchanged (see hasUnreliableTime()).
-      const candidate = { tr, nsa, sense, freqMatrix, phaseMatrix, oversamplingPercent, etl: searchBase.etl, slices: searchBase.slices };
+      const candidate = { tr, nsa, sense, freqMatrix, phaseMatrix, oversamplingPercent, etl: searchBase.etl, slices: searchBase.slices, ...geParamsOf(searchBase) };
       if (csSense) {
         candidate.accelType = 'cs-sense';
         // The CS factor itself is held fixed (never varied below), but a
@@ -7305,7 +7637,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // searched separately even though the direction is the same. For
     // CS-SENSE, the factor is held fixed (see csSense above) rather than
     // searched.
-    const senseUpCandidates = csSense ? [searchBase.sense] : stepsUp(searchBase.sense, SENSE_PRACTICAL_CEILING, 0.5);
+    const senseUpCandidates = csSense ? [searchBase.sense] : stepsUp(searchBase.sense, senseCeilingFor(start), 0.5);
 
     let fastest = null;
     for (const sense of senseUpCandidates) {
@@ -7423,7 +7755,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       const aggressiveMatrixScales = matrixScaleCandidates(matrixScaleFloorForPct(tierVoxelCapPct('aggressive', priority)));
       const aggressiveSenseCandidates = csSense
         ? [searchBase.sense]
-        : stepsUp(searchBase.sense, Math.max(AGGRESSIVE_SENSE_CEILING, searchBase.sense), 0.5);
+        : stepsUp(searchBase.sense, Math.max(VENDOR_AGGRESSIVE_SENSE_CEILING[start.vendor] || AGGRESSIVE_SENSE_CEILING, searchBase.sense), 0.5);
       // Where the personal rule fixed NSA, include everything down to 1 in
       // addition to the rule's own value; otherwise the usual free search.
       const aggressiveNsaCandidates = nsaStep.ruleApplies
@@ -7478,8 +7810,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   function tierChangeOneLiner(start, candidate, foldCtx) {
     const changes = [];
     if (candidate.tr !== start.tr) changes.push(`TR ${start.tr}→${candidate.tr}`);
-    if (candidate.nsa !== start.nsa) changes.push(`NSA ${start.nsa}→${candidate.nsa}`);
-    if (candidate.sense !== start.sense) changes.push(`SENSE ${start.sense}→${candidate.sense}`);
+    if (candidate.nsa !== start.nsa) changes.push(`${vendorTerms(start.vendor).nsa} ${start.nsa}→${candidate.nsa}`);
+    if (candidate.sense !== start.sense) changes.push(`${vendorTerms(start.vendor).sense} ${start.sense}→${candidate.sense}`);
     if (candidate.freqMatrix !== start.freqMatrix || candidate.phaseMatrix !== start.phaseMatrix) {
       changes.push(`Matrix ${start.freqMatrix}×${start.phaseMatrix}→${candidate.freqMatrix}×${candidate.phaseMatrix}`);
     }
@@ -7677,8 +8009,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     }
     if (candidate.accelType === 'cs-sense') {
       reasons.push('CS-SENSE factor held constant — not searched');
-    } else if (tierKey !== 'aggressive' && candidate.sense >= SENSE_PRACTICAL_CEILING) {
-      reasons.push(`SENSE at the typical practical limit (${SENSE_PRACTICAL_CEILING}) — not a hardware cap, actual limits vary by coil/system`);
+    } else if (tierKey !== 'aggressive' && candidate.sense >= senseCeilingFor(candidate)) {
+      reasons.push(`${vendorTerms(candidate.vendor).sense} at the typical practical limit (${senseCeilingFor(candidate)}) — not a hardware cap, actual limits vary by coil/system`);
     }
     return reasons.join(', ') + '.';
   }
@@ -8122,6 +8454,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       csVoxelPhase: optimizerProtocol.csVoxelPhase,
       etl: optimizerProtocol.etl,
       slices: parseFloat(optSlicesEl.value),
+      ...geParamsOf(optimizerProtocol),
+      vendor: optVendor(),
     };
     if (!isValid(start)) {
       optimizerErrorEl.textContent = 'This protocol is missing a value the optimizer needs (TR, NSA, acceleration factor or matrix). Edit the protocol and fill those in first.';
@@ -8871,6 +9205,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     'accel-type', 'cs-voxel-freq', 'cs-voxel-phase',
     'matrix-style', 'fov-freq', 'fov-phase', 'voxel-freq', 'voxel-phase', 'base-res', 'phase-res-pct',
     'oversampling', 'oversampling-unit', 'oversampling-h', 'oversampling-f', 'oversampling-axis',
+    'ge-fov', 'pfov', 'npw', 'acqs', 'bw',
     'sequenceType'];
   const CALC_GLOBAL_IDS = ['vendor-select', 'slice-orientation-select'];
   const CALC_STATE_IDS = new Set([
@@ -8883,7 +9218,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       const state = { cur: {}, prop: {}, globals: {} };
       ['cur', 'prop'].forEach(p => CALC_PANEL_FIELDS.forEach(f => {
         const el = document.getElementById(`${p}-${f}`);
-        if (el) state[p][f] = el.value;
+        if (el) state[p][f] = el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value;
       }));
       CALC_GLOBAL_IDS.forEach(id => { state.globals[id] = document.getElementById(id).value; });
       localStorage.setItem(CALC_STATE_KEY, JSON.stringify(state));
@@ -8898,7 +9233,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (!state || typeof state !== 'object') return;
     const put = (id, v) => {
       const el = document.getElementById(id);
-      if (el && typeof v === 'string') el.value = v;
+      if (el && typeof v === 'string') {
+        if (el.type === 'checkbox') el.checked = v === '1';
+        else el.value = v;
+      }
     };
     // Vendor first: its change handler applies a vendor-driven matrix style
     // to both panels, which the per-panel restore below then overrides.
@@ -9126,6 +9464,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       csVoxelFreq: w.vfreq, csVoxelPhase: w.vphase,
       oversamplingPercent: p.oversamplingPercent || 0,
       etl: p.etl, slices: p.slices,
+      ...geParamsOf(p),
     };
     // The saved console time belongs to the saved values; if NSA/matrix/accel
     // were edited here it's re-anchored, and if TR was edited it's dropped
@@ -9381,6 +9720,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (!row || !quick.outcome) return;
     const key = row.dataset.tier;
     quickEls.sheet.innerHTML = `<div class="quick-sheet-head"><strong>${escapeHtml(tierDisplayLabel(key))} — details</strong><button type="button" class="btn-secondary" id="quick-sheet-close">Close</button></div>`
+      + `<button type="button" class="btn-primary cc-open-btn" data-cc-tier="${escapeHtml(key)}">📋 Console card — what to enter</button>`
       + buildOptimizerDetailHtml(quick.outcome, key);
     quickEls.sheetOverlay.classList.add('show');
   });
@@ -10048,6 +10388,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       + (set.note ? `<div class="lib-note" style="margin-bottom:8px;">${escapeHtml(set.note)}</div>` : '')
       + `<table class="exam-table"><thead><tr><th>#</th><th>Protocol</th><th>Console time</th></tr></thead><tbody>${rows}</tbody></table>`
       + `<div class="exam-total">Total console time: ${withTime ? formatConsoleTime(total) : '—'}</div>`
+      + `<button type="button" class="btn-primary cc-open-btn" id="exam-cards-btn" style="margin-top:10px;">📋 Console cards — swipe through this exam</button>`
       + (missing ? `<div class="lib-note">${missing} of ${members.length} member${members.length === 1 ? '' : 's'} ${missing === 1 ? 'has' : 'have'} no console time, so the total is partial.</div>` : '')
       + `<div class="lib-note"><button type="button" class="btn-secondary" id="exam-remove-btn">Remove this exam</button> (removes only the list, never the protocols)</div>`;
   }
@@ -10106,6 +10447,387 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     renderRolesView();
     render();
   });
+
+
+  // ---------------------------------------------------------------------
+  // Console card (Otis, 2026-10-24). After adjusting a protocol (Calculator,
+  // or a Quick suggestion) it lists ONLY the settings that changed, stock →
+  // new, grouped in the console's own tab order; each line is tapped off once
+  // it's entered, and the bottom shows the scan time and relative SNR the
+  // console should then read. A card made for a library protocol is kept in
+  // this browser, so the Exams tab can swipe through one card per sequence
+  // (sequences without a card show "Run as stock").
+  // A protocol can also be marked "console refuses CS-SENSE" (it showed a
+  // Conflict): any card that turns CS-SENSE on for it gets a red stop warning.
+  // ---------------------------------------------------------------------
+  const CONSOLE_CARDS_KEY = 'mriq.consoleCards.v1';
+  let consoleCards = {};
+  try {
+    const v = JSON.parse(localStorage.getItem(CONSOLE_CARDS_KEY));
+    if (v && typeof v === 'object' && !Array.isArray(v)) consoleCards = v;
+  } catch (e) { /* first run */ }
+  function persistConsoleCards() {
+    try { localStorage.setItem(CONSOLE_CARDS_KEY, JSON.stringify(consoleCards)); } catch (e) { /* convenience only */ }
+  }
+
+  // Protocols the console is known to refuse CS-SENSE on, marked once (so the
+  // tick can still be cleared in Edit Protocol). St. Anne's shoulder SAG T2 FS:
+  // CS-SENSE yes + reduction 1.50 gave "Current parameter set is invalid"
+  // (Otis, 2026-10-24).
+  const CS_REFUSED_SEED = ['11ce391b-2737-5af1-b080-ccbd32bdcbd4'];
+  const CS_REFUSED_SEED_KEY = 'mriq.csRefusedSeed.v1';
+  function seedCsRefused() {
+    let done = [];
+    try { done = JSON.parse(localStorage.getItem(CS_REFUSED_SEED_KEY)) || []; } catch (e) { done = []; }
+    let changed = false;
+    CS_REFUSED_SEED.forEach(id => {
+      const p = protocols.find(x => x.id === id);
+      if (!p || done.includes(id)) return;
+      p.csSenseRefused = true;
+      done.push(id);
+      changed = true;
+    });
+    if (!changed) return;
+    persistProtocols();
+    try { localStorage.setItem(CS_REFUSED_SEED_KEY, JSON.stringify(done)); } catch (e) { /* tries again next load */ }
+  }
+  seedCsRefused();
+
+  const ccNum = v => Number.isFinite(v) && v > 0;
+  const ccRound = v => String(Math.round(v * 100) / 100);
+  const ccPair = (a, b) => (ccNum(a) && ccNum(b) ? `${ccRound(a)} × ${ccRound(b)}` : null);
+  const ccOne = v => (ccNum(v) ? ccRound(v) : null);
+
+  // The fields a card can list, in the console's tab order. Philips keeps NSA
+  // on Contrast; GE uses its parameter-screen groups.
+  function consoleCardFields(vendor, orientation) {
+    const t = vendorTerms(vendor);
+    const ge = vendor === 'GE';
+    const philips = vendor === 'Philips';
+    const axes = axisPairLabel(vendor, orientation);
+    const geo = ge ? 'Scanning Range' : 'Geometry';
+    const con = ge ? 'Scan Timing' : 'Contrast';
+    const acq = ge ? 'Acquisition Timing' : 'Contrast';
+    const voxel = p => (p.accelType === 'cs-sense' && ccNum(p.csVoxelFreq) && ccNum(p.csVoxelPhase)
+      ? ccPair(p.csVoxelFreq, p.csVoxelPhase)
+      : (ccNum(p.freqMatrix) && ccNum(p.phaseMatrix) ? ccPair(p.fovFreq / p.freqMatrix, p.fovPhase / p.phaseMatrix) : null));
+    const sides = p => Number.isFinite(p.foldOverH) && Number.isFinite(p.foldOverF);
+    const letters = p => OVERSAMPLING_AXIS_LETTERS[p.foldOverAxis] || OVERSAMPLING_AXIS_LETTERS.hf;
+    const yesNo = b => (b ? 'yes' : 'no');
+    const fields = [
+      ge
+        ? { tab: geo, label: 'FOV (cm)', get: p => (ccNum(p.fovFreq) ? ccRound(p.fovFreq / 10) : null) }
+        : { tab: geo, label: `FOV ${axes} (mm)`, get: p => ccPair(p.fovFreq, p.fovPhase) },
+      ge ? { tab: geo, label: 'Phase FOV', get: p => ccOne(p.pfov) } : null,
+      ge ? null : { tab: geo, label: `ACQ voxel ${axes} (mm)`, get: voxel },
+      // Matrix only where the console takes it (GE), or when there's no FOV to turn it into a voxel size.
+      { tab: ge ? acq : geo, label: `Matrix ${axes}`, get: p => ccPair(p.freqMatrix, p.phaseMatrix), skip: (a, b) => !ge && voxel(a) !== null && voxel(b) !== null },
+      { tab: geo, label: 'Slices', get: p => ccOne(p.slices) },
+      { tab: geo, label: 'Slice thickness (mm)', get: p => ccOne(p.sliceThicknessMm) },
+      { tab: geo, label: `${t.oversampling} direction`, get: p => (sides(p) ? letters(p).join('/') : null) },
+      { tab: geo, label: p => `${t.oversampling} ${letters(p)[0]} (mm)`, get: p => (sides(p) ? String(p.foldOverH) : null) },
+      { tab: geo, label: p => `${t.oversampling} ${letters(p)[1]} (mm)`, get: p => (sides(p) ? String(p.foldOverF) : null) },
+      { tab: geo, label: `${t.oversampling} (%)`, get: p => String(Math.round(p.oversamplingPercent || 0)), skip: (a, b) => sides(a) || sides(b) },
+    ];
+    if (philips) {
+      fields.push(
+        { tab: geo, label: 'SENSE', get: p => yesNo(p.accelType === 'sense') },
+        { tab: geo, label: 'SENSE P reduction', get: p => (p.accelType === 'sense' ? ccOne(p.sense) : null) },
+        { tab: geo, label: 'CS-SENSE', get: p => yesNo(p.accelType === 'cs-sense'), cs: true },
+        { tab: geo, label: 'CS-SENSE reduction', get: p => (p.accelType === 'cs-sense' ? ccOne(p.sense) : null) },
+      );
+    } else {
+      fields.push(
+        { tab: ge ? acq : geo, label: 'CS-SENSE', get: p => yesNo(p.accelType === 'cs-sense'), cs: true, skip: (a, b) => a.accelType !== 'cs-sense' && b.accelType !== 'cs-sense' },
+        { tab: ge ? acq : geo, label: t.sense, get: p => (p.accelType === 'none' ? 'off' : ccOne(p.sense)) },
+      );
+    }
+    fields.push(
+      { tab: con, label: 'TE (ms)', get: p => ccOne(p.te) },
+      { tab: con, label: 'TR (ms)', get: p => ccOne(p.tr) },
+      { tab: con, label: t.etl, get: p => ccOne(p.etl) },
+      ge ? { tab: con, label: 'Bandwidth (±kHz)', get: p => ccOne(p.bwKhz) } : null,
+      { tab: acq, label: t.nsa, get: p => ccOne(p.nsa) },
+      ge ? { tab: acq, label: 'No Phase Wrap', get: p => yesNo(!!p.npw) } : null,
+      ge ? { tab: acq, label: 'Acqs', get: p => ccOne(p.acqs) } : null,
+    );
+    return {
+      fields: fields.filter(Boolean),
+      tabOrder: ge ? ['Scan Timing', 'Scanning Range', 'Acquisition Timing'] : ['Geometry', 'Contrast'],
+      otherTabs: philips ? ['Motion', 'Dyn/Ang', 'Postproc', 'Offc/Ang'] : [],
+    };
+  }
+
+  // from/to: protocol-shaped values (what's on the console now → what to enter).
+  // result: compareProtocols(from, to) for the time and SNR targets.
+  function buildConsoleCard({ protocol, from, to, result }) {
+    const vendor = to.vendor || from.vendor || (protocol && protocol.vendor) || '';
+    const orientation = (protocol && protocol.sliceOrientation) || to.sliceOrientation || from.sliceOrientation || 'axial';
+    const spec = consoleCardFields(vendor, orientation);
+    const changes = [];
+    spec.fields.forEach(f => {
+      if (f.skip && f.skip(from, to)) return;
+      const a = f.get(from);
+      const b = f.get(to);
+      if (b === null || a === b) return; // a blank Proposed field means "not entered", not "cleared"
+      changes.push({ tab: f.tab, label: typeof f.label === 'function' ? f.label(to) : f.label, from: a === null ? '—' : a, to: b, csOn: !!f.cs && b === 'yes' });
+    });
+    const tabsUsed = spec.tabOrder.filter(tab => changes.some(c => c.tab === tab));
+    const untouched = spec.tabOrder.filter(tab => !tabsUsed.includes(tab)).concat(spec.otherTabs);
+
+    let time = { text: 'Verify at console', was: '', verify: true, why: '' };
+    if (result && result.time.consoleBased) {
+      time.was = formatConsoleTime(result.time.currentMs / 1000);
+      if (result.time.comparable) time = { text: formatConsoleTime(result.time.proposedMs / 1000), was: time.was, verify: false, why: '' };
+      else time.why = result.time.verifyReasons.join(', ');
+    } else if (result && result.time.comparable) {
+      time = { text: formatPercent(result.time.percentChange), was: 'no console time saved', verify: false, why: '' };
+    } else if (protocol && ccNum(protocol.consoleTimeSec)) {
+      time.was = formatConsoleTime(protocol.consoleTimeSec);
+    }
+    const snr = result && result.snr.comparable
+      ? { text: result.snr.ratio.toFixed(2), was: '1.00' }
+      : { text: 'N/A', was: 'CS-SENSE on one side only' };
+    const savedSec = result && result.time.consoleBased && result.time.comparable ? Math.round(result.time.proposedMs / 1000) : null;
+    return {
+      protocolId: protocol ? protocol.id : '',
+      name: protocol ? protocol.name : 'Proposed changes',
+      vendor,
+      changes,
+      untouched,
+      csOn: from.accelType !== 'cs-sense' && to.accelType === 'cs-sense',
+      foldCut: (to.oversamplingPercent || 0) < (from.oversamplingPercent || 0),
+      time,
+      snr,
+      newSec: savedSec,
+      stockSec: protocol && ccNum(protocol.consoleTimeSec) ? protocol.consoleTimeSec : null,
+      checked: [],
+      savedAt: new Date().toISOString(),
+    };
+  }
+
+  // Warnings are worked out when shown, so marking "console refused" updates every card.
+  function consoleCardWarnings(card) {
+    const p = card.protocolId ? protocols.find(x => x.id === card.protocolId) : null;
+    const out = [];
+    if (card.csOn && p && p.csSenseRefused) {
+      out.push({ stop: true, title: '⛔ The console refused CS-SENSE on this protocol', text: 'It showed a Conflict ("parameter set is invalid") before. Keep CS-SENSE off and use another change.' });
+    } else if (card.csOn) {
+      out.push({ title: '⚠ Turning CS-SENSE on', text: 'Check the Conflicts tab before you scan. If it shows a conflict, tap Restore and mark it here so MR IQ warns you next time.', action: p ? 'cs-refused' : '' });
+    }
+    if (card.foldCut) {
+      out.push({ title: '⚠ Watch for wrap', text: `${vendorTerms(card.vendor).oversampling} was cut. Check the first images for fold-over before you move on.` });
+    }
+    return out;
+  }
+
+  // Saves (or clears) the card filed under its protocol. Same changes as the
+  // saved card keep their ticks.
+  function fileConsoleCard(card) {
+    if (!card.protocolId) return card;
+    if (!card.changes.length) { delete consoleCards[card.protocolId]; persistConsoleCards(); return card; }
+    const old = consoleCards[card.protocolId];
+    const sig = c => JSON.stringify(c.changes);
+    if (old && sig(old) === sig(card)) card.checked = Array.isArray(old.checked) ? old.checked : [];
+    consoleCards[card.protocolId] = card;
+    persistConsoleCards();
+    return card;
+  }
+
+  const cc = { cards: [], exam: null };
+  const ccEls = {
+    overlay: document.getElementById('cc-overlay'),
+    deck: document.getElementById('cc-deck'),
+    dots: document.getElementById('cc-dots'),
+    title: document.getElementById('cc-title'),
+    sub: document.getElementById('cc-sub'),
+    hint: document.getElementById('cc-hint'),
+  };
+
+  function consoleCardHtml(card, i) {
+    const pos = cc.exam ? `${i + 1} of ${cc.cards.length}` : 'Console card';
+    const p = card.protocolId ? protocols.find(x => x.id === card.protocolId) : null;
+    const meta = p ? [scannerLabel(p), p.facility].filter(Boolean).join(' · ') : '';
+    const head = `<div><div class="cc-pos">${escapeHtml(pos)}</div><h2 class="cc-name">${escapeHtml(card.name)}</h2>${meta ? `<div class="cc-meta">${escapeHtml(meta)}</div>` : ''}</div>`;
+    if (!card.changes || !card.changes.length) {
+      const sec = card.stockSec || (p && ccNum(p.consoleTimeSec) ? p.consoleTimeSec : null);
+      return `<section class="cc-card" data-i="${i}">${head}<div class="cc-stock">No changes. Run as stock.<small>${sec ? `Console should read ${formatConsoleTime(sec)}` : 'No console time saved'}</small></div>`
+        + (card.missing ? '<div class="cc-warn">⚠ Not found in this library<small>Check the exam list in the Exams tab.</small></div>' : '') + '</section>';
+    }
+    const checked = new Set(card.checked || []);
+    const faster = card.stockSec && card.newSec ? card.stockSec - card.newSec : null;
+    const pill = `${card.changes.length} change${card.changes.length === 1 ? '' : 's'}${faster !== null && faster > 0 ? ` · ${formatConsoleTime(faster)} faster` : (faster !== null && faster < 0 ? ` · ${formatConsoleTime(-faster)} longer` : '')}`;
+    const tabs = [];
+    card.changes.forEach((c, j) => {
+      let g = tabs.find(x => x.tab === c.tab);
+      if (!g) { g = { tab: c.tab, rows: [] }; tabs.push(g); }
+      g.rows.push(`<button type="button" class="cc-row${checked.has(j) ? ' done' : ''}" data-j="${j}" aria-pressed="${checked.has(j)}"><span class="cc-box">✓</span><span><span class="cc-param">${escapeHtml(c.label)}</span><span class="cc-vals"><span class="cc-old">${escapeHtml(c.from)}</span><span class="cc-arrow">→</span><span>${escapeHtml(c.to)}</span></span></span></button>`);
+    });
+    const warns = consoleCardWarnings(card).map(w => `<div class="cc-warn${w.stop ? ' stop' : ''}">${escapeHtml(w.title)}<small>${escapeHtml(w.text)}</small>${w.action === 'cs-refused' ? '<button type="button" class="btn-secondary" data-cc-action="cs-refused">Console refused it — remember</button>' : ''}</div>`).join('');
+    const done = card.changes.filter((_, j) => checked.has(j)).length;
+    const allIn = done === card.changes.length;
+    const t = card.time;
+    return `<section class="cc-card" data-i="${i}">${head}<span class="cc-pill">${escapeHtml(pill)}</span>`
+      + tabs.map(g => `<div class="cc-tab"><span class="cc-tab-label">${escapeHtml(g.tab)}</span>${g.rows.join('')}</div>`).join('')
+      + (card.untouched && card.untouched.length ? `<div class="cc-untouched">${escapeHtml(card.untouched.join(', '))}: no changes</div>` : '')
+      + warns
+      + `<div class="cc-target${allIn ? ' all-in' : ''}"><span class="cc-target-label">Console should read</span><div class="cc-metrics">`
+      + `<div class="cc-metric"><span class="cc-k">Total scan time</span><span class="cc-big${t.verify ? ' verify' : ''}">${escapeHtml(t.text)}</span><span class="cc-was">${t.was ? 'was ' + escapeHtml(t.was) : ''}${t.why ? ' · ' + escapeHtml(t.why) : ''}</span></div>`
+      + `<div class="cc-metric"><span class="cc-k">Rel. SNR</span><span class="cc-big">${escapeHtml(card.snr.text)}</span><span class="cc-was">${card.snr.text === 'N/A' ? escapeHtml(card.snr.was) : 'was ' + escapeHtml(card.snr.was)}</span></div>`
+      + `</div><div class="cc-progress">${allIn ? '✓ All in. Match the time on the console.' : `${done} of ${card.changes.length} entered`}</div></div>`
+      + (cc.exam && card.protocolId ? '<div class="cc-foot"><button type="button" class="btn-secondary" data-cc-action="clear">Back to stock (remove this card)</button></div>' : '')
+      + '</section>';
+  }
+
+  function renderConsoleDeck(startIndex) {
+    ccEls.deck.innerHTML = cc.cards.map(consoleCardHtml).join('');
+    ccEls.dots.innerHTML = cc.cards.length > 1 ? cc.cards.map(c => `<span class="cc-dot${c.changes && c.changes.length ? ' has' : ''}"></span>`).join('') : '';
+    ccEls.hint.textContent = cc.cards.length > 1 ? 'Tap a line when it’s in. Swipe for the next sequence.' : 'Tap a line when it’s in.';
+    if (cc.exam) {
+      const stock = cc.cards.reduce((sum, c) => sum + (c.stockSec || 0), 0);
+      const fresh = cc.cards.reduce((sum, c) => sum + (c.changes && c.changes.length ? (c.newSec || c.stockSec || 0) : (c.stockSec || 0)), 0);
+      const unknown = cc.cards.some(c => c.changes && c.changes.length && !c.newSec);
+      ccEls.title.textContent = cc.exam.name;
+      ccEls.sub.textContent = stock ? `${formatConsoleTime(stock)} stock → ${unknown ? 'verify at console' : formatConsoleTime(fresh)}` : '';
+    } else {
+      ccEls.title.textContent = 'Console card';
+      ccEls.sub.textContent = cc.cards[0] && cc.cards[0].protocolId ? '' : 'Load a protocol from the Library to keep this card for the Exams tab.';
+    }
+    if (Number.isInteger(startIndex)) {
+      ccEls.deck.scrollLeft = 0;
+      const el = ccEls.deck.children[startIndex];
+      if (el) ccEls.deck.scrollLeft = el.offsetLeft;
+    }
+    syncConsoleDots();
+  }
+  function syncConsoleDots() {
+    const w = ccEls.deck.clientWidth + 12;
+    const i = w > 12 ? Math.round(ccEls.deck.scrollLeft / w) : 0;
+    Array.from(ccEls.dots.children).forEach((d, n) => d.classList.toggle('on', n === i));
+  }
+  ccEls.deck.addEventListener('scroll', () => requestAnimationFrame(syncConsoleDots));
+
+  function openConsoleDeck(cards, exam, startIndex) {
+    cc.cards = cards;
+    cc.exam = exam;
+    ccEls.overlay.classList.add('show');
+    document.body.style.overflow = 'hidden';
+    ccEls.overlay.scrollTop = 0;
+    renderConsoleDeck(startIndex || 0);
+  }
+  function closeConsoleDeck() {
+    ccEls.overlay.classList.remove('show');
+    document.body.style.overflow = '';
+    if (document.getElementById('view-exams').classList.contains('active')) renderExamsView();
+  }
+  document.getElementById('cc-close').addEventListener('click', closeConsoleDeck);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ccEls.overlay.classList.contains('show')) closeConsoleDeck(); });
+
+  // One card per member of the exam: its saved card, or "Run as stock".
+  function examConsoleCards(set) {
+    return resolveExamMembers(set).map(m => {
+      const p = m.protocol;
+      const saved = p ? consoleCards[p.id] : null;
+      if (saved && Array.isArray(saved.changes)) return { ...saved, name: m.name || saved.name, stockSec: p && ccNum(p.consoleTimeSec) ? p.consoleTimeSec : saved.stockSec };
+      return { protocolId: p ? p.id : '', name: m.name, changes: [], stockSec: p && ccNum(p.consoleTimeSec) ? p.consoleTimeSec : null, missing: !p };
+    });
+  }
+  function openExamConsoleDeck(set, protocolId) {
+    const cards = examConsoleCards(set);
+    let start = protocolId ? cards.findIndex(c => c.protocolId === protocolId) : cards.findIndex(c => c.changes.length);
+    if (start < 0) start = 0;
+    openConsoleDeck(cards, set, start);
+  }
+  // Shows a card: inside its exam when the protocol is in one (the open Exams
+  // tab's exam first), otherwise on its own.
+  function showConsoleCard(card) {
+    fileConsoleCard(card);
+    if (card.protocolId) {
+      const inSet = s => resolveExamMembers(s).some(m => m.protocol && m.protocol.id === card.protocolId);
+      const set = examSets.find(s => s.id === examState.id && inSet(s)) || examSets.find(inSet);
+      if (set) { openExamConsoleDeck(set, card.protocolId); return; }
+    }
+    openConsoleDeck([card], null, 0);
+  }
+
+  ccEls.deck.addEventListener('click', (e) => {
+    const cardEl = e.target.closest('.cc-card');
+    if (!cardEl) return;
+    const i = Number(cardEl.dataset.i);
+    const card = cc.cards[i];
+    const keep = () => { const scroll = ccEls.deck.scrollLeft; renderConsoleDeck(null); ccEls.deck.scrollLeft = scroll; syncConsoleDots(); };
+    const row = e.target.closest('.cc-row');
+    if (row) {
+      const j = Number(row.dataset.j);
+      const set = new Set(card.checked || []);
+      if (set.has(j)) set.delete(j); else set.add(j);
+      card.checked = Array.from(set);
+      if (card.protocolId && consoleCards[card.protocolId]) { consoleCards[card.protocolId].checked = card.checked; persistConsoleCards(); }
+      keep();
+      return;
+    }
+    const action = e.target.closest('[data-cc-action]');
+    if (!action) return;
+    if (action.dataset.ccAction === 'cs-refused') {
+      const p = protocols.find(x => x.id === card.protocolId);
+      if (!p) return;
+      p.csSenseRefused = true;
+      persistProtocols();
+      renderProtocolGrid();
+      render();
+      keep();
+    } else if (action.dataset.ccAction === 'clear') {
+      delete consoleCards[card.protocolId];
+      persistConsoleCards();
+      cc.cards[i] = { protocolId: card.protocolId, name: card.name, changes: [], stockSec: card.stockSec };
+      keep();
+    }
+  });
+
+  // Calculator: Current = what's on the console, Proposed = what to enter.
+  document.getElementById('cc-calc-btn').addEventListener('click', () => {
+    const from = { ...readSet(curInputs, 'cur'), ...savedExtrasFromPanel('cur') };
+    const to = { ...readSet(propInputs, 'prop'), ...savedExtrasFromPanel('prop') };
+    if (!isValid(from) || !isValid(to)) { alert('Fill in valid Current and Proposed values first.'); return; }
+    to.consoleTimeSec = null;
+    const protocol = calcLoadedProtocolId ? protocols.find(p => p.id === calcLoadedProtocolId) || null : null;
+    const result = compareProtocols(from, to, parseFloat(gK.value) || DEFAULT_G_FACTOR_K);
+    showConsoleCard(buildConsoleCard({ protocol, from, to, result }));
+  });
+
+  // Quick: the saved protocol (what's on the console) → the tapped suggestion.
+  quickEls.sheet.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-cc-tier]');
+    if (!btn || !quick.outcome) return;
+    const p = quickProtocol();
+    const tier = quick.outcome.tiers[btn.dataset.ccTier];
+    if (!p || !tier) return;
+    const from = { ...p, ...paramsFromProtocol(p), consoleTimeSec: p.consoleTimeSec };
+    const to = { ...from, ...tier.candidate, consoleTimeSec: null };
+    const ctx = quick.outcome.foldOver;
+    if (foldOverIsMm(ctx) && ctx.fovPhase > 0 && (to.oversamplingPercent || 0) !== (from.oversamplingPercent || 0)) {
+      const sides = foldOverSides(to.oversamplingPercent || 0, ctx);
+      to.foldOverAxis = ctx.axis;
+      to.foldOverH = sides.h;
+      to.foldOverF = sides.f;
+    }
+    const result = compareProtocols(from, to, parseFloat(gK.value) || DEFAULT_G_FACTOR_K);
+    quickEls.sheetOverlay.classList.remove('show');
+    showConsoleCard(buildConsoleCard({ protocol: p, from, to, result }));
+  });
+
+  document.getElementById('exam-body').addEventListener('click', (e) => {
+    if (!e.target.closest('#exam-cards-btn')) return;
+    const set = examSets.find(x => x.id === examState.id);
+    if (set) openExamConsoleDeck(set, null);
+  });
+
+  // The Calculator's loaded protocol, as of the last visit.
+  try {
+    const id = localStorage.getItem(CALC_LOADED_KEY);
+    const p = id ? protocols.find(x => x.id === id) : null;
+    if (p) { calcLoadedProtocolId = p.id; calcLoadedProtocolName = p.name; }
+  } catch (e) { /* convenience only */ }
 
   // Fill the indication/category selects (after the data above exists).
   examIndicationEl.innerHTML = indicationOptionsHtml('— Not selected —');
