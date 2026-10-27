@@ -2685,7 +2685,11 @@ function consoleTimeVerifyReasons(from, to) {
   const reasons = [];
   if (to.tr !== from.tr) reasons.push('TR changed');
   const anyCs = from.accelType === 'cs-sense' || to.accelType === 'cs-sense';
-  if (anyCs && (from.accelType !== to.accelType || effectiveAccelFactor(from) !== effectiveAccelFactor(to))) {
+  // Lowering an existing CS-SENSE factor scales the console time by the factor
+  // (checked on St. Anne's 2D neck scans, within ~5%); turning CS on/off or
+  // raising it still needs the console.
+  const csLowered = from.accelType === 'cs-sense' && to.accelType === 'cs-sense' && effectiveAccelFactor(to) < effectiveAccelFactor(from);
+  if (anyCs && !csLowered && (from.accelType !== to.accelType || effectiveAccelFactor(from) !== effectiveAccelFactor(to))) {
     reasons.push('CS-SENSE factor changed');
   }
   if (tseFactor(from) !== tseFactor(to)) reasons.push('TSE factor changed');
@@ -2737,7 +2741,9 @@ function relativeSnr(params, k = DEFAULT_G_FACTOR_K) {
   // AREA itself (not its reciprocal) is what's proportional to SNR.
   if (hasCsVoxel(params)) {
     const voxelArea = params.csVoxelFreq * params.csVoxelPhase;
-    return voxelArea * Math.sqrt(nsa * osFactor);
+    // Fewer sampled lines = less signal averaged, same as SENSE (no g-factor,
+    // and the CS denoising isn't modeled), so a lower factor is credited.
+    return voxelArea * Math.sqrt(nsa * osFactor / effectiveAccelFactor(params));
   }
   // Oversampling acquires more phase-encode lines the same way extra NSA
   // acquires more repeats - both just add more sampled data in the phase
@@ -7176,6 +7182,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     extreme: 'far above the typical practical ceiling — very likely to produce degraded or non-diagnostic images on most coils',
   };
 
+  // Above this, a 2D CS-SENSE scan turns blotchy/smeared (St. Anne's neck F/S at 4-5, 2026-10-26).
+  const CS_2D_MAX = 2.5;
   const BALANCED_MIN_SNR_RATIO = 0.90; // "negligible" SNR loss: up to ~10%
   const QUALITY_MAX_TIME_RATIO = 1.15; // "modest" time increase: up to ~15%
   // Key sequences: Quality-first may spend much more time to raise quality.
@@ -7544,7 +7552,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // Everything from here on searches FROM the NSA rule's result, not
     // from the raw starting protocol - NSA (and, if the 2->1 offset fired,
     // SENSE/oversampling) are pre-set by the rule above.
-    const searchBase = nsaStep.candidate;
+    const nsaBase = nsaStep.candidate;
+    // A 2D CS-SENSE factor above CS_2D_MAX is lowered to it in Fastest,
+    // Balanced and Quality-first (Aggressive keeps the start factor); NSA may
+    // then drop below the personal rule to win the time back.
+    const csCapped = csSense && !/3d/i.test(sequenceType || '') && nsaBase.sense > CS_2D_MAX + 1e-9;
+    const searchBase = csCapped ? { ...nsaBase, sense: CS_2D_MAX } : nsaBase;
 
     // TR is NOT used as a time-saving lever. Real console times don't scale
     // with TR (when slice count limits TR the scanner adds/removes packages:
@@ -7626,8 +7639,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // this sequence type (T1/T2); only falls back to a free search for
     // other sequence types (PD/STIR/DWI/etc.), same behavior as before
     // this rule existed.
-    const nsaDownCandidates = nsaStep.ruleApplies ? [searchBase.nsa] : nsaSearchDown(start.nsa);
-    const nsaUpBase = nsaStep.ruleApplies ? [searchBase.nsa] : nsaSearchUp(start.nsa);
+    const csNsaDown = csCapped ? nsaSearchDown(searchBase.nsa) : [];
+    const nsaDownCandidates = nsaStep.ruleApplies ? Array.from(new Set([searchBase.nsa, ...csNsaDown])) : nsaSearchDown(start.nsa);
+    const nsaUpBase = nsaStep.ruleApplies ? Array.from(new Set([searchBase.nsa, ...csNsaDown])) : (csCapped ? Array.from(new Set([...nsaSearchUp(start.nsa), ...csNsaDown])) : nsaSearchUp(start.nsa));
     // Key sequences may also offer MORE averaging than your personal NSA cap
     // in Quality-first — that cap exists to save time, which Key doesn't prioritize.
     const nsaUpCandidates = role === 'key'
@@ -7758,7 +7772,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (aggressiveMode) {
       const aggressiveMatrixScales = matrixScaleCandidates(matrixScaleFloorForPct(tierVoxelCapPct('aggressive', priority)));
       const aggressiveSenseCandidates = csSense
-        ? [searchBase.sense]
+        ? [nsaBase.sense]
         : stepsUp(searchBase.sense, Math.max(VENDOR_AGGRESSIVE_SENSE_CEILING[start.vendor] || AGGRESSIVE_SENSE_CEILING, searchBase.sense), 0.5);
       // Where the personal rule fixed NSA, include everything down to 1 in
       // addition to the rule's own value; otherwise the usual free search.
@@ -7808,14 +7822,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       return { ok: false, reason: `No option found within these constraints for "${sequenceType}" — double-check the TR range is set correctly and that the priority isn't over-restrictive.` };
     }
 
-    return { ok: true, trRange, nsaStep, aggressiveRequested: Boolean(aggressiveMode), role: role || '', tiers: { fastest, balanced, quality, aggressive } };
+    return { ok: true, trRange, nsaStep, csCapped: csCapped ? { from: nsaBase.sense, to: CS_2D_MAX } : null, aggressiveRequested: Boolean(aggressiveMode), role: role || '', tiers: { fastest, balanced, quality, aggressive } };
   }
 
   function tierChangeOneLiner(start, candidate, foldCtx) {
     const changes = [];
     if (candidate.tr !== start.tr) changes.push(`TR ${start.tr}→${candidate.tr}`);
     if (candidate.nsa !== start.nsa) changes.push(`${vendorTerms(start.vendor).nsa} ${start.nsa}→${candidate.nsa}`);
-    if (candidate.sense !== start.sense) changes.push(`${vendorTerms(start.vendor).sense} ${start.sense}→${candidate.sense}`);
+    if (candidate.sense !== start.sense) changes.push(`${candidate.accelType === 'cs-sense' ? 'CS-SENSE' : vendorTerms(start.vendor).sense} ${start.sense}→${candidate.sense}`);
     if (candidate.freqMatrix !== start.freqMatrix || candidate.phaseMatrix !== start.phaseMatrix) {
       changes.push(`Matrix ${start.freqMatrix}×${start.phaseMatrix}→${candidate.freqMatrix}×${candidate.phaseMatrix}`);
     }
@@ -7991,7 +8005,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         ? `TR raised to ${candidate.tr} ms — toward the top of your ${opts.sequenceType} range (${trRange.minTr}–${trRange.maxTr} ms) — to protect T1 recovery/SNR; this affects contrast and time unpredictably`
         : `TR left unchanged at ${candidate.tr} ms (raising it would exceed this tier's time budget)`;
     } else {
-      trText = `TR kept at your current ${candidate.tr} ms — scan time doesn't scale reliably with TR (slice packages), so TR isn't used to save time`;
+      // TR does set time at a fixed package count, but when TR is "shortest"
+      // the console trades TR against packages: half the TR needs twice the
+      // packages, so TR x packages (and the time) stays about the same.
+      trText = start.tr > trRange.maxTr * 1.5
+        ? `TR kept at ${candidate.tr} ms — it's this long because TR is "shortest" with all the slices in one package. More packages would bring TR down into your ${trRange.minTr}–${trRange.maxTr} ms range, but each package is a separate pass, so TR × packages and the scan time stay about the same: that's a contrast choice, not a time saver`
+        : `TR kept at ${candidate.tr} ms — a shorter TR only saves time if the slices still fit in the same number of packages; otherwise the console adds packages and the time stays about the same, so the console has to confirm any TR change`;
     }
     const reasons = [trText];
     if (matrixLocked) {
@@ -8011,7 +8030,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     } else if (tierKey === 'aggressive') {
       reasons.push(`minimum time with the normal caps relaxed (SENSE up to ${AGGRESSIVE_SENSE_CEILING}, voxel-size ceiling ×${AGGRESSIVE_VOXEL_CAP_MULTIPLIER}, NSA allowed below your personal rule if combined SNR stays ≥ ${AGGRESSIVE_NSA_MIN_SNR_RATIO}); relative SNR ${result.snr.ratio.toFixed(2)}×`);
     }
-    if (candidate.accelType === 'cs-sense') {
+    if (candidate.accelType === 'cs-sense' && candidate.sense < start.sense) {
+      reasons.push(`CS-SENSE lowered ${start.sense}→${candidate.sense}: above about ${CS_2D_MAX} a 2D scan comes out blotchy and smeared${candidate.nsa < start.nsa ? `, and ${vendorTerms(start.vendor).nsa} ${start.nsa}→${candidate.nsa} wins most of the time back` : ''}`);
+    } else if (candidate.accelType === 'cs-sense') {
       reasons.push('CS-SENSE factor held constant — not searched');
     } else if (tierKey !== 'aggressive' && candidate.sense >= senseCeilingFor(candidate)) {
       reasons.push(`${vendorTerms(candidate.vendor).sense} at the typical practical limit (${senseCeilingFor(candidate)}) — not a hardware cap, actual limits vary by coil/system`);
@@ -8282,6 +8303,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         ${matrixCaveat ? '<div class="tier-matrix-caveat">⚠ Verify matrix/voxel at console</div>' : ''}
         ${trCaveat ? '<div class="tier-matrix-caveat">⚠ Verify TR/slice-fit at console</div>' : ''}
         ${trRaise ? '<div class="tier-matrix-caveat">⚠ TR raised — affects contrast and time unpredictably</div>' : ''}
+        ${outcome.csCapped && key !== 'aggressive' ? `<div class="tier-matrix-caveat">⚠ CS-SENSE ${outcome.csCapped.from} is too high for a 2D scan (blotchy, smeared) — lowered to ${outcome.csCapped.to}. Time is an estimate.</div>` : ''}
         ${tierData.limitedSavings ? '<div class="tier-matrix-caveat">Limited savings within resolution limits</div>' : ''}
         ${result.time.comparable && timeInputsWarning([outcome.start, candidate]) ? `<div class="tier-matrix-caveat">⚠ Time unverified — ${escapeHtml(timeInputsWarning([outcome.start, candidate]).short)}</div>` : ''}
         ${tierData.aggressiveInfo ? '<div class="aggressive-caveat-card">⚠⚠ Aggressive — outside normal safety margins, verify carefully before use</div>' : ''}
@@ -8403,7 +8425,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       ${tierData.limitedSavings ? `<div class="warning-banner show">Limited additional time savings available within resolution limits for this priority — matrix/voxel is already at or near the ≤${voxelIncreaseCapPct(priority)}% ceiling (see the resolution-ceiling constants if this should be looser or tighter).</div>` : ''}
       ${resSummary ? `<div class="info-note show">${escapeHtml(resSummary)}</div>` : ''}
       ${trSummary ? `<div class="info-note show">${escapeHtml(trSummary)}</div>` : ''}
-      ${csSense ? `<div class="info-note show">CS-SENSE factor held constant — optimizer does not adjust acceleration for this reconstruction type; adjust CS factor manually and re-enter voxel size to explore that dimension.</div>` : ''}
+      ${csSense ? (outcome.csCapped && selectedTier !== 'aggressive'
+        ? `<div class="warning-banner show">⚠ CS-SENSE lowered ${outcome.csCapped.from} → ${outcome.csCapped.to}: above about ${outcome.csCapped.to}, a 2D scan comes out blotchy and smeared, and extra NSA can't average that away. NSA may drop to win the time back. Time and SNR here are estimates — check the console time before scanning.</div>`
+        : `<div class="info-note show">CS-SENSE factor held constant — optimizer does not adjust acceleration for this reconstruction type; adjust CS factor manually and re-enter voxel size to explore that dimension.</div>`) : ''}
       <div class="outcome-log-row"><button type="button" class="btn-secondary" data-action="log-outcome">📝 Log real-world result…</button></div>
     `;
   }
@@ -9676,7 +9700,10 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       if (v && v.note) foldNotes.add(v.note);
     });
     const foldNoteHtml = foldNotes.size ? `<div class="quick-bh">${escapeHtml(Array.from(foldNotes).join(' '))}</div>` : '';
-    quickEls.results.innerHTML = tierKeysFor(quick.outcome).map(k => quickTierRowHtml(k, quick.outcome)).join('') + foldNoteHtml + bhHtml;
+    const csNoteHtml = quick.outcome.csCapped
+      ? `<div class="tier-matrix-caveat">⚠ CS-SENSE ${quick.outcome.csCapped.from} is too high for a 2D scan (blotchy, smeared): Fastest, Balanced and Quality-first lower it to ${quick.outcome.csCapped.to}. Times are estimates.</div>`
+      : '';
+    quickEls.results.innerHTML = csNoteHtml + tierKeysFor(quick.outcome).map(k => quickTierRowHtml(k, quick.outcome)).join('') + foldNoteHtml + bhHtml;
   }
 
   // --- wiring --------------------------------------------------------------------
