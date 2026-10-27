@@ -2020,6 +2020,7 @@
         <select id="pf-region" required>
           <option value="">Select…</option>
           <option>Brain</option>
+          <option>Neck</option>
           <option>Spine</option>
           <option>Abdomen</option>
           <option>MSK/Extremity</option>
@@ -4434,11 +4435,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // Protocol library: storage
   // ---------------------------------------------------------------------
   const STORAGE_KEY = 'mriq.protocolLibrary.v1';
-  const REGIONS = ['All', 'Brain', 'Spine', 'Abdomen', 'MSK/Extremity', 'Other'];
+  const REGIONS = ['All', 'Brain', 'Neck', 'Spine', 'Abdomen', 'MSK/Extremity', 'Other'];
   // Regions that have sub-regions (the same mechanism for all of them).
   const SUBREGIONS = {
     Spine: ['C-spine', 'T-spine', 'L-spine'],
     Brain: ['Orbits', 'IAC', 'Pituitary', 'Fast brain'],
+    Neck: ['Soft tissue neck', 'Brachial plexus'],
   };
   const SPINE_SUBREGIONS = ['All', ...SUBREGIONS.Spine];
   // Library sub-tabs. Brain also gets "General" = no sub-region (routine, seizure and MS brain).
@@ -4457,6 +4459,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const legacy = LEGACY_REGION_MAP[String(region || '').trim().toLowerCase()];
     if (legacy) { region = 'Brain'; subRegion = legacy; }
     else if (region === 'Brain' && !subRegion && FAST_BRAIN_IDS.has(p.id)) subRegion = 'Fast brain';
+    // The first soft tissue neck import used Other + "Neck" before the Neck tab existed.
+    else if (region === 'Other' && subRegion === 'Neck') { region = 'Neck'; subRegion = 'Soft tissue neck'; }
     return { region, subRegion };
   }
   function normalizeAcrRegion(r) {
@@ -9912,7 +9916,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const CSV_ZERO_OK = new Set(['Oversampling side 1 (mm)', 'Oversampling side 2 (mm)']);
   const csvLoose = t => String(t == null ? '' : t).toLowerCase().replace(/[—–]/g, '-').replace(/\s+/g, '');
   const CSV_HEADER_KEYS = Object.fromEntries(CSV_HEADERS.map(h => [csvLoose(h), h]));
-  const CSV_REGIONS = ['Brain', 'Spine', 'Abdomen', 'MSK/Extremity', 'Other'];
+  const CSV_REGIONS = ['Brain', 'Neck', 'Spine', 'Abdomen', 'MSK/Extremity', 'Other'];
   // Optional "Sub-region" / "Subregion" column (not in the template). Orbit/Orbits/IAC/Pituitary in the Region column also work.
   CSV_HEADER_KEYS.subregion = 'Sub-region';
   CSV_HEADER_KEYS['sub-region'] = 'Sub-region';
