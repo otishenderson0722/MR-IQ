@@ -2040,6 +2040,7 @@
           <option>Neck</option>
           <option>Spine</option>
           <option>Abdomen</option>
+          <option>Pelvis</option>
           <option>MSK/Extremity</option>
           <option>Other</option>
         </select>
@@ -4458,14 +4459,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // Protocol library: storage
   // ---------------------------------------------------------------------
   const STORAGE_KEY = 'mriq.protocolLibrary.v1';
-  const REGIONS = ['All', 'Brain', 'Neck', 'Spine', 'Abdomen', 'MSK/Extremity', 'Other'];
+  const REGIONS = ['All', 'Brain', 'Neck', 'Spine', 'Abdomen', 'Pelvis', 'MSK/Extremity', 'Other'];
   // Regions that have sub-regions (the same mechanism for all of them).
   const SUBREGIONS = {
     Spine: ['C-spine', 'T-spine', 'L-spine', 'Sacrum/SI'],
     Brain: ['Orbits', 'IAC', 'Pituitary', 'Fast brain'],
     Neck: ['Soft tissue neck', 'Brachial plexus'],
-    'MSK/Extremity': ['Shoulder', 'Humerus', 'Elbow', 'Forearm', 'Wrist', 'Hand', 'Scapula', 'Bony pelvis'],
-    Abdomen: ['Female pelvis'],
+    'MSK/Extremity': ['Shoulder', 'Humerus', 'Elbow', 'Forearm', 'Wrist', 'Hand', 'Scapula'],
+    Pelvis: ['Bony pelvis', 'Female pelvis'],
   };
   const SPINE_SUBREGIONS = ['All', ...SUBREGIONS.Spine];
   // Sub-regions for a region: the fixed list plus any other sub-region a saved protocol already
@@ -4490,7 +4491,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   }
   // Name suffixes the St. Anne's sets use, for records saved before they carried a sub-region.
   const SUFFIX_SUBREGIONS = [
-    [/\bFPELV\b/i, 'Abdomen', 'Female pelvis'],
+    [/\bFPELV\b/i, 'Pelvis', 'Female pelvis'],
     [/\bSHLD\b/i, 'MSK/Extremity', 'Shoulder'],
     [/\bHUM\b/i, 'MSK/Extremity', 'Humerus'],
     [/\bELB\b/i, 'MSK/Extremity', 'Elbow'],
@@ -4498,7 +4499,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     [/\bWRI\b/i, 'MSK/Extremity', 'Wrist'],
     [/\bHND\b/i, 'MSK/Extremity', 'Hand'],
     [/\bSCAP\b/i, 'MSK/Extremity', 'Scapula'],
-    [/\bPELV\b/i, 'MSK/Extremity', 'Bony pelvis'],
+    [/\bPELV\b/i, 'Pelvis', 'Bony pelvis'],
     [/\b(SAC|SI)\b/, 'Spine', 'Sacrum/SI'],
   ];
   // "Orbits" (plural) on purpose: it matches the exam name and the default NSA exception keyword.
@@ -4520,15 +4521,17 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     // Sacrum and SI joints were first imported under MSK/Extremity; Otis looks for them under Spine.
     else if (region === 'MSK/Extremity' && (subRegion === 'Sacrum' || subRegion === 'Sacrum/SI joints')) { region = 'Spine'; subRegion = 'Sacrum/SI'; }
     if (region === 'MSK') region = 'MSK/Extremity';
+    // Bony pelvis (was MSK/Extremity) and female pelvis (was Abdomen) share the Pelvis tab.
+    if (subRegion === 'Bony pelvis' || subRegion === 'Female pelvis') region = 'Pelvis';
     // MSK and abdomen records saved with no sub-region: take it from the name suffix
     // (protocols, e.g. "AX PD FS WRI") or the start of the name (exam sets, e.g. "Wrist w/wo").
-    if (!subRegion && ['MSK/Extremity', 'Abdomen', 'Other', ''].includes(region || '')) {
+    if (!subRegion && ['MSK/Extremity', 'Abdomen', 'Pelvis', 'Other', ''].includes(region || '')) {
       const name = String(p.name || '');
       const hit = SUFFIX_SUBREGIONS.find(([re]) => re.test(name));
       if (hit) { region = hit[1]; subRegion = hit[2]; }
       else {
-        const sr = (SUBREGIONS[region] || []).find(x => name.trim().toLowerCase().startsWith(x.toLowerCase()));
-        if (sr) subRegion = sr;
+        const sr = (SUBREGIONS[region] || []).concat(SUBREGIONS.Pelvis).find(x => name.trim().toLowerCase().startsWith(x.toLowerCase()));
+        if (sr) { subRegion = sr; if (SUBREGIONS.Pelvis.includes(sr)) region = 'Pelvis'; }
       }
     }
     return { region, subRegion };
@@ -10039,7 +10042,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const CSV_ZERO_OK = new Set(['Oversampling side 1 (mm)', 'Oversampling side 2 (mm)']);
   const csvLoose = t => String(t == null ? '' : t).toLowerCase().replace(/[—–]/g, '-').replace(/\s+/g, '');
   const CSV_HEADER_KEYS = Object.fromEntries(CSV_HEADERS.map(h => [csvLoose(h), h]));
-  const CSV_REGIONS = ['Brain', 'Neck', 'Spine', 'Abdomen', 'MSK/Extremity', 'Other'];
+  const CSV_REGIONS = ['Brain', 'Neck', 'Spine', 'Abdomen', 'Pelvis', 'MSK/Extremity', 'Other'];
   // Optional "Sub-region" / "Subregion" column (not in the template). Orbit/Orbits/IAC/Pituitary in the Region column also work.
   CSV_HEADER_KEYS.subregion = 'Sub-region';
   CSV_HEADER_KEYS['sub-region'] = 'Sub-region';
