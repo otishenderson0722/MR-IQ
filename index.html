@@ -525,6 +525,13 @@
   .proto-body { display: flex; flex-direction: column; gap: 8px; padding: 0 16px; }
   .protocol-card.collapsed .proto-body { display: none; }
   .lib-expand-row { display: flex; gap: 8px; margin: 0 0 8px; }
+  .proto-sugg-pill { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; color: var(--good, #3fb950); border: 1px solid currentColor; vertical-align: 2px; white-space: nowrap; }
+  .variant-pick { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-top: 4px; }
+  .variant-pick button { flex: 1; min-height: 44px; padding: 8px 6px; background: var(--panel-2); color: var(--text-dim); border: 0; border-right: 1px solid var(--border); font: inherit; font-weight: 600; font-size: 0.88rem; cursor: pointer; }
+  .variant-pick button:last-child { border-right: 0; }
+  .variant-pick button span { font-weight: 400; font-variant-numeric: tabular-nums; }
+  .variant-pick button.active { background: var(--accent); color: #08131c; }
+  .variant-name { font-size: 0.9rem !important; color: var(--text-dim); }
   .card-region-tag { color: var(--accent); font-size: 0.76rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
   .card-badges { display: flex; flex-wrap: wrap; gap: 6px; }
   .badge {
@@ -6010,7 +6017,46 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   planGuideOverlay.addEventListener('click', (e) => { if (e.target === planGuideOverlay) closePlanningGuide(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && planGuideOverlay.classList.contains('show')) closePlanningGuide(); });
 
-  function protocolCardHtml(p, isFirst, isLast) {
+  // A "(SUGGESTED)" protocol shares one Library row with its original: the name without the tag,
+  // or, failing that, the STIR -> FS original or the protocol its planning note says "Plan like".
+  const SUGGESTED_RE = /\s*\(suggested[^)]*\)\s*/i;
+  const isSuggestedProtocol = p => SUGGESTED_RE.test(p.name || '');
+  function suggestedOriginal(p, pool) {
+    const same = q => q.id !== p.id && !isSuggestedProtocol(q) && q.facility === p.facility && scannerLabel(q) === scannerLabel(p);
+    const base = String(p.name || '').replace(SUGGESTED_RE, ' ').trim();
+    const like = (String(p.planningNotes || '').match(/^\s*Plan like (.+?)\s*[(.,]/i) || [])[1];
+    const tries = [base, base.replace(/\bSTIR\b/i, 'FS'), like].filter(Boolean).map(t => t.toLowerCase());
+    for (const t of tries) { const hit = pool.find(q => same(q) && String(q.name || '').trim().toLowerCase() === t); if (hit) return hit; }
+    return null;
+  }
+  // Rows for the shown protocols: {lead, variants:[original, suggested...]}. A suggested protocol
+  // whose original isn't shown (other filter/search) gets its own row.
+  function libraryRows(list) {
+    const rows = [];
+    const byLead = new Map();
+    list.forEach(p => { if (!isSuggestedProtocol(p)) { const r = { lead: p, variants: [p] }; rows.push(r); byLead.set(p.id, r); } });
+    list.forEach(p => {
+      if (!isSuggestedProtocol(p)) return;
+      const orig = suggestedOriginal(p, list);
+      const r = orig && byLead.get(orig.id);
+      if (r) r.variants.push(p); else rows.push({ lead: p, variants: [p] });
+    });
+    const pos = new Map(list.map((p, i) => [p.id, i]));
+    return rows.sort((a, b) => pos.get(a.lead.id) - pos.get(b.lead.id));
+  }
+  const variantChoice = new Map(); // row lead id -> index of the version shown (0 = original)
+  function protocolRowHtml(row, isFirst, isLast) {
+    let k = variantChoice.get(row.lead.id) || 0;
+    if (k >= row.variants.length) k = 0;
+    return protocolCardHtml(row.variants[k], isFirst, isLast, row, k);
+  }
+
+  function protocolCardHtml(p, isFirst, isLast, row, shownIdx) {
+    const key = row ? row.lead.id : p.id;
+    const multi = row && row.variants.length > 1;
+    const ta = q => (Number.isFinite(q.consoleTimeSec) && q.consoleTimeSec > 0 ? formatConsoleTime(q.consoleTimeSec) : '');
+    const variantPickHtml = multi ? `<div class="variant-pick" role="group" aria-label="Version">${row.variants.map((v, i) =>
+      `<button type="button" data-action="variant" data-variant="${i}" class="${i === shownIdx ? 'active' : ''}" aria-pressed="${i === shownIdx}">${i === 0 ? 'Original' : (row.variants.length > 2 ? 'Suggested ' + i : 'Suggested')}${ta(v) ? ` <span>${ta(v)}</span>` : ''}</button>`).join('')}</div>` : '';
     const notesHtml = p.notes ? `<div class="protocol-notes">${escapeHtml(p.notes)}</div>` : '';
     const regionLabel = p.region + (p.subRegion ? ' · ' + p.subRegion : '');
     const thicknessLabel = typeof p.sliceThicknessMm === 'number' ? ` · ${p.sliceThicknessMm}mm` : '';
@@ -6018,17 +6064,20 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     const acrTagHtml = acrSeqLabel ? `<div class="acr-tag">ACR: ${escapeHtml(acrSeqLabel)}</div>` : '';
     const terms = vendorTerms(p.vendor);
     const vendorBadgeHtml = p.vendor ? `<span class="badge">${escapeHtml(p.vendor)}</span>` : '';
-    const isOpen = openProtocolIds.has(p.id);
-    const taLabel = Number.isFinite(p.consoleTimeSec) && p.consoleTimeSec > 0 ? formatConsoleTime(p.consoleTimeSec) : '';
+    const isOpen = openProtocolIds.has(key);
+    const taLabel = ta(p);
+    const rowName = multi ? row.lead.name : p.name;
     return `
-      <div class="protocol-card ${isOpen ? 'open' : 'collapsed'}" data-id="${p.id}">
+      <div class="protocol-card ${isOpen ? 'open' : 'collapsed'}" data-id="${p.id}" data-key="${key}">
         <button type="button" class="proto-row" data-action="toggle" aria-expanded="${isOpen}">
           <span class="proto-caret" aria-hidden="true">${isOpen ? '▼' : '▶'}</span>
-          <span class="proto-name">${escapeHtml(p.name)}</span>
+          <span class="proto-name">${escapeHtml(rowName)}${multi ? ` <span class="proto-sugg-pill">+${row.variants.length - 1} suggested</span>` : ''}</span>
           ${needsConfirmation(p) ? '<span class="proto-flag" title="Needs confirmation">⚠</span>' : ''}
           ${taLabel ? `<span class="proto-ta">${taLabel}</span>` : ''}
         </button>
         <div class="proto-body">
+        ${variantPickHtml}
+        ${multi && shownIdx > 0 ? `<h4 class="variant-name">${escapeHtml(p.name)}</h4>` : ''}
         <div class="card-region-tag">${escapeHtml(regionLabel)}</div>
         <div class="card-badges">
           <span class="badge">${escapeHtml(p.facility)}</span>
@@ -6172,17 +6221,18 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   expandRowEl.addEventListener('click', (e) => {
     const b = e.target.closest('button[data-expand]');
     if (!b) return;
-    if (b.dataset.expand === 'all') filterProtocols().forEach(pr => openProtocolIds.add(pr.id));
+    if (b.dataset.expand === 'all') libraryRows(filterProtocols()).forEach(r => openProtocolIds.add(r.lead.id));
     else openProtocolIds.clear();
     renderProtocolGrid();
   });
   function renderProtocolGrid() {
     const list = filterProtocols();
-    expandRowEl.style.display = list.length > 1 ? 'flex' : 'none';
+    const rows = libraryRows(list);
+    expandRowEl.style.display = rows.length > 1 ? 'flex' : 'none';
     if (list.length === 0) {
       protocolGridEl.innerHTML = `<div class="empty-state">No saved protocols here yet. Use “+ Add Protocol” or save from the Calculator tab.</div>`;
     } else {
-      protocolGridEl.innerHTML = list.map((pr, i) => protocolCardHtml(pr, i === 0, i === list.length - 1)).join('');
+      protocolGridEl.innerHTML = rows.map((r, i) => protocolRowHtml(r, i === 0, i === rows.length - 1)).join('');
     }
     renderCompliancePanel(list);
   }
@@ -6190,7 +6240,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // Swaps a protocol with its neighbour among the cards currently shown. Hidden
   // protocols (other regions/facilities/scanners/search) keep their places.
   function moveProtocol(id, dir) {
-    const visible = filterProtocols();
+    // Moves whole rows (an original carries its suggested versions along).
+    const visible = libraryRows(filterProtocols()).map(r => r.lead);
     const i = visible.findIndex(pr => pr.id === id);
     const j = i + dir;
     if (i < 0 || j < 0 || j >= visible.length) return;
@@ -6202,7 +6253,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     persistProtocolOrder();
     renderProtocolGrid();
     orderStatusEl.textContent = '';
-    const card = protocolGridEl.querySelector(`.protocol-card[data-id="${CSS.escape(id)}"]`);
+    const card = protocolGridEl.querySelector(`.protocol-card[data-key="${CSS.escape(id)}"]`);
     if (card) {
       const again = card.querySelector(`[data-action="${dir < 0 ? 'move-up' : 'move-down'}"]`);
       (again && !again.disabled ? again : card).focus?.({ preventScroll: true });
@@ -6229,8 +6280,9 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
     switch (btn.dataset.action) {
       case 'toggle': {
-        const open = !openProtocolIds.has(id);
-        if (open) openProtocolIds.add(id); else openProtocolIds.delete(id);
+        const key = card.dataset.key || id;
+        const open = !openProtocolIds.has(key);
+        if (open) openProtocolIds.add(key); else openProtocolIds.delete(key);
         card.classList.toggle('open', open);
         card.classList.toggle('collapsed', !open);
         btn.setAttribute('aria-expanded', String(open));
@@ -6271,8 +6323,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       case 'duplicate':
         openModal('add', { ...protocol, id: null, name: protocol.name + ' (Copy)' });
         break;
-      case 'move-up': moveProtocol(id, -1); break;
-      case 'move-down': moveProtocol(id, 1); break;
+      case 'variant':
+        variantChoice.set(card.dataset.key || id, Number(btn.dataset.variant) || 0);
+        renderProtocolGrid();
+        break;
+      case 'move-up': moveProtocol(card.dataset.key || id, -1); break;
+      case 'move-down': moveProtocol(card.dataset.key || id, 1); break;
       case 'delete':
         if (confirm(`Delete "${protocol.name}"? This can’t be undone.`)) {
           protocols = protocols.filter(p => p.id !== id);
