@@ -4447,10 +4447,43 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     Spine: ['C-spine', 'T-spine', 'L-spine', 'Sacrum/SI'],
     Brain: ['Orbits', 'IAC', 'Pituitary', 'Fast brain'],
     Neck: ['Soft tissue neck', 'Brachial plexus'],
+    'MSK/Extremity': ['Shoulder', 'Humerus', 'Elbow', 'Forearm', 'Wrist', 'Hand', 'Scapula', 'Bony pelvis'],
+    Abdomen: ['Female pelvis'],
   };
   const SPINE_SUBREGIONS = ['All', ...SUBREGIONS.Spine];
-  // Library sub-tabs. Brain also gets "General" = no sub-region (routine, seizure and MS brain).
-  const subregionTabsFor = region => (SUBREGIONS[region] ? ['All', ...(region === 'Brain' ? ['General'] : []), ...SUBREGIONS[region]] : []);
+  // Sub-regions for a region: the fixed list plus any other sub-region a saved protocol already
+  // uses (so a new body part from an import gets its own tab without a code change).
+  function subregionsFor(region) {
+    const fixed = SUBREGIONS[region] || [];
+    if (!region || region === 'All') return fixed;
+    const extra = [];
+    protocols.forEach(p => {
+      const sr = p.region === region ? String(p.subRegion || '').trim() : '';
+      if (sr && !fixed.includes(sr) && !extra.includes(sr)) extra.push(sr);
+    });
+    return fixed.concat(extra.sort((a, b) => a.localeCompare(b)));
+  }
+  // Library sub-tabs. "General" = no sub-region: always on Brain (routine, seizure and MS brain),
+  // elsewhere only when some protocol in that region has no sub-region.
+  function subregionTabsFor(region) {
+    const subs = subregionsFor(region);
+    if (!subs.length) return [];
+    const general = region === 'Brain' || (protocols.some(p => p.region === region && !p.subRegion));
+    return ['All', ...(general ? ['General'] : []), ...subs];
+  }
+  // Name suffixes the St. Anne's sets use, for records saved before they carried a sub-region.
+  const SUFFIX_SUBREGIONS = [
+    [/\bFPELV\b/i, 'Abdomen', 'Female pelvis'],
+    [/\bSHLD\b/i, 'MSK/Extremity', 'Shoulder'],
+    [/\bHUM\b/i, 'MSK/Extremity', 'Humerus'],
+    [/\bELB\b/i, 'MSK/Extremity', 'Elbow'],
+    [/\bFARM\b/i, 'MSK/Extremity', 'Forearm'],
+    [/\bWRI\b/i, 'MSK/Extremity', 'Wrist'],
+    [/\bHND\b/i, 'MSK/Extremity', 'Hand'],
+    [/\bSCAP\b/i, 'MSK/Extremity', 'Scapula'],
+    [/\bPELV\b/i, 'MSK/Extremity', 'Bony pelvis'],
+    [/\b(SAC|SI)\b/, 'Spine', 'Sacrum/SI'],
+  ];
   // "Orbits" (plural) on purpose: it matches the exam name and the default NSA exception keyword.
   const LEGACY_REGION_MAP = { orbit: 'Orbits', orbits: 'Orbits', iac: 'IAC', pituitary: 'Pituitary' };
   const FAST_BRAIN_IDS = new Set([
@@ -4469,6 +4502,18 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     else if (region === 'Other' && subRegion === 'Neck') { region = 'Neck'; subRegion = 'Soft tissue neck'; }
     // Sacrum and SI joints were first imported under MSK/Extremity; Otis looks for them under Spine.
     else if (region === 'MSK/Extremity' && (subRegion === 'Sacrum' || subRegion === 'Sacrum/SI joints')) { region = 'Spine'; subRegion = 'Sacrum/SI'; }
+    if (region === 'MSK') region = 'MSK/Extremity';
+    // MSK and abdomen records saved with no sub-region: take it from the name suffix
+    // (protocols, e.g. "AX PD FS WRI") or the start of the name (exam sets, e.g. "Wrist w/wo").
+    if (!subRegion && ['MSK/Extremity', 'Abdomen', 'Other', ''].includes(region || '')) {
+      const name = String(p.name || '');
+      const hit = SUFFIX_SUBREGIONS.find(([re]) => re.test(name));
+      if (hit) { region = hit[1]; subRegion = hit[2]; }
+      else {
+        const sr = (SUBREGIONS[region] || []).find(x => name.trim().toLowerCase().startsWith(x.toLowerCase()));
+        if (sr) subRegion = sr;
+      }
+    }
     return { region, subRegion };
   }
   function normalizeAcrRegion(r) {
@@ -4550,7 +4595,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       if (!names.length) return;
       const ids = Array.isArray(e.protocolIds) ? e.protocolIds : [];
       // A legacy Orbit/IAC/Pituitary set becomes Brain + sub-region; the Fast brain set gets its own.
-      const nr = normalizeRegion({ region: typeof e.region === 'string' ? e.region : '', subRegion: typeof e.subRegion === 'string' ? e.subRegion : '' });
+      const nr = normalizeRegion({ name: e.name, region: typeof e.region === 'string' ? e.region : '', subRegion: typeof e.subRegion === 'string' ? e.subRegion : '' });
       if (nr.region === 'Brain' && !nr.subRegion && same(e.name, 'Fast brain')) nr.subRegion = 'Fast brain';
       const set = {
         id: typeof e.id === 'string' && e.id ? e.id : makeId(),
@@ -5458,7 +5503,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   function filterProtocols(opts) {
     return orderedProtocols().filter(p => {
       if (libState.region !== 'All' && p.region !== libState.region) return false;
-      if (!(opts && opts.ignoreSubRegion) && SUBREGIONS[libState.region] && libState.subRegion !== 'All') {
+      if (!(opts && opts.ignoreSubRegion) && subregionTabsFor(libState.region).length && libState.subRegion !== 'All') {
         const want = libState.subRegion === 'General' ? '' : libState.subRegion;
         if ((p.subRegion || '') !== want) return false;
       }
@@ -6315,7 +6360,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // Planning guide picker: Auto shows which guide it would match right now.
   function refreshPlanningGuideOptions() {
     const auto = autoPlanningGuideId({
-      name: pf.name.value, region: pf.region.value, subRegion: SUBREGIONS[pf.region.value] ? pf.subRegion.value : '',
+      name: pf.name.value, region: pf.region.value, subRegion: subregionsFor(pf.region.value).length ? pf.subRegion.value : '',
       sliceOrientation: pf.vendor.value === 'Philips' ? pf.sliceOrientation.value : '', sequenceType: modalSequenceType,
     });
     const keep = pf.planningGuide.value;
@@ -6347,12 +6392,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
   // Sub-region choices follow the chosen region (the same table the Library tabs use).
   function fillSubregionOptions(keep) {
-    const subs = SUBREGIONS[pf.region.value] || [];
+    const subs = subregionsFor(pf.region.value);
     pf.subRegion.innerHTML = '<option value="">General / unspecified</option>' + subs.map(sr => `<option value="${escapeHtml(sr)}">${escapeHtml(sr)}</option>`).join('');
     pf.subRegion.value = subs.includes(keep) ? keep : '';
   }
   function toggleSubregionField() {
-    pf.subRegionField.style.display = SUBREGIONS[pf.region.value] ? 'flex' : 'none';
+    pf.subRegionField.style.display = subregionsFor(pf.region.value).length ? 'flex' : 'none';
   }
 
   function refreshAcrSequenceOptions() {
@@ -6439,7 +6484,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     pf.name.value = prefill?.name || '';
     pf.region.value = prefill?.region || defaultRegion;
     // A new protocol started from a Library tab pre-fills the sub-region too; editing keeps the stored one.
-    const defaultSubRegion = (!prefill?.region && SUBREGIONS[libState.region] && !['All', 'General'].includes(libState.subRegion)) ? libState.subRegion : '';
+    const defaultSubRegion = (!prefill?.region && subregionsFor(libState.region).length && !['All', 'General'].includes(libState.subRegion)) ? libState.subRegion : '';
     fillSubregionOptions(prefill?.subRegion || defaultSubRegion);
     document.getElementById('pf-saved-status').textContent = '';
     document.getElementById('modal-save-another-btn').style.display = mode === 'add' ? '' : 'none';
@@ -6557,7 +6602,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       id: editingId || makeId(),
       name: pf.name.value.trim(),
       region: pf.region.value,
-      subRegion: SUBREGIONS[pf.region.value] ? pf.subRegion.value : '',
+      subRegion: subregionsFor(pf.region.value).length ? pf.subRegion.value : '',
       facility: pickedFs.facility,
       scannerModel: pickedFs.scanner.model,
       scannerRoom: pickedFs.scanner.room,
