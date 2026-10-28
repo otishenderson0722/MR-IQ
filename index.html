@@ -4444,7 +4444,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const REGIONS = ['All', 'Brain', 'Neck', 'Spine', 'Abdomen', 'MSK/Extremity', 'Other'];
   // Regions that have sub-regions (the same mechanism for all of them).
   const SUBREGIONS = {
-    Spine: ['C-spine', 'T-spine', 'L-spine'],
+    Spine: ['C-spine', 'T-spine', 'L-spine', 'Sacrum/SI'],
     Brain: ['Orbits', 'IAC', 'Pituitary', 'Fast brain'],
     Neck: ['Soft tissue neck', 'Brachial plexus'],
   };
@@ -4467,6 +4467,8 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     else if (region === 'Brain' && !subRegion && FAST_BRAIN_IDS.has(p.id)) subRegion = 'Fast brain';
     // The first soft tissue neck import used Other + "Neck" before the Neck tab existed.
     else if (region === 'Other' && subRegion === 'Neck') { region = 'Neck'; subRegion = 'Soft tissue neck'; }
+    // Sacrum and SI joints were first imported under MSK/Extremity; Otis looks for them under Spine.
+    else if (region === 'MSK/Extremity' && (subRegion === 'Sacrum' || subRegion === 'Sacrum/SI joints')) { region = 'Spine'; subRegion = 'Sacrum/SI'; }
     return { region, subRegion };
   }
   function normalizeAcrRegion(r) {
