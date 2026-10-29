@@ -413,6 +413,8 @@
   .qr-actions button { min-height: 40px; background: var(--panel-2); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 4px 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
   .qr-actions .planning-note-callout { flex: 1 1 100%; font-size: 0.78rem; padding: 4px 8px; margin: 0; }
   .qr-foot { display: flex; gap: 6px; }
+  .qr-move { display: flex; gap: 4px; flex: 0 0 auto; }
+  .qr-foot button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
   .qr-foot button { flex: 1; min-height: 44px; background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer; }
   .qr-foot button.primary { border-color: var(--accent); color: var(--accent); }
   .quick-tune-head:empty { display: none; }
@@ -960,6 +962,9 @@
   .exam-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
   .exam-table th, .exam-table td { border-bottom: 1px solid var(--border); padding: 6px 6px; text-align: left; vertical-align: top; }
   .exam-table td:first-child, .exam-table th:first-child { width: 28px; color: var(--text-dim); }
+  .exam-move { display: flex; gap: 4px; }
+  .exam-move button, .qr-move button { min-width: 40px; min-height: 40px; background: var(--panel-2); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; font-size: 1rem; font-weight: 800; cursor: pointer; padding: 0; }
+  .exam-move button:disabled, .qr-move button:disabled { opacity: 0.3; cursor: default; }
   .exam-table .ta { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 700; }
   .exam-total { margin: 10px 0 4px; font-size: 1.05rem; font-weight: 800; }
   .exam-flag { display: block; font-size: 0.74rem; color: var(--warn-border); margin-top: 2px; }
@@ -9607,7 +9612,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // touches the optimizer, so every time shown is a saved console time.
   // Choices, done ticks and the budget are about this patient: kept only
   // until the page reloads or "New patient" is tapped.
-  const run = { choice: {}, done: new Set(), open: -1, budgetSec: null, examId: '' };
+  const run = { choice: {}, done: new Set(), open: -1, budgetSec: null, examId: '', reorder: false };
   const quickExamEl = document.getElementById('quick-exam');
   const quickRunEl = document.getElementById('quick-run');
   const quickTuneEl = document.getElementById('quick-tune');
@@ -9667,7 +9672,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       + Array.from(groups).map(([g, list]) => `<optgroup label="${escapeHtml(g || 'Other')}">${list.map(e => `<option value="${escapeHtml(e.id)}">${escapeHtml(e.name)}</option>`).join('')}</optgroup>`).join('')
       + '<option value="__single">One sequence at a time (all protocols)</option>';
     quickExamEl.value = quick.examId || (quick.single ? '__single' : '');
-    if (run.examId !== quick.examId) { run.examId = quick.examId; run.choice = {}; run.done = new Set(); run.open = -1; run.budgetSec = null; }
+    if (run.examId !== quick.examId) { run.examId = quick.examId; run.choice = {}; run.done = new Set(); run.open = -1; run.budgetSec = null; run.reorder = false; }
 
     const set = quickExamSet();
     // Single-sequence mode = the old Quick screen; exam mode shows the
@@ -9718,7 +9723,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       return `<div class="qr-row${done ? ' done' : ''}${run.open === i ? ' open' : ''}" data-i="${i}">
         <div class="qr-main"><button type="button" class="qr-dot" data-action="done" aria-pressed="${done}" aria-label="Mark ${escapeHtml(r.name)} done">${done ? '✓' : i + 1}</button>
           <button type="button" class="qr-name" data-action="open" aria-expanded="${run.open === i}">${escapeHtml(p ? shortName(p) : r.name)}${flag ? `<span class="qr-flag">${escapeHtml(flag)}</span>` : ''}</button>
-          ${sw}<div class="qr-time">${t !== null ? formatConsoleTime(t) : '—'}</div></div>${actions}</div>`;
+          ${run.reorder ? `<div class="qr-move"><button type="button" data-action="move" data-dir="-1" aria-label="Move up"${i === 0 ? ' disabled' : ''}>▲</button><button type="button" data-action="move" data-dir="1" aria-label="Move down"${i === rows.length - 1 ? ' disabled' : ''}>▼</button></div>` : sw}<div class="qr-time">${t !== null ? formatConsoleTime(t) : '—'}</div></div>${actions}</div>`;
     }).join('');
 
     const doneCount = run.done.size;
@@ -9733,7 +9738,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
           <div class="qr-budget-top qr-dim"><span>${Math.round(lo / 60)} min</span><span>${Math.round(hi / 60)} min</span></div></div>` : ''}
       </div>
       <div class="qr-list">${rowHtml}</div>
-      <div class="qr-foot"><button type="button" class="primary" data-action="cards">📋 Console cards</button><button type="button" data-action="reset">↺ New patient</button></div>`;
+      <div class="qr-foot"><button type="button" class="primary" data-action="cards">📋 Console cards</button><button type="button" data-action="reorder" class="${run.reorder ? 'on' : ''}" aria-pressed="${run.reorder}">${run.reorder ? '✓ Done ordering' : '↕ Change order'}</button><button type="button" data-action="reset">↺ New patient</button></div>`;
   }
 
   quickExamEl.addEventListener('change', () => {
@@ -9773,6 +9778,21 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       case 'done': if (run.done.has(i)) run.done.delete(i); else run.done.add(i); break;
       case 'open': run.open = run.open === i ? -1 : i; break;
       case 'variant': run.choice[i] = Number(btn.dataset.k); break;
+      case 'reorder': run.reorder = !run.reorder; run.open = -1; break;
+      case 'move': {
+        const j = i + Number(btn.dataset.dir);
+        if (!moveExamMember(set, i, Number(btn.dataset.dir))) return;
+        // This patient's ticks and version picks move with their sequence.
+        const ci = run.choice[i], cj = run.choice[j];
+        delete run.choice[i]; delete run.choice[j];
+        if (ci !== undefined) run.choice[j] = ci;
+        if (cj !== undefined) run.choice[i] = cj;
+        const di = run.done.has(i), dj = run.done.has(j);
+        run.done.delete(i); run.done.delete(j);
+        if (di) run.done.add(j);
+        if (dj) run.done.add(i);
+        break;
+      }
       case 'plan': if (p) openPlanningGuide(p); return;
       case 'tune': if (p) { quickLoad(p); renderQuick(); window.scrollTo(0, 0); } return;
       case 'card': case 'cards': {
@@ -10772,6 +10792,16 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
 
   // --- Exams tab ----------------------------------------------------------------
   const examState = { id: '' };
+  // Move one sequence of an exam up (-1) or down (+1); saved right away.
+  // The Quick run sheet and the console card deck follow this order.
+  function moveExamMember(set, i, dir) {
+    const j = i + dir;
+    if (!set || j < 0 || j >= set.protocols.length) return false;
+    [set.protocols[i], set.protocols[j]] = [set.protocols[j], set.protocols[i]];
+    [set.protocolIds[i], set.protocolIds[j]] = [set.protocolIds[j], set.protocolIds[i]];
+    persistExamSets();
+    return true;
+  }
   // Finds each member of an exam: by id when the set names one, else by name + facility
   // (exact name first, then ignoring case). Several matches use the first and say so.
   function resolveExamMembers(set) {
@@ -10812,12 +10842,13 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         if (ta === null) flags.push('<span class="exam-flag">No console time saved</span>');
       }
       const sub = pr ? [pr.region, pr.subRegion, pr.sliceOrientation, scannerLabel(pr)].filter(Boolean).join(' · ') : '';
-      return `<tr><td>${i + 1}</td><td><strong>${escapeHtml(m.name)}</strong>${sub ? `<div class="exam-meta" style="margin:0;">${escapeHtml(sub)}</div>` : ''}${flags.join('')}</td><td class="ta">${ta !== null ? formatConsoleTime(ta) : '—'}</td></tr>`;
+      const move = `<div class="exam-move"><button type="button" data-move="-1" data-i="${i}" aria-label="Move ${escapeHtml(m.name)} up"${i === 0 ? ' disabled' : ''}>▲</button><button type="button" data-move="1" data-i="${i}" aria-label="Move ${escapeHtml(m.name)} down"${i === members.length - 1 ? ' disabled' : ''}>▼</button></div>`;
+      return `<tr><td>${i + 1}</td><td><strong>${escapeHtml(m.name)}</strong>${sub ? `<div class="exam-meta" style="margin:0;">${escapeHtml(sub)}</div>` : ''}${flags.join('')}</td><td class="ta">${ta !== null ? formatConsoleTime(ta) : '—'}</td><td>${move}</td></tr>`;
     }).join('');
     const missing = members.length - withTime;
     bodyEl.innerHTML = `<div class="exam-meta">${escapeHtml([set.facility, set.scannerModel, set.region + (set.subRegion ? ' · ' + set.subRegion : '')].filter(Boolean).join(' · '))}${set.basedOn ? ` · based on ${escapeHtml(set.basedOn)}` : ''}</div>`
       + (set.note ? `<div class="lib-note" style="margin-bottom:8px;">${escapeHtml(set.note)}</div>` : '')
-      + `<table class="exam-table"><thead><tr><th>#</th><th>Protocol</th><th>Console time</th></tr></thead><tbody>${rows}</tbody></table>`
+      + `<table class="exam-table"><thead><tr><th>#</th><th>Protocol</th><th>Time</th><th>Order</th></tr></thead><tbody>${rows}</tbody></table>`
       + `<div class="exam-total">Total console time: ${withTime ? formatConsoleTime(total) : '—'}</div>`
       + `<button type="button" class="btn-primary cc-open-btn" id="exam-cards-btn" style="margin-top:10px;">📋 Console cards — swipe through this exam</button>`
       + (missing ? `<div class="lib-note">${missing} of ${members.length} member${members.length === 1 ? '' : 's'} ${missing === 1 ? 'has' : 'have'} no console time, so the total is partial.</div>` : '')
@@ -10830,6 +10861,11 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     renderExamsView();
   });
   document.getElementById('exam-body').addEventListener('click', (e) => {
+    const mv = e.target.closest('button[data-move]');
+    if (mv) {
+      if (moveExamMember(examSets.find(x => x.id === examState.id), Number(mv.dataset.i), Number(mv.dataset.move))) renderExamsView();
+      return;
+    }
     if (!e.target.closest('#exam-remove-btn')) return;
     const set = examSets.find(x => x.id === examState.id);
     if (!set || !confirm(`Remove the exam “${set.name}”? The protocols stay in your library.`)) return;
