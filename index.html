@@ -2099,7 +2099,8 @@
           <option>Spine</option>
           <option>Abdomen</option>
           <option>Pelvis</option>
-          <option>MSK/Extremity</option>
+          <option>Upper extremity</option>
+          <option>Lower extremity</option>
           <option>Other</option>
         </select>
       </div>
@@ -4517,13 +4518,14 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // Protocol library: storage
   // ---------------------------------------------------------------------
   const STORAGE_KEY = 'mriq.protocolLibrary.v1';
-  const REGIONS = ['All', 'Brain', 'Neck', 'Spine', 'Abdomen', 'Pelvis', 'MSK/Extremity', 'Other'];
+  const REGIONS = ['All', 'Brain', 'Neck', 'Spine', 'Abdomen', 'Pelvis', 'Upper extremity', 'Lower extremity', 'Other'];
   // Regions that have sub-regions (the same mechanism for all of them).
   const SUBREGIONS = {
     Spine: ['C-spine', 'T-spine', 'L-spine', 'Sacrum/SI'],
     Brain: ['Orbits', 'IAC', 'Pituitary', 'Fast brain'],
     Neck: ['Soft tissue neck', 'Brachial plexus'],
-    'MSK/Extremity': ['Shoulder', 'Humerus', 'Elbow', 'Forearm', 'Wrist', 'Hand', 'Scapula'],
+    'Upper extremity': ['Shoulder', 'Humerus', 'Elbow', 'Forearm', 'Wrist', 'Hand', 'Scapula'],
+    'Lower extremity': ['Hip', 'Knee', 'Ankle'],
     Pelvis: ['Bony pelvis', 'Female pelvis'],
   };
   const SPINE_SUBREGIONS = ['All', ...SUBREGIONS.Spine];
@@ -4537,8 +4539,17 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       const sr = p.region === region ? String(p.subRegion || '').trim() : '';
       if (sr && !fixed.includes(sr) && !extra.includes(sr)) extra.push(sr);
     });
+    if (region === 'Lower extremity') {
+      // Foot, femur, tib/fib etc. from later imports slot in head to toe, not A-Z.
+      const all = fixed.concat(extra);
+      const rank = sr => { const i = LOWER_EXT_ORDER.findIndex(re => re.test(sr)); return i < 0 ? LOWER_EXT_ORDER.length : i; };
+      return all.map((sr, i) => [sr, i]).sort((a, b) => (rank(a[0]) - rank(b[0])) || (a[1] - b[1])).map(x => x[0]);
+    }
     return fixed.concat(extra.sort((a, b) => a.localeCompare(b)));
   }
+  const LOWER_EXT_ORDER = [/hip/i, /femur|thigh/i, /knee/i, /tib|fib|leg|calf/i, /ankle/i, /foot|heel|calcan/i, /toe|forefoot|midfoot/i];
+  // Old MSK/Extremity sub-regions that belong on the Lower extremity tab (everything else is upper).
+  const LOWER_EXT_RE = /\b(hip|femur|thigh|knee|tib|fib|tib\/fib|lower leg|leg|calf|ankle|foot|feet|heel|calcan\w*|toes?|forefoot|midfoot|lower ext\w*)\b/i;
   // Library sub-tabs. "General" = no sub-region: always on Brain (routine, seizure and MS brain),
   // elsewhere only when some protocol in that region has no sub-region.
   function subregionTabsFor(region) {
@@ -4550,13 +4561,16 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // Name suffixes the St. Anne's sets use, for records saved before they carried a sub-region.
   const SUFFIX_SUBREGIONS = [
     [/\bFPELV\b/i, 'Pelvis', 'Female pelvis'],
-    [/\bSHLD\b/i, 'MSK/Extremity', 'Shoulder'],
-    [/\bHUM\b/i, 'MSK/Extremity', 'Humerus'],
-    [/\bELB\b/i, 'MSK/Extremity', 'Elbow'],
-    [/\bFARM\b/i, 'MSK/Extremity', 'Forearm'],
-    [/\bWRI\b/i, 'MSK/Extremity', 'Wrist'],
-    [/\bHND\b/i, 'MSK/Extremity', 'Hand'],
-    [/\bSCAP\b/i, 'MSK/Extremity', 'Scapula'],
+    [/\bSHLD\b/i, 'Upper extremity', 'Shoulder'],
+    [/\bHUM\b/i, 'Upper extremity', 'Humerus'],
+    [/\bELB\b/i, 'Upper extremity', 'Elbow'],
+    [/\bFARM\b/i, 'Upper extremity', 'Forearm'],
+    [/\bWRI\b/i, 'Upper extremity', 'Wrist'],
+    [/\bHND\b/i, 'Upper extremity', 'Hand'],
+    [/\bSCAP\b/i, 'Upper extremity', 'Scapula'],
+    [/\bHIP\b/i, 'Lower extremity', 'Hip'],
+    [/\bKNEE\b/i, 'Lower extremity', 'Knee'],
+    [/\bANK\b/i, 'Lower extremity', 'Ankle'],
     [/\bPELV\b/i, 'Pelvis', 'Bony pelvis'],
     [/\b(SAC|SI)\b/, 'Spine', 'Sacrum/SI'],
   ];
@@ -4583,15 +4597,23 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     if (subRegion === 'Bony pelvis' || subRegion === 'Female pelvis') region = 'Pelvis';
     // MSK and abdomen records saved with no sub-region: take it from the name suffix
     // (protocols, e.g. "AX PD FS WRI") or the start of the name (exam sets, e.g. "Wrist w/wo").
-    if (!subRegion && ['MSK/Extremity', 'Abdomen', 'Pelvis', 'Other', ''].includes(region || '')) {
+    const EXT = ['MSK/Extremity', 'Upper extremity', 'Lower extremity'];
+    if (!subRegion && EXT.concat(['Abdomen', 'Pelvis', 'Other', '']).includes(region || '')) {
       const name = String(p.name || '');
       const hit = SUFFIX_SUBREGIONS.find(([re]) => re.test(name));
       if (hit) { region = hit[1]; subRegion = hit[2]; }
       else {
-        const sr = (SUBREGIONS[region] || []).concat(SUBREGIONS.Pelvis).find(x => name.trim().toLowerCase().startsWith(x.toLowerCase()));
-        if (sr) { subRegion = sr; if (SUBREGIONS.Pelvis.includes(sr)) region = 'Pelvis'; }
+        const own = EXT.includes(region) ? SUBREGIONS['Upper extremity'].concat(SUBREGIONS['Lower extremity']) : (SUBREGIONS[region] || []);
+        const sr = own.concat(SUBREGIONS.Pelvis).find(x => name.trim().toLowerCase().startsWith(x.toLowerCase()));
+        if (sr) {
+          subRegion = sr;
+          region = SUBREGIONS.Pelvis.includes(sr) ? 'Pelvis' : SUBREGIONS['Lower extremity'].includes(sr) ? 'Lower extremity' : SUBREGIONS['Upper extremity'].includes(sr) ? 'Upper extremity' : region;
+        }
       }
     }
+    // The old single MSK/Extremity tab is split: hip, knee, ankle (and later foot, long bone) go
+    // to Lower extremity, shoulder down to hand to Upper extremity.
+    if (region === 'MSK/Extremity') region = LOWER_EXT_RE.test(subRegion || p.name || '') ? 'Lower extremity' : 'Upper extremity';
     return { region, subRegion };
   }
   function normalizeAcrRegion(r) {
@@ -10363,7 +10385,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   const CSV_ZERO_OK = new Set(['Oversampling side 1 (mm)', 'Oversampling side 2 (mm)']);
   const csvLoose = t => String(t == null ? '' : t).toLowerCase().replace(/[—–]/g, '-').replace(/\s+/g, '');
   const CSV_HEADER_KEYS = Object.fromEntries(CSV_HEADERS.map(h => [csvLoose(h), h]));
-  const CSV_REGIONS = ['Brain', 'Neck', 'Spine', 'Abdomen', 'Pelvis', 'MSK/Extremity', 'Other'];
+  const CSV_REGIONS = ['Brain', 'Neck', 'Spine', 'Abdomen', 'Pelvis', 'Upper extremity', 'Lower extremity', 'Other'];
   // Optional "Sub-region" / "Subregion" column (not in the template). Orbit/Orbits/IAC/Pituitary in the Region column also work.
   CSV_HEADER_KEYS.subregion = 'Sub-region';
   CSV_HEADER_KEYS['sub-region'] = 'Sub-region';
@@ -10481,6 +10503,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       if (region) {
         const legacy = LEGACY_REGION_MAP[region.trim().toLowerCase()];
         if (legacy) { region = 'Brain'; subRegion = legacy; }
+        else if (/^msk(\/extremity)?$|^extremity$/i.test(region.trim())) region = LOWER_EXT_RE.test(cell('Sub-region') || cell('Name') || '') ? 'Lower extremity' : 'Upper extremity';
         else {
           const hit = CSV_REGIONS.find(r => csvLoose(r) === csvLoose(region));
           if (hit) region = hit; else problems.push(`Region “${region}” isn't one of ${CSV_REGIONS.join(', ')} (or Orbits, IAC, Pituitary)`);
