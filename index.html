@@ -573,6 +573,26 @@
   .variant-pick button span { font-weight: 400; font-variant-numeric: tabular-nums; }
   .variant-pick button.active { background: var(--accent); color: #08131c; }
   .variant-name { font-size: 0.9rem !important; color: var(--text-dim); }
+  /* What changed (Original vs Suggested), shown on a card's Suggested version. */
+  .wc { margin-top: 8px; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--panel-2); }
+  .wc-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; font-weight: 700; font-size: 1rem; }
+  .wc-save { border-radius: 6px; padding: 3px 10px; font-weight: 800; font-size: 0.95rem; white-space: nowrap; background: #238636; color: #fff; }
+  .wc-save.slower { background: var(--warn-bg); color: var(--warn-text); border: 2px solid var(--warn-border); }
+  .wc-save.same { background: transparent; color: var(--text-dim); border: 1px solid var(--border); font-weight: 600; }
+  .wc table { width: 100%; border-collapse: collapse; font-size: 0.9rem; font-variant-numeric: tabular-nums; table-layout: fixed; }
+  .wc th { color: var(--text-dim); text-align: left; font-weight: 600; padding: 4px; border-bottom: 1px solid var(--border); }
+  .wc th:first-child { width: 35%; }
+  .wc td:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.85rem; }
+  .wc td { padding: 7px 4px; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; vertical-align: top; }
+  .wc tr:last-child td { border-bottom: 0; }
+  .wc td.wc-old { color: var(--text-dim); text-decoration: line-through; text-decoration-color: #f85149; text-decoration-thickness: 2px; }
+  .wc td.wc-new { background: rgba(63, 185, 80, 0.16); color: #7ee787; font-weight: 800; border-radius: 4px; }
+  .wc td.wc-new.wc-down { background: var(--warn-bg); color: var(--warn-text); }
+  .wc-same { margin-top: 6px; font-size: 0.8rem; color: var(--text-dim); }
+  .wc-why { margin-top: 8px; border-left: 4px solid var(--accent); background: rgba(79, 168, 224, 0.10); padding: 7px 9px; border-radius: 6px; font-size: 0.88rem; line-height: 1.4; }
+  .wc-status { margin-top: 8px; padding: 7px 9px; border-radius: 6px; font-weight: 800; font-size: 0.92rem; }
+  .wc-status.ok { background: rgba(63, 185, 80, 0.16); color: #7ee787; border: 2px solid var(--good); }
+  .wc-status.untried { background: var(--warn-bg); color: var(--warn-text); border: 2px solid var(--warn-border); }
   .card-region-tag { color: var(--accent); font-size: 0.76rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
   .card-badges { display: flex; flex-wrap: wrap; gap: 6px; }
   .badge {
@@ -6124,6 +6144,76 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     return protocolCardHtml(row.variants[k], isFirst, isLast, row, k);
   }
 
+  // "What changed" box for a Suggested version: only the fields that differ from the
+  // original (old struck out, new highlighted), the time saved, an SNR estimate, the
+  // CHANGED line from its notes, and whether it has been tried on the console.
+  function whatChangedHtml(o, p) {
+    const terms = vendorTerms(p.vendor);
+    const num = v => (Number.isFinite(v) ? v : null);
+    const fold = q => {
+      const [a, b] = OVERSAMPLING_AXIS_LETTERS[q.foldOverAxis] || ['', ''];
+      if (Number.isFinite(q.foldOverH) && Number.isFinite(q.foldOverF) && a) return `${a}${q.foldOverH} / ${b}${q.foldOverF}`;
+      return Number.isFinite(q.oversamplingPercent) ? `${roundTenth(q.oversamplingPercent)}%` : null;
+    };
+    const dirOf = q => ({ hf: 'FH', lr: 'RL', ap: 'AP' })[q.foldOverAxis] || null;
+    const pair = (x, y) => (num(x) != null || num(y) != null ? `${shownVal(x)}×${shownVal(y)}` : null);
+    const fields = [
+      ['Sequence', q => q.sequenceType || null],
+      ['TR', q => num(q.tr)],
+      ['TE', q => num(q.te)],
+      [terms.etl, q => num(q.etl)],
+      [terms.nsa, q => num(q.nsa)],
+      ['Accel.', q => accelSummaryLabel(q)],
+      ['Matrix', q => pair(q.freqMatrix, q.phaseMatrix)],
+      ['FOV', q => pair(q.fovFreq, q.fovPhase)],
+      [p.vendor === 'Philips' ? 'Fold-over' : 'Phase dir.', dirOf],
+      ['Oversample', fold],
+      ['Thickness', q => (num(q.sliceThicknessMm) != null ? q.sliceThicknessMm + ' mm' : null)],
+      ['Slices', q => num(q.slices)],
+    ];
+    const rows = [];
+    const same = [];
+    fields.forEach(([label, get]) => {
+      const a = get(o); const b = get(p);
+      if (a == null && b == null) return;
+      if (String(a) === String(b)) { if (['TR', 'TE', terms.nsa, 'Matrix', 'Thickness', 'Slices'].includes(label)) same.push(`${label} ${a}`); return; }
+      rows.push(`<tr><td>${escapeHtml(label)}</td><td class="wc-old">${escapeHtml(String(a == null ? '—' : a))}</td><td class="wc-new">${escapeHtml(String(b == null ? '—' : b))}</td></tr>`);
+    });
+    const tO = consoleTimeSecOf(o); const tP = consoleTimeSecOf(p);
+    let badge = '';
+    if (tO && tP) {
+      const d = Math.round(tO - tP);
+      badge = d > 0 ? `<span class="wc-save">−${formatConsoleTime(d)} faster</span>`
+        : d < 0 ? `<span class="wc-save slower">+${formatConsoleTime(-d)} longer</span>` : '<span class="wc-save same">Same time</span>';
+      if (d) rows.push(`<tr><td>Scan time</td><td class="wc-old">${formatConsoleTime(tO)}</td><td class="wc-new${d < 0 ? ' wc-down' : ''}">${formatConsoleTime(tP)}</td></tr>`);
+    }
+    // SNR from the app's own model, only when both sides use the same kind of acceleration
+    // (a CS-SENSE number and a SENSE number aren't on the same scale).
+    const isCs = q => (q.accelType || 'sense') === 'cs-sense';
+    if (isCs(o) === isCs(p)) {
+      try {
+        const k = parseFloat(gK.value) || DEFAULT_G_FACTOR_K;
+        const r = relativeSnr(paramsFromProtocol(p), k) / relativeSnr(paramsFromProtocol(o), k);
+        if (Number.isFinite(r) && r > 0 && Math.abs(r - 1) >= 0.02) {
+          rows.push(`<tr><td>SNR (est.)</td><td>100%</td><td class="wc-new${r < 1 ? ' wc-down' : ''}">~${Math.round(r * 100)}%</td></tr>`);
+        }
+      } catch (e) { /* missing numbers: leave SNR out */ }
+    }
+    const notes = String(p.notes || '');
+    const m = notes.match(/(?:CHANGED(?: from [^:]{1,60})?|Changes from [^:]{1,60}):\s*([\s\S]+?)(?=\s*(?:KEPT\b|Time:|Estimate:|Console:|$))/);
+    let why = m ? m[1].replace(/\s*\([^)]*\)/g, '').replace(/\s*->\s*/g, ' → ').trim() : '';
+    if (why.length > 170) why = why.slice(0, 167).replace(/\s+\S*$/, '') + '…';
+    const checked = /CONSOLE-CHECKED|checked (?:on the console )?by Otis/i.test(notes);
+    const untried = !checked && /not (?:run|tried) on the console yet/i.test(notes);
+    return `<div class="wc">
+          <div class="wc-head"><span>What changed</span>${badge}</div>
+          ${rows.length ? `<table><thead><tr><th></th><th>Original</th><th>Suggested</th></tr></thead><tbody>${rows.join('')}</tbody></table>` : '<div class="wc-same">No saved setting differs; see the notes.</div>'}
+          ${same.length ? `<div class="wc-same">Same: ${escapeHtml(same.join(' · '))}</div>` : ''}
+          ${why ? `<div class="wc-why"><b>Changed:</b> ${escapeHtml(why)}</div>` : ''}
+          ${checked ? '<div class="wc-status ok">✓ Checked on the console</div>' : untried ? '<div class="wc-status untried">⚠ Not tried on the console yet</div>' : ''}
+        </div>`;
+  }
+
   function protocolCardHtml(p, isFirst, isLast, row, shownIdx) {
     const key = row ? row.lead.id : p.id;
     const multi = row && row.variants.length > 1;
@@ -6151,6 +6241,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
         <div class="proto-body">
         ${variantPickHtml}
         ${multi && shownIdx > 0 ? `<h4 class="variant-name">${escapeHtml(p.name)}</h4>` : ''}
+        ${multi && shownIdx > 0 ? whatChangedHtml(row.variants[0], p) : ''}
         <div class="card-region-tag">${escapeHtml(regionLabel)}</div>
         <div class="card-badges">
           <span class="badge">${escapeHtml(p.facility)}</span>
