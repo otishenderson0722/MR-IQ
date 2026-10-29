@@ -382,6 +382,45 @@
   .q-text { flex: 1; text-align: center; font-weight: 700; color: var(--text-dim); font-size: 0.9rem; }
   .q-reset { min-height: 48px; font-size: 0.85rem; background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
   .q-wide { grid-column: 1 / -1; font-size: 0.72rem; color: var(--text-dim); }
+  /* Quick run sheet (Otis, 2026-10-29): pick an exam, scan down the list in
+     order, swap in suggested versions, watch the total, tick each one off. */
+  .quick-strip .quick-exam-select { grid-column: 1 / -1; font-weight: 800; }
+  .qr-total { background: var(--panel); border: 2px solid var(--accent); border-radius: 12px; padding: 8px 10px; }
+  .qr-total.over { border-color: var(--bad); }
+  .qr-total-top { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .qr-big { font-size: 1.7rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .qr-dim { color: var(--text-dim); font-size: 0.82rem; }
+  .qr-save { color: var(--good); font-weight: 800; }
+  .qr-over { color: var(--bad); font-weight: 800; font-size: 0.95rem; }
+  .qr-budget { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 6px; }
+  .qr-budget-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.85rem; }
+  .qr-budget-top strong { font-size: 1.05rem; }
+  .qr-budget input[type=range] { width: 100%; height: 36px; margin: 0; accent-color: var(--good); }
+  .qr-list { display: flex; flex-direction: column; gap: 5px; }
+  .qr-row { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; }
+  .qr-row.done { opacity: 0.55; }
+  .qr-row.open { border-color: var(--accent); opacity: 1; }
+  .qr-main { display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 4px; min-height: 48px; }
+  .qr-dot { flex: 0 0 40px; height: 40px; border-radius: 50%; border: 2px solid var(--text-dim); background: transparent; color: var(--text-dim); font-weight: 800; font-size: 0.85rem; cursor: pointer; padding: 0; }
+  .qr-row.done .qr-dot { background: var(--good); border-color: var(--good); color: #06240f; }
+  .qr-name { flex: 1 1 auto; min-width: 0; font-weight: 700; font-size: 0.92rem; cursor: pointer; overflow-wrap: anywhere; background: none; border: 0; color: var(--text); text-align: left; padding: 6px 0; }
+  .qr-name .qr-flag { color: var(--warn-border); font-size: 0.75rem; font-weight: 700; display: block; }
+  .qr-sw { display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex: 0 0 auto; }
+  .qr-sw button { min-height: 34px; padding: 0 7px; font-size: 0.72rem; font-weight: 800; background: var(--panel-2); color: var(--text-dim); border: 0; cursor: pointer; }
+  .qr-sw button.on { background: var(--good); color: #06240f; }
+  .qr-time { flex: 0 0 auto; font-weight: 800; font-variant-numeric: tabular-nums; font-size: 0.95rem; min-width: 38px; text-align: right; }
+  .qr-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 8px 8px; }
+  .qr-actions button { min-height: 40px; background: var(--panel-2); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 4px 10px; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+  .qr-actions .planning-note-callout { flex: 1 1 100%; font-size: 0.78rem; padding: 4px 8px; margin: 0; }
+  .qr-foot { display: flex; gap: 6px; }
+  .qr-foot button { flex: 1; min-height: 44px; background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; font-weight: 700; font-size: 0.88rem; cursor: pointer; }
+  .qr-foot button.primary { border-color: var(--accent); color: var(--accent); }
+  .quick-tune-head:empty { display: none; }
+  .quick-tune-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; background: var(--panel-2); border: 1px solid var(--accent); border-radius: 10px; padding: 4px 4px 4px 10px; font-weight: 800; }
+  .quick-tune-head span { min-width: 0; overflow-wrap: anywhere; }
+  .quick-tune-head button { min-height: 40px; flex: 0 0 auto; background: var(--panel); color: var(--accent); border: 1px solid var(--accent); border-radius: 8px; padding: 0 10px; font-weight: 700; cursor: pointer; }
+  #quick-tune { display: flex; flex-direction: column; gap: 6px; }
+  #quick-tune.hidden, .quick-protocols.hidden { display: none; }
   .quick-sheet-overlay {
     display: none;
     position: fixed;
@@ -1345,6 +1384,12 @@
       <div class="quick-strip">
         <select id="quick-facility" aria-label="Facility"></select>
         <select id="quick-scanner" aria-label="Scanner"></select>
+        <select id="quick-exam" aria-label="Exam" class="quick-exam-select"></select>
+      </div>
+      <div id="quick-run"></div>
+      <div id="quick-tune">
+      <div class="quick-tune-head" id="quick-tune-head"></div>
+      <div class="quick-strip">
         <select id="quick-indication" aria-label="Exam indication" autocomplete="off"></select>
         <select id="quick-priority" aria-label="Clinical priority override" autocomplete="off">
           <option value="">Override: none</option>
@@ -1359,6 +1404,7 @@
       <div class="quick-infoline"><div id="quick-seq"></div><div id="quick-role"></div><label class="quick-aggr"><input type="checkbox" id="quick-aggressive" autocomplete="off"><span>Aggressive</span></label><div class="quick-timewarn" id="quick-timewarn"></div></div>
       <div id="quick-results"></div>
       <div class="quick-fields" id="quick-fields"></div>
+      </div>
     </div>
   </div>
   <div class="quick-sheet-overlay" id="quick-sheet-overlay">
@@ -9479,7 +9525,7 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
   // reload always starts with no priority and Aggressive off.
   // The exam indication is picked once and applies to every protocol tapped;
   // like priority it's about THIS patient, so it's never remembered.
-  const quick = { facility: '', scanner: '', protocolId: null, work: null, editingSeq: false, editingRole: false, outcome: null };
+  const quick = { facility: '', scanner: '', protocolId: null, work: null, editingSeq: false, editingRole: false, outcome: null, examId: '' };
 
   (function loadQuickSelection() {
     try {
@@ -9487,11 +9533,12 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
       if (saved && typeof saved === 'object') {
         quick.facility = typeof saved.facility === 'string' ? saved.facility : '';
         quick.scanner = typeof saved.scanner === 'string' ? saved.scanner : '';
+        quick.examId = typeof saved.examId === 'string' ? saved.examId : '';
       }
     } catch (e) { /* first run */ }
   })();
   function saveQuickSelection() {
-    try { localStorage.setItem(QUICK_SELECTION_KEY, JSON.stringify({ facility: quick.facility, scanner: quick.scanner })); } catch (e) { /* convenience only */ }
+    try { localStorage.setItem(QUICK_SELECTION_KEY, JSON.stringify({ facility: quick.facility, scanner: quick.scanner, examId: quick.examId })); } catch (e) { /* convenience only */ }
   }
 
   const quickUniq = (list) => Array.from(new Set(list)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
@@ -9542,12 +9589,210 @@ function compareProtocols(current, proposed, gFactorK = DEFAULT_G_FACTOR_K) {
     saveQuickSelection();
 
     const list = quickScannerProtocols();
-    if (!list.some(p => p.id === quick.protocolId)) { quick.protocolId = null; quick.work = null; quick.outcome = null; }
+    // In an exam, Fine-tune may load a member saved under another scanner name.
+    const keep = list.some(p => p.id === quick.protocolId) || (quick.examId && protocols.some(p => p.id === quick.protocolId));
+    if (!keep) { quick.protocolId = null; quick.work = null; quick.outcome = null; }
+    renderQuickRun();
     quickEls.protocols.innerHTML = list.length
       ? list.map(p => `<button type="button" class="quick-pbtn${p.id === quick.protocolId ? ' selected' : ''}" data-id="${escapeHtml(p.id)}" title="${escapeHtml(p.region + (p.subRegion ? ' · ' + p.subRegion : ''))}">${escapeHtml(p.name)}</button>`).join('')
       : `<div class="quick-empty" style="grid-column:1/-1;">${protocols.length ? 'No saved protocols for this scanner.' : 'No saved protocols yet — add some in the Protocol Library, or Import a backup there.'}</div>`;
     renderQuickProtocolDetail();
   }
+
+  // --- Run sheet --------------------------------------------------------------
+  // An exam (from the Exams tab's sets) in scan order: each sequence with its
+  // console time, an Original/Suggested switch where a (SUGGESTED) version
+  // exists, a tap-to-mark-done dot, and a running total. The time slider picks
+  // suggested versions (biggest saving first) until the exam fits; it never
+  // touches the optimizer, so every time shown is a saved console time.
+  // Choices, done ticks and the budget are about this patient: kept only
+  // until the page reloads or "New patient" is tapped.
+  const run = { choice: {}, done: new Set(), open: -1, budgetSec: null, examId: '' };
+  const quickExamEl = document.getElementById('quick-exam');
+  const quickRunEl = document.getElementById('quick-run');
+  const quickTuneEl = document.getElementById('quick-tune');
+  const quickTuneHeadEl = document.getElementById('quick-tune-head');
+  const runTime = p => (p && Number.isFinite(p.consoleTimeSec) && p.consoleTimeSec > 0 ? p.consoleTimeSec : null);
+
+  function quickExamSets() {
+    return examSets.filter(e => !e.facility || sameText(e.facility, quick.facility));
+  }
+  function quickExamSet() {
+    return quickExamSets().find(e => e.id === quick.examId) || null;
+  }
+  // Each member of the exam with every version of it: [original, suggested…].
+  // A member that is itself a suggested protocol starts on its suggested version.
+  function quickRunRows(set) {
+    const pool = protocols.filter(p => sameText(p.facility, set.facility || quick.facility));
+    return resolveExamMembers(set).map(m => {
+      const p = m.protocol;
+      if (!p) return { name: m.name, variants: [], start: 0 };
+      const orig = isSuggestedProtocol(p) ? (suggestedOriginal(p, pool) || p) : p;
+      const variants = [orig, ...pool.filter(q => isSuggestedProtocol(q) && q.id !== orig.id && (suggestedOriginal(q, pool) || {}).id === orig.id)];
+      if (!variants.some(v => v.id === p.id)) variants.push(p);
+      return { name: m.name, variants, start: variants.findIndex(v => v.id === p.id) };
+    });
+  }
+  const runPick = (row, i) => {
+    const k = run.choice[i] ?? row.start;
+    return row.variants[k < row.variants.length ? k : 0] || null;
+  };
+  const shortName = p => String(p.name || '').replace(SUGGESTED_RE, ' ').trim();
+
+  // Fit the exam into the budget: start from each row's own version, then
+  // swap to the fastest version per row, biggest saving first, until it fits.
+  function fitRunToBudget(rows) {
+    run.choice = {};
+    if (run.budgetSec === null) return;
+    let total = rows.reduce((a, r, i) => a + (runTime(runPick(r, i)) || 0), 0);
+    const swaps = rows.map((r, i) => {
+      const cur = runTime(runPick(r, i));
+      let best = null;
+      r.variants.forEach((v, k) => { const t = runTime(v); if (cur !== null && t !== null && t < cur && (!best || t < best.t)) best = { k, t }; });
+      return best ? { i, k: best.k, save: cur - best.t } : null;
+    }).filter(Boolean).sort((a, b) => b.save - a.save);
+    for (const s of swaps) {
+      if (total <= run.budgetSec) break;
+      run.choice[s.i] = s.k;
+      total -= s.save;
+    }
+  }
+
+  function renderQuickRun() {
+    const sets = quickExamSets();
+    if (!sets.some(e => e.id === quick.examId)) quick.examId = '';
+    const groups = new Map();
+    sets.forEach(e => { const g = e.region + (e.subRegion ? ' · ' + e.subRegion : ''); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(e); });
+    quickExamEl.innerHTML = `<option value="">${sets.length ? 'Pick an exam…' : 'No exams for this facility'}</option>`
+      + Array.from(groups).map(([g, list]) => `<optgroup label="${escapeHtml(g || 'Other')}">${list.map(e => `<option value="${escapeHtml(e.id)}">${escapeHtml(e.name)}</option>`).join('')}</optgroup>`).join('')
+      + '<option value="__single">One sequence at a time (all protocols)</option>';
+    quickExamEl.value = quick.examId || (quick.single ? '__single' : '');
+    if (run.examId !== quick.examId) { run.examId = quick.examId; run.choice = {}; run.done = new Set(); run.open = -1; run.budgetSec = null; }
+
+    const set = quickExamSet();
+    // Single-sequence mode = the old Quick screen; exam mode shows the
+    // optimizer only after "Fine-tune" on a row.
+    quickEls.protocols.classList.toggle('hidden', !!set || !quick.single);
+    quickTuneEl.classList.toggle('hidden', !!set ? !quick.protocolId : !quick.single);
+    const tuned = set && quickProtocol();
+    quickTuneHeadEl.innerHTML = tuned ? `<span>⚡ Fine-tune: ${escapeHtml(tuned.name)}</span><button type="button" data-action="close-tune">Back to exam</button>` : '';
+    if (!set) {
+      quickRunEl.innerHTML = quick.single ? '' : `<div class="quick-empty">${examSets.length
+        ? 'Pick an exam above to get its sequences in scan order, with times and a running total.'
+        : 'No exams yet. Import a backup that includes exam sets (Protocol Library → Import backup).'}</div>`;
+      return;
+    }
+    if (quick.protocolId) { quickRunEl.innerHTML = ''; return; }
+
+    const rows = quickRunRows(set);
+    let total = 0, orig = 0, missing = 0, swapped = 0, minSec = 0;
+    rows.forEach((r, i) => {
+      const p = runPick(r, i);
+      const t = runTime(p);
+      if (t === null) missing += 1; else total += t;
+      const o = runTime(r.variants[r.start]);
+      if (o !== null) orig += o;
+      const fast = r.variants.map(runTime).filter(x => x !== null);
+      if (fast.length) minSec += Math.min(...fast);
+      if (p && r.variants[r.start] && p.id !== r.variants[r.start].id) swapped += 1;
+    });
+    const over = run.budgetSec !== null && total > run.budgetSec;
+    const saved = orig - total;
+    const lo = Math.max(60, Math.floor(minSec / 60) * 60);
+    const hi = Math.max(lo + 60, Math.ceil(orig / 60) * 60);
+    const budget = run.budgetSec === null ? hi : Math.min(hi, Math.max(lo, run.budgetSec));
+    const multi = rows.some(r => r.variants.length > 1);
+
+    const rowHtml = rows.map((r, i) => {
+      const p = runPick(r, i);
+      const t = runTime(p);
+      const done = run.done.has(i);
+      const sw = r.variants.length > 1 ? `<div class="qr-sw" role="group" aria-label="Version">${r.variants.map((v, k) =>
+        `<button type="button" data-action="variant" data-k="${k}" class="${v === p ? 'on' : ''}" aria-pressed="${v === p}">${k === 0 ? 'Orig' : (r.variants.length > 2 ? 'Sugg ' + k : 'Sugg')}</button>`).join('')}</div>` : '';
+      const flag = !p ? 'Not found in this library' : (t === null ? 'No console time saved' : (needsConfirmation(p) ? '⚠ Needs confirmation' : ''));
+      const actions = run.open === i && p ? `<div class="qr-actions">
+          ${planningGuideFor(p) ? '<button type="button" data-action="plan">📐 How to plan</button>' : ''}
+          <button type="button" data-action="card">📋 Console card</button>
+          <button type="button" data-action="tune">⚡ Fine-tune</button>
+          ${planningNoteHtml(p)}</div>` : '';
+      return `<div class="qr-row${done ? ' done' : ''}${run.open === i ? ' open' : ''}" data-i="${i}">
+        <div class="qr-main"><button type="button" class="qr-dot" data-action="done" aria-pressed="${done}" aria-label="Mark ${escapeHtml(r.name)} done">${done ? '✓' : i + 1}</button>
+          <button type="button" class="qr-name" data-action="open" aria-expanded="${run.open === i}">${escapeHtml(p ? shortName(p) : r.name)}${flag ? `<span class="qr-flag">${escapeHtml(flag)}</span>` : ''}</button>
+          ${sw}<div class="qr-time">${t !== null ? formatConsoleTime(t) : '—'}</div></div>${actions}</div>`;
+    }).join('');
+
+    const doneCount = run.done.size;
+    quickRunEl.innerHTML = `<div class="qr-total${over ? ' over' : ''}">
+        <div class="qr-dim">Exam total${missing ? ` (${missing} without a time)` : ''}</div>
+        <div class="qr-total-top"><span class="qr-big">${formatConsoleTime(total)}</span>
+          ${saved > 0 ? `<span class="qr-dim">was ${formatConsoleTime(orig)}</span><span class="qr-save">−${formatConsoleTime(saved)}</span>` : ''}</div>
+        <div class="qr-dim">${swapped ? `${swapped} of ${rows.length} using suggested · ` : ''}${doneCount} of ${rows.length} done</div>
+        ${over ? `<div class="qr-over">⚠ Still ${formatConsoleTime(total - run.budgetSec)} over. Every suggested version is already in; Fine-tune a sequence to cut more.</div>` : ''}
+        ${multi ? `<div class="qr-budget"><div class="qr-budget-top"><span>Patient can hold still about</span><strong>${run.budgetSec === null ? 'full exam' : Math.round(budget / 60) + ' min'}</strong></div>
+          <input type="range" id="qr-budget" min="${lo}" max="${hi}" step="60" value="${budget}" aria-label="Time the patient can hold still">
+          <div class="qr-budget-top qr-dim"><span>${Math.round(lo / 60)} min</span><span>${Math.round(hi / 60)} min</span></div></div>` : ''}
+      </div>
+      <div class="qr-list">${rowHtml}</div>
+      <div class="qr-foot"><button type="button" class="primary" data-action="cards">📋 Console cards</button><button type="button" data-action="reset">↺ New patient</button></div>`;
+  }
+
+  quickExamEl.addEventListener('change', () => {
+    quick.single = quickExamEl.value === '__single';
+    quick.examId = quick.single ? '' : quickExamEl.value;
+    quick.protocolId = null; quick.work = null;
+    saveQuickSelection();
+    renderQuick();
+  });
+  quickTuneHeadEl.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-action="close-tune"]')) return;
+    quick.protocolId = null; quick.work = null;
+    renderQuick();
+    window.scrollTo(0, 0);
+  });
+  quickRunEl.addEventListener('input', (e) => {
+    if (e.target.id !== 'qr-budget') return;
+    const set = quickExamSet();
+    if (!set) return;
+    const rows = quickRunRows(set);
+    const v = Number(e.target.value);
+    run.budgetSec = v >= Number(e.target.max) ? null : v;
+    fitRunToBudget(rows);
+    renderQuickRun();
+    const el = document.getElementById('qr-budget');
+    if (el) el.focus();
+  });
+  quickRunEl.addEventListener('click', (e) => {
+    const set = quickExamSet();
+    const btn = e.target.closest('[data-action]');
+    if (!set || !btn) return;
+    const rows = quickRunRows(set);
+    const rowEl = btn.closest('.qr-row');
+    const i = rowEl ? Number(rowEl.dataset.i) : -1;
+    const p = i >= 0 ? runPick(rows[i], i) : null;
+    switch (btn.dataset.action) {
+      case 'done': if (run.done.has(i)) run.done.delete(i); else run.done.add(i); break;
+      case 'open': run.open = run.open === i ? -1 : i; break;
+      case 'variant': run.choice[i] = Number(btn.dataset.k); break;
+      case 'plan': if (p) openPlanningGuide(p); return;
+      case 'tune': if (p) { quickLoad(p); renderQuick(); window.scrollTo(0, 0); } return;
+      case 'card': case 'cards': {
+        const picked = rows.map((r, k) => ({ r, p: runPick(r, k) }));
+        const cards = picked.map(({ r, p: q }) => {
+          const savedCard = q ? consoleCards[q.id] : null;
+          if (savedCard && Array.isArray(savedCard.changes)) return { ...savedCard, name: q.name, stockSec: runTime(q) ?? savedCard.stockSec };
+          return { protocolId: q ? q.id : '', name: q ? q.name : r.name, changes: [], stockSec: runTime(q), missing: !q };
+        });
+        openConsoleDeck(cards, set, btn.dataset.action === 'card' ? Math.max(0, i) : 0);
+        return;
+      }
+      case 'reset':
+        if (!confirm('Start this exam over? Clears done ticks, version picks and the time slider.')) return;
+        run.choice = {}; run.done = new Set(); run.open = -1; run.budgetSec = null;
+        break;
+      default: return;
+    }
+    renderQuickRun();
+  });
 
   // Everything below the buttons for the currently loaded protocol.
   function renderQuickProtocolDetail() {
